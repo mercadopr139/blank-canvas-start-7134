@@ -2,7 +2,7 @@
 // the funder's portal (each one a conversation with Grant Coach), the
 // funder's documents and NLA's, and the facts of the grant (due date,
 // amount, period). See the REVISED PLAN in docs/grant-coach/README.md.
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,9 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  ArrowLeft, Check, Circle, CircleDot, MinusCircle, Loader2, Upload, Link2, ExternalLink, Trash2, CalendarClock, ChevronDown, ChevronRight,
-  Sparkles, Download, RefreshCw, Images, MessageSquareText,
+  ArrowLeft, Check, Circle, X, ClipboardPaste, CircleDot, MinusCircle, Loader2, Upload, Link2, ExternalLink, Trash2, CalendarClock, ChevronDown, ChevronRight,
+  Sparkles, Download, RefreshCw, Images, MessageSquareText, Printer,
 } from "lucide-react";
+import { buildAnswersPdf, answersPdfFileName, printableItems } from "@/lib/grantCoach/answersPdf";
 import { checklistProgress } from "@/lib/grantCoach/oceanChecklist";
 import { GRANT_DOCUMENTS_BUCKET } from "@/lib/grantCoach/orgDocuments";
 import { gatherLiveFacts, factYearLabel } from "@/lib/grantCoach/liveFacts";
@@ -133,7 +134,7 @@ const AdminGrantFolder = () => {
      conversation (GrantQuestionPanel). */
   const screensInput = useRef<HTMLInputElement>(null);
   const [reading, setReading] = useState<string | null>(null);
-  const importScreens = async (files: FileList | null) => {
+  const importScreens = async (files: FileList | File[] | null) => {
     if (!files?.length || !folder) return;
     const list = Array.from(files).slice(0, 12);
     setReading(`Uploading ${list.length} screenshot${list.length === 1 ? "" : "s"}…`);
@@ -181,6 +182,42 @@ const AdminGrantFolder = () => {
     }
   };
   const [grantTalkOpen, setGrantTalkOpen] = useState(false);
+
+  /* Paste screenshots (Josh, 2026-10-22): Win+Shift+S or Ctrl+C on a screen,
+     then Ctrl+V anywhere on this page, the same way screenshots go into a
+     chat. Each paste joins a numbered tray in paste order; "Read" sends the
+     whole tray at once so questions keep their screens and order. Only image
+     pastes are caught; pasting text into a conversation box still works. */
+  const [tray, setTray] = useState<{ file: File; url: string }[]>([]);
+  const trayRef = useRef(tray);
+  trayRef.current = tray;
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const images = Array.from(e.clipboardData?.files ?? []).filter((f) => f.type.startsWith("image/"));
+      if (!images.length) return;
+      e.preventDefault();
+      setTray((t) => {
+        const room = 12 - t.length;
+        if (room <= 0) { toast.error("The tray holds 12 screens. Read these first, then paste the rest."); return t; }
+        const added = images.slice(0, room).map((img, i) => {
+          const n = t.length + i + 1;
+          const file = new File([img], `screen-${String(n).padStart(2, "0")}.${img.type.split("/")[1] || "png"}`, { type: img.type });
+          return { file, url: URL.createObjectURL(file) };
+        });
+        return [...t, ...added];
+      });
+    };
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, []);
+  useEffect(() => () => trayRef.current.forEach((t) => URL.revokeObjectURL(t.url)), []);
+  const dropFromTray = (i: number) => setTray((t) => { URL.revokeObjectURL(t[i].url); return t.filter((_, j) => j !== i); });
+  const readTray = async () => {
+    const files = tray.map((t) => t.file);
+    await importScreens(files);
+    tray.forEach((t) => URL.revokeObjectURL(t.url));
+    setTray([]);
+  };
 
   /* Wipe this folder: its checklist, conversations, documents and files.
      The Grant Vault is untouched; it belongs to NLA, not to one grant. */
@@ -275,6 +312,38 @@ const AdminGrantFolder = () => {
     if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["grant-folder", id] });
     qc.invalidateQueries({ queryKey: ["grant-folders"] });
+  };
+
+  /* ───── The hardcopy ─────
+     After the online application is submitted, the folder is NLA's only
+     record of what went in. Print downloads every question and answer in
+     portal order and files the same PDF under our documents. */
+  const [printing, setPrinting] = useState(false);
+  const printAnswers = async () => {
+    if (!folder) return;
+    const rows = printableItems(items);
+    if (!rows.length) { toast.error("Nothing to print yet. Read the portal screenshots in first."); return; }
+    setPrinting(true);
+    try {
+      const pdf = await buildAnswersPdf(folder, rows);
+      const name = answersPdfFileName(folder);
+      pdf.save(name);
+      const blob = pdf.output("blob");
+      const path = docPath(id!, name);
+      const { error } = await supabase.storage.from(GRANT_DOCUMENTS_BUCKET).upload(path, blob, { contentType: "application/pdf" });
+      if (error) throw error;
+      const { error: e2 } = await supabase.from("grant_documents" as never).insert({
+        folder_id: id, side: "ours", title: `Our answers, printed ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/New_York" })}`,
+        storage_path: path, file_name: name, mime_type: "application/pdf", size_bytes: blob.size, uploaded_by: user?.id ?? null,
+      } as never);
+      if (e2) throw e2;
+      qc.invalidateQueries({ queryKey: ["grant-docs", id] });
+      toast.success("Answers printed. A copy is filed under our documents.");
+    } catch (e) {
+      toast.error(`Couldn't print: ${(e as Error).message}`);
+    } finally {
+      setPrinting(false);
+    }
   };
 
   /* ───── Documents ───── */
@@ -392,12 +461,37 @@ const AdminGrantFolder = () => {
           <div className="rounded-xl border border-white/10 bg-neutral-900/60 p-4 flex flex-wrap items-center gap-3">
             <div className="flex-1 min-w-[220px]">
               <p className="font-semibold text-sm inline-flex items-center gap-2"><Images className="w-4 h-4 text-white/50" /> Questions from the funder's portal</p>
-              <p className="text-[12px] text-white/45 mt-0.5">Screenshot each screen of the online application and upload them here, in order. Grant Coach reads every question in, with its limit, and each becomes a row below to talk through. Your typed answers on the screens are ignored.</p>
+              <p className="text-[12px] text-white/45 mt-0.5">Screenshot each screen of the online application and <span className="text-white/75 font-medium">paste it here with Ctrl+V</span>, in order, or upload the files. Grant Coach reads every question in, with its limit, and each becomes a row below to talk through. Your typed answers on the screens are ignored.</p>
             </div>
             <input ref={screensInput} type="file" multiple accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => void importScreens(e.target.files)} />
             <Button size="sm" onClick={() => screensInput.current?.click()} disabled={reading != null} className="text-white" style={{ backgroundColor: NLA_RED }}>
               {reading ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Upload className="w-3.5 h-3.5 mr-1.5" />} {reading ?? "Upload screenshots"}
             </Button>
+            {tray.length > 0 ? (
+              <div className="w-full border-t border-white/[0.06] pt-3 space-y-2.5">
+                <div className="flex flex-wrap gap-2">
+                  {tray.map((t, i) => (
+                    <div key={t.url} className="relative w-24 h-16 rounded-md overflow-hidden border border-white/15 bg-black">
+                      <img src={t.url} alt={`Screen ${i + 1}`} className="w-full h-full object-cover object-top" />
+                      <span className="absolute bottom-0.5 left-0.5 text-[10px] font-bold bg-black/75 text-white rounded px-1">{i + 1}</span>
+                      <button type="button" onClick={() => dropFromTray(i)} disabled={reading != null} title="Take this screen out" className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/75 text-white/80 hover:text-white flex items-center justify-center">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button size="sm" onClick={() => void readTray()} disabled={reading != null} className="text-white" style={{ backgroundColor: NLA_RED }}>
+                    {reading ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1.5" />}
+                    {reading ?? `Read ${tray.length} screen${tray.length === 1 ? "" : "s"}`}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => { tray.forEach((t) => URL.revokeObjectURL(t.url)); setTray([]); }} disabled={reading != null} className="bg-transparent border-white/20 text-white/70 hover:bg-white/10 hover:text-white">Clear</Button>
+                  <span className="text-[12px] text-white/45">Keep pasting the next screen. Read when the tray holds the whole application, up to 12.</span>
+                </div>
+              </div>
+            ) : (
+              <p className="w-full text-[11px] text-white/35 inline-flex items-center gap-1.5"><ClipboardPaste className="w-3.5 h-3.5" /> Paste a screenshot anywhere on this page to start the tray.</p>
+            )}
           </div>
 
           {/* The grant as a whole */}
@@ -418,7 +512,10 @@ const AdminGrantFolder = () => {
 
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-bold">Checklist</h2>
-            <p className="text-[12px] text-white/45">Tap the circle to move an item along. Tap a row to open it: talk it through with Grant Coach, approve the answer, copy it into the portal, mark it pasted.</p>
+            <Button size="sm" variant="outline" onClick={() => void printAnswers()} disabled={printing || items.length === 0} className="bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white">
+              {printing ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Printer className="w-3.5 h-3.5 mr-1.5" />} Print my answers
+            </Button>
+            <p className="text-[12px] text-white/45 w-full">Tap the circle to move an item along. Tap a row to open it: talk it through with Grant Coach, approve the answer, copy it into the portal, mark it pasted. After you submit, Print my answers keeps NLA's copy.</p>
           </div>
           {sections.map((sec) => {
             const p = checklistProgress(sec.items);
@@ -479,7 +576,12 @@ const AdminGrantFolder = () => {
                               <Textarea
                                 key={`${it.id}-${it.answer ?? ""}`}
                                 defaultValue={it.answer ?? ""}
-                                onBlur={(e) => { const v = e.target.value.trim() || null; if (v !== (it.answer ?? null)) void patchItem(it, { answer: v }); }}
+                                onBlur={(e) => {
+                                  const v = e.target.value.trim() || null;
+                                  if (v === (it.answer ?? null)) return;
+                                  // Approved means this exact text. A changed answer goes back to In progress (and un-pasted) until it is approved again.
+                                  void patchItem(it, it.status === "done" ? { answer: v, status: "in_progress", pasted_at: null } : { answer: v });
+                                }}
                                 placeholder={it.kind === "narrative" ? "The answer, as it will go in the form." : it.kind === "upload" ? "Where the file is, or a note." : "The value, or a note."}
                                 rows={it.kind === "narrative" ? 6 : 2}
                                 className="bg-neutral-950 border-neutral-800 text-white text-sm"

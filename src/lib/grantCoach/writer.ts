@@ -4,7 +4,7 @@
 // written in this folder — so the function never guesses and Josh can see
 // exactly what it was told.
 import { supabase } from "@/integrations/supabase/client";
-import { ORG_FIELDS, orgFieldValue } from "@/lib/grantCoach/orgProfile";
+import { ORG_FIELDS, orgFieldValue, formatEin } from "@/lib/grantCoach/orgProfile";
 import type { Fact } from "@/lib/grantCoach/liveFacts";
 
 export interface LibraryEntry {
@@ -30,7 +30,7 @@ export async function loadLibrary(): Promise<LibraryEntry[]> {
   const saved: Record<string, string | null> = {};
   ((data ?? []) as { key: string; value: string | null }[]).forEach((r) => { saved[r.key] = r.value; });
   return ORG_FIELDS
-    .map((f) => ({ key: f.key, label: f.label, value: orgFieldValue(f, saved).trim(), storyOnly: STORY_ONLY_KEYS.has(f.key) || undefined }))
+    .map((f) => ({ key: f.key, label: f.label, value: f.key === "ein" ? formatEin(orgFieldValue(f, saved)) : orgFieldValue(f, saved).trim(), storyOnly: STORY_ONLY_KEYS.has(f.key) || undefined }))
     .filter((e) => e.value);
 }
 

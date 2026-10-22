@@ -75,7 +75,8 @@ const GrantQuestionPanel = ({ folderId, folder, item, library, facts, answered, 
       const { error: e2 } = await supabase.from("grant_messages" as never).insert({ folder_id: folderId, item_id: item?.id ?? null, role: "coach", content: reply, created_by: user?.id ?? null } as never);
       if (e2) throw e2;
       if (res.answer && item) {
-        await onPatch({ answer: res.answer, status: item.status === "todo" ? "in_progress" : item.status });
+        // A new draft is new text: it needs approving again, and is not in the portal yet.
+        await onPatch(item.status === "done" ? { answer: res.answer, status: "in_progress", pasted_at: null } : { answer: res.answer, status: item.status === "todo" ? "in_progress" : item.status });
         toast.success(`Answer drafted · ${res.words ?? measure(res.answer, "words")} words. Read it, then Approve.`);
       }
       await qc.invalidateQueries({ queryKey: key });
@@ -158,10 +159,16 @@ const GrantQuestionPanel = ({ folderId, folder, item, library, facts, answered, 
               <Check className="w-3.5 h-3.5 mr-1.5" /> Approve
             </Button>
           ) : (
-            <span className="text-[11px] text-emerald-300 inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Approved</span>
+            <span className="text-[11px] text-emerald-300 inline-flex items-center gap-1.5">
+              <Check className="w-3.5 h-3.5" /> Approved
+              <button type="button" onClick={() => void onPatch({ status: "in_progress", pasted_at: null })} title="Take the approval back; the answer stays" className="text-white/45 hover:text-white underline underline-offset-2">Undo</button>
+            </span>
           )}
           {item.pasted_at ? (
-            <span className="text-[11px] text-sky-300 inline-flex items-center gap-1"><ClipboardCheck className="w-3.5 h-3.5" /> Pasted into the portal</span>
+            <span className="text-[11px] text-sky-300 inline-flex items-center gap-1.5">
+              <ClipboardCheck className="w-3.5 h-3.5" /> Pasted into the portal
+              <button type="button" onClick={() => void onPatch({ pasted_at: null })} title="Not pasted after all; it stays approved" className="text-white/45 hover:text-white underline underline-offset-2">Undo</button>
+            </span>
           ) : (
             <Button size="sm" variant="outline" onClick={() => void onPatch({ pasted_at: new Date().toISOString(), status: "done" })} disabled={!item.answer?.trim()} className="bg-transparent border-sky-400/40 text-sky-300 hover:bg-sky-400/10 hover:text-sky-200">
               <ClipboardCheck className="w-3.5 h-3.5 mr-1.5" /> Mark pasted

@@ -195,7 +195,7 @@ export const ORG_SECTIONS: OrgSection[] = [
     fields: [
       { key: "legal_name", label: "Legal name of organization", kind: "short", required: true, seed: "No Limits Academy Inc." },
       { key: "dba", label: "Doing business as (DBA / AKA)", kind: "short", required: true, seed: "No Limits Academy", help: "The site and the domain say No Limits Boxing Academy too; use what is registered." },
-      { key: "ein", label: "Federal EIN", kind: "short", required: true, help: "On the IRS determination letter and the 990." },
+      { key: "ein", label: "Federal EIN", kind: "short", required: true, help: "On the IRS determination letter and the 990. Two digits, a dash, seven digits (XX-XXXXXXX); the dash is placed for you." },
       { key: "nonprofit_date", label: "Date of 501(c)(3) determination", kind: "date", required: true },
       { key: "fiscal_year", label: "Fiscal year", kind: "short", required: true, help: "e.g. January 1 – December 31" },
       { key: "year_established", label: "Year established", kind: "number", required: true, seed: "2020" },
@@ -295,4 +295,14 @@ export const orgCompleteness = (saved: Record<string, string | null>) => {
   const required = ORG_FIELDS.filter((f) => f.required);
   const done = required.filter((f) => orgFieldValue(f, saved).trim()).length;
   return { done, total: required.length };
+};
+
+/**
+ * An EIN is nine digits written XX-XXXXXXX (IRS). Typed any other way —
+ * 84-399-8071 was saved once — portals that check the format reject it.
+ * Anything that is not nine digits is left alone for a person to fix.
+ */
+export const formatEin = (raw: string): string => {
+  const digits = raw.replace(/\D/g, "");
+  return digits.length === 9 ? `${digits.slice(0, 2)}-${digits.slice(2)}` : raw.trim();
 };

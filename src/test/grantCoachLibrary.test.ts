@@ -50,3 +50,15 @@ describe("Grant Coach — the organization documents", () => {
     expect(p).toMatch(/^org\/form_990\/\d+_NLA_990_2025_final\.pdf$/);
   });
 });
+
+import { formatEin } from "@/lib/grantCoach/orgProfile";
+describe("EIN format", () => {
+  it("writes nine digits as XX-XXXXXXX however they were typed", () => {
+    expect(formatEin("84-399-8071")).toBe("84-3998071");
+    expect(formatEin("843998071")).toBe("84-3998071");
+    expect(formatEin(" 84 3998071 ")).toBe("84-3998071");
+  });
+  it("leaves anything that is not nine digits for a person to fix", () => {
+    expect(formatEin("84-39980")).toBe("84-39980");
+  });
+});

@@ -20,7 +20,7 @@ import {
   BookOpen, FolderLock, Globe, Check, Loader2, Upload, Link2, ExternalLink, Trash2, RotateCcw, AlertCircle, FolderPlus, CalendarClock, ChevronRight,
 } from "lucide-react";
 import { checklistProgress } from "@/lib/grantCoach/oceanChecklist";
-import { ORG_SECTIONS, orgFieldValue, orgCompleteness, type OrgField } from "@/lib/grantCoach/orgProfile";
+import { ORG_SECTIONS, orgFieldValue, orgCompleteness, formatEin, type OrgField } from "@/lib/grantCoach/orgProfile";
 import { useAsk } from "@/components/admin/AskDialog";
 import { ORG_DOCUMENTS, GRANT_DOCUMENTS_BUCKET, orgDocumentPath, type OrgDocument } from "@/lib/grantCoach/orgDocuments";
 
@@ -116,6 +116,7 @@ const AdminGrantCoach = () => {
   const [justSaved, setJustSaved] = useState<string | null>(null);
   const [lastSave, setLastSave] = useState<{ label: string; at: Date } | null>(null);
   const saveField = async (field: OrgField, raw: string) => {
+    if (field.key === "ein") raw = formatEin(raw);
     const value = raw.trim() ? raw : null;
     const current = saved[field.key];
     // Nothing typed over a seed, or the same text again: nothing to write.
