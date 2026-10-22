@@ -121,8 +121,15 @@ const Vision = () => {
                   </div>
                 </div>
 
+                <p className="text-2xl md:text-3xl font-black italic text-primary-foreground leading-snug mb-2">
+                  “What am I going to do after high school?”
+                </p>
+                <p className="text-sm font-bold tracking-[0.18em] uppercase text-nla mb-8">
+                  The question every young person leaves able to answer
+                </p>
+
                 <p className="text-lg md:text-xl text-primary-foreground/80 leading-relaxed mb-6">
-                  The Launch Pad is what separates No Limits Academy from every other youth program. Starting at age 15, youth enter a classroom environment designed around an introspective process — one that helps them identify their <strong className="text-primary-foreground">strengths</strong> and align those gifts with a real, viable future.
+                  The Launch Pad is what separates No Limits Academy from every other youth program. From 8th through 12th grade, youth enter a classroom environment designed around an introspective process — one that helps them identify their <strong className="text-primary-foreground">strengths</strong> and align those gifts with a real, viable future.
                 </p>
 
                 {/* Scripture anchor — 1 Peter 4:10 frames the gifts-and-stewardship
@@ -233,6 +240,9 @@ const Vision = () => {
                   <p className="text-base md:text-lg text-primary-foreground/75 leading-relaxed">
                     Helps each young person discover their strengths, clarify their gifts, and align with the Pad that fits their calling.
                   </p>
+                  <p className="mt-5 pt-5 border-t border-primary-foreground/10 text-sm md:text-base text-primary-foreground/60 leading-relaxed">
+                    Brings <strong className="text-primary-foreground">42 years of business leadership</strong> across national beverage and food-service brands, and has hired and developed <strong className="text-primary-foreground">388 employees</strong>.
+                  </p>
                 </div>
 
                 <div className="bg-primary-foreground/[0.04] border border-primary-foreground/10 rounded-2xl p-7 md:p-8">
@@ -283,6 +293,15 @@ const Vision = () => {
               <p className="text-xl md:text-2xl font-bold text-foreground leading-snug md:ml-5">
                 Our goal is simple: produce young people so prepared, so professional, and so disciplined that they become the <strong className="text-nla">most sought-after talent</strong> in their generation.
               </p>
+
+              <div className="mt-10 md:ml-5">
+                <p className="text-xs font-black tracking-[0.2em] uppercase text-nla mb-3">Beyond the sessions</p>
+                <div className="flex flex-wrap gap-2.5">
+                  {["Guest speakers", "Mentorship", "Networking", "Résumés & interviewing"].map((x) => (
+                    <span key={x} className="rounded-full border border-foreground/15 px-4 py-2 text-base font-semibold text-foreground">{x}</span>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -316,6 +335,9 @@ const Vision = () => {
         <section className="bg-background py-16 md:py-[80px]">
           <div className="container">
             <div className="max-w-3xl mx-auto text-center">
+              <p className="text-xl md:text-2xl italic font-semibold text-muted-foreground mb-8">
+                “If it’s going to be, it’s gotta be me.”
+              </p>
               <h2 className="text-4xl md:text-5xl font-black text-foreground leading-[1.05] tracking-tight mb-6">
                 Invest in a generation.
               </h2>

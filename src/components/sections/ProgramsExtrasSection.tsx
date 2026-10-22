@@ -74,7 +74,7 @@ const ProgramsExtrasSection = () => {
     id: "launch-pad",
     title: "The Launch Pad",
     subtitle: "Senior Boxers Only",
-    ageRange: "11–19 years old",
+    ageRange: "8th–12th grade",
     blurb: "The Launch Pad is how No Limits Academy executes its mission long-term. It keeps young people connected to guidance, opportunity, and support long after they leave the gym—through a growing network of mentors, local businesses, and real-world partnerships.\n\nWe don't just train athletes. We develop future leaders, employees, employers, entrepreneurs, and community builders—youth who graduate with a clear path forward and the discipline to succeed.",
     images: resolveGroup("programs.launch-pad"),
     videoId: videoId("programs.launch-pad"),
