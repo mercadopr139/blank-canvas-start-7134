@@ -22,6 +22,8 @@ import {
 import { checklistProgress } from "@/lib/grantCoach/oceanChecklist";
 import { ORG_SECTIONS, orgFieldValue, orgCompleteness, formatEin, type OrgField } from "@/lib/grantCoach/orgProfile";
 import { useAsk } from "@/components/admin/AskDialog";
+import PastAnswers from "@/components/admin/grantCoach/PastAnswers";
+import StoryBank from "@/components/admin/grantCoach/StoryBank";
 import { ORG_DOCUMENTS, GRANT_DOCUMENTS_BUCKET, orgDocumentPath, type OrgDocument } from "@/lib/grantCoach/orgDocuments";
 
 const NLA_RED = "#bf0f3e";
@@ -400,6 +402,8 @@ const AdminGrantCoach = () => {
               </section>
             ))
           )}
+          <StoryBank />
+          <PastAnswers />
         </div>
       )}
 

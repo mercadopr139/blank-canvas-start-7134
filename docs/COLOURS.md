@@ -9,7 +9,7 @@ one thing from across a room.
 |---|---|---|---|---|
 | NLA red | `#bf0f3e` | — | The academy: primary buttons, Operations pillar, Battle Team | `NLA_RED` (practicePlan.ts), `PILLAR_COLOR.operations` |
 | Pillar green | `#22c55e` | — | Sales & Marketing pillar (Lap ring, message board) | `PILLAR_COLOR.sales_marketing` |
-| Pillar blue | `#38bdf8` | — | Finance pillar (Lap ring, message board) | `PILLAR_COLOR.finance` |
+| Pillar blue | `#38bdf8` | — | Finance pillar (Lap ring, message board) and Grant Coach, a Finance app (card header bands, the armed paste tile, the open tab) | `PILLAR_COLOR.finance`, `GC_BLUE` (grantCoach/GcCard.tsx) |
 | Today green | `green-400` `#4ade80` | target | Today's Plan — "today" | Workbench |
 | Lap lime | `lime-400` `#a3e635` | flag | The Lap and weekly goals — "this week": the basket on a Workbench, goal controls on the Lap, the flag a placed goal wears | `LAP_GREEN` (lap/commitments.ts) |
 | Gold | `#f0a500` | — | Non-Battle Team (Gym Board, NBT board) | `GROUPS` (practicePlan.ts), `NBT_AMBER` |
