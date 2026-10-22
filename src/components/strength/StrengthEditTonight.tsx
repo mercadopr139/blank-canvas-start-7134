@@ -14,6 +14,7 @@ import { DAYS, type DayKey, type DayWorkout, type WeekRow } from "@/lib/strength
 import { todayNY } from "@/lib/programYear";
 import BulletEditor from "@/components/practice/BulletEditor";
 import ExerciseVideoPicker from "@/components/strength/ExerciseVideoPicker";
+import ExercisePicturePicker from "@/components/strength/ExercisePicturePicker";
 import { warmupToText, textToWarmup } from "@/lib/warmupText";
 
 const NLA_RED = "#bf0f3e";
@@ -111,6 +112,7 @@ export const StrengthEditTonight = ({
               <Input value={draft.main?.lift ?? ""} onChange={(e) => setMain("lift", e.target.value)} onBlur={commit} className={`${box} flex-1 text-base font-semibold`} />
               <Input value={draft.main?.scheme ?? ""} onChange={(e) => setMain("scheme", e.target.value)} onBlur={commit} className={`${box} w-28 text-base font-black tabular-nums text-center`} />
             </div>
+            {draft.main?.lift?.trim() && <div className="mt-2"><ExercisePicturePicker name={draft.main.lift} /></div>}
           </div>
         </section>
 
@@ -125,6 +127,7 @@ export const StrengthEditTonight = ({
               {/* The demo video the kids will see for this exercise, and a
                   way to throw it out for another (Josh, 2026-10-13). */}
               <ExerciseVideoPicker name={a.name} />
+              {a.name.trim() && <ExercisePicturePicker name={a.name} />}
             </div>
           ))}
           <div>

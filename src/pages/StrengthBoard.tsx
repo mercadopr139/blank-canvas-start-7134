@@ -27,6 +27,7 @@ import { StrengthEditTonight } from "@/components/strength/StrengthEditTonight";
 import { todayNY } from "@/lib/programYear";
 import TrackTimer from "@/components/nbt/TrackTimer";
 import ExerciseVideo from "@/components/strength/ExerciseVideo";
+import ExercisePictures from "@/components/strength/ExercisePictures";
 import { PrepStrip } from "@/components/practice/PrepStrip";
 import { equipmentItems } from "@/lib/practicePlan";
 import { fetchLiftNote } from "@/lib/liftNote";
@@ -396,6 +397,7 @@ const StrengthBoard = () => {
                       >
                         {day.main.scheme}
                       </span>
+                      <ExercisePictures name={day.main.lift} color={NLA_RED} compact />
                     </div>
                   </div>
                 ) : null}
@@ -445,6 +447,7 @@ const StrengthBoard = () => {
                               >
                                 {a.sets}
                               </span>
+                              <ExercisePictures name={a.name} color={EXTRA} compact />
                             </div>
                           </div>
                           {/* The demo fills the column (Josh, 2026-10-21: a

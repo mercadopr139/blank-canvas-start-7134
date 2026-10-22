@@ -17,9 +17,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const ExerciseVideo = ({
-  name, compact = false, inline = false, swappable = false,
+  name, compact = false, inline = false, swappable = false, quietWhenMissing = false,
 }: {
   name: string;
+  /** Inside a picture panel: show nothing (not a search link) when no demo was found. */
+  quietWhenMissing?: boolean;
   compact?: boolean;
   inline?: boolean;
   /** A "New video" link under the thumbnail: throw this pick out and find another (the coach's page, Josh, 2026-10-20). */
@@ -87,6 +89,8 @@ const ExerciseVideo = ({
     `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&playsinline=1&origin=${encodeURIComponent(typeof window !== "undefined" ? window.location.origin : "")}`;
   const icon = compact ? "w-[2.2em] h-[2.2em]" : "w-14 h-14";
   const label = compact ? "text-[0.6em]" : "text-xs";
+
+  if (quietWhenMissing && !videoId) return null;
 
   // Inline and playing: the player takes the thumbnail's place, same size.
   if (inline && playing && videoId) {
