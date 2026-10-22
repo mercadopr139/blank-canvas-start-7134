@@ -26,6 +26,10 @@ import {
 import { PrepStrip } from "@/components/practice/PrepStrip";
 import { equipmentItems } from "@/lib/practicePlan";
 import { fetchLiftNote } from "@/lib/liftNote";
+import ExercisePictures from "@/components/strength/ExercisePictures";
+import StationPictures from "@/components/strength/StationPictures";
+import { stationPictures } from "@/lib/nbtStations";
+import { stationLines } from "@/lib/nbt";
 
 const NbtBoard = () => {
   const navigate = useNavigate();
@@ -104,7 +108,8 @@ const NbtBoard = () => {
       ? equipmentItems([
           ...day.prep,
           ...TRACKS.map((t) => day.lift[t]?.name),
-          ...TRACKS.flatMap((t) => day.work[t] ?? []),
+          // The shared stations once, or each track's own circuit.
+          ...(stationLines(day).length ? stationLines(day) : TRACKS.flatMap((t) => day.work[t] ?? [])),
           ...day.reset,
         ])
       : []),
@@ -359,7 +364,7 @@ const NbtBoard = () => {
 
           {/* The two tracks, equal width and equal weight. This row takes
               whatever height is left and the tiles fit themselves to it. */}
-          {!/^\d+ stations/i.test(day.work.alpha?.[0] ?? "") && (
+          {stationLines(day).length === 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 md:min-h-0">
             {TRACKS.map((t, ti) => {
               const m = TRACK_META[t];
@@ -400,6 +405,7 @@ const NbtBoard = () => {
                               {dose && (
                                 <p className="rounded-[0.35em] px-[0.5em] py-[0.1em] text-[0.9em] font-black leading-snug" style={{ backgroundColor: `${m.color}26`, color: m.color }}>{dose}</p>
                               )}
+                              {lift?.name && <ExercisePictures name={lift.name} color={m.color} compact />}
                             </div>
                             {cue.length > 0 && <p className="mt-[0.3em] text-[0.75em] text-white/65 leading-snug">{cue.join(" — ")}</p>}
                           </>
@@ -479,7 +485,7 @@ const NbtBoard = () => {
               Board: ONE container, every size in em, and fitColumns sets its
               font-size so it fills the screen exactly, on the Newline or a
               laptop. Nothing scrolls, nothing clips. */}
-          {/^\d+ stations/i.test(day.work.alpha?.[0] ?? "") && (
+          {stationLines(day).length > 0 && (
             <div
               ref={(el) => { colRefs.current[0] = el; }}
               data-max-px="44"
@@ -504,6 +510,7 @@ const NbtBoard = () => {
                           {dose && (
                             <p className="rounded-[0.35em] px-[0.5em] py-[0.1em] text-[0.85em] font-black leading-snug" style={{ backgroundColor: `${m.color}26`, color: m.color }}>{dose}</p>
                           )}
+                          {lift?.name && <ExercisePictures name={lift.name} color={m.color} compact />}
                         </div>
                         {cue.length > 0 && <p className="mt-[0.3em] text-[0.65em] text-white/65 leading-snug">{cue.join(" — ")}</p>}
                       </div>
@@ -525,7 +532,7 @@ const NbtBoard = () => {
 
               {/* Cardio Stations: the band takes what is left. */}
               {(() => {
-                const lines = day.work.alpha ?? [];
+                const lines = stationLines(day);
                 const header = lines[0] ?? "5 stations · 2 min each · rotate on the whistle";
                 const tiles = lines.slice(1).map((l) => {
                   const m = l.match(/^Station\s+(\d)\s*·\s*([^—]+?)\s*—\s*(.*)$/);
@@ -537,7 +544,10 @@ const NbtBoard = () => {
                       <h2 className="text-[0.85em] font-black uppercase tracking-wide leading-tight text-white">
                         Cardio Stations <span className="text-white/40 text-[0.6em] tracking-normal font-bold">· everyone</span>
                       </h2>
-                      <p className="text-[0.5em] text-white/40">{header}</p>
+                      <div className="flex items-center gap-[0.8em]">
+                        <p className="text-[0.5em] text-white/40">{header}</p>
+                        <StationPictures stations={stationPictures(lines)} color={NBT_AMBER} />
+                      </div>
                     </div>
                     <div className="grid gap-[0.5em] flex-1 min-h-0 px-[0.9em] pt-[0.6em] pb-[0.5em]" style={{ gridTemplateColumns: `repeat(${Math.max(1, tiles.length)}, minmax(0, 1fr))` }}>
                       {tiles.map((t, i) => (

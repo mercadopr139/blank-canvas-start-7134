@@ -20,6 +20,9 @@ import { roomBrief } from "@/lib/nbtRooms";
 import { todayNY } from "@/lib/programYear";
 import BulletEditor from "@/components/practice/BulletEditor";
 import { bulletLinesOf } from "@/lib/bulletText";
+import ExercisePicturePicker from "@/components/strength/ExercisePicturePicker";
+import { stationPictures } from "@/lib/nbtStations";
+import { stationLines, withStations } from "@/lib/nbt";
 
 const box = "bg-black/60 border-white/15 text-white";
 const linesOf = (v: string) => v.split("\n").map((s) => s.trim()).filter(Boolean);
@@ -62,6 +65,32 @@ export const NbtEditTonight = ({
     save(next);
   };
 
+  /** The Cardio Stations are one shared block: one editor, stored once (Josh, 2026-10-22). */
+  const stations = stationLines(draft);
+  const stationsNight = stations.length > 0;
+  const saveStations = (value: string | null) => {
+    const next = withStations(draft, bulletLinesOf(value)) as NbtDay;
+    setDraft(next);
+    save(next);
+  };
+
+  /**
+   * Rename one station for tonight only ("1 · The Racks" → "1 · Outside Run",
+   * Josh, 2026-10-22). It rewrites that one line of tonight's plan — this
+   * week's day, saved like every other Edit-tonight change — so the template
+   * and every other night stay as they are.
+   */
+  const renameStation = (index: number, place: string) => {
+    const lines = [...stations];
+    const m = lines[index]?.match(/^(Station\s+\d\s*·\s*)([^—]+?)(\s*—\s*.*)$/);
+    const clean = place.trim();
+    if (!m || !clean || clean === m[2].trim()) return;
+    lines[index] = `${m[1]}${clean}${m[3]}`;
+    const next = withStations(draft, lines) as NbtDay;
+    setDraft(next);
+    save(next);
+  };
+
   /** One track rewritten by the generator with the coach's note; the other stays. */
   const rewrite = async (t: Track) => {
     const instruction = note[t].trim();
@@ -92,7 +121,7 @@ export const NbtEditTonight = ({
       const merged: NbtDay = {
         ...draft,
         lift: { ...draft.lift, [t]: fresh.lift[t] },
-        work: { ...draft.work, [t]: fresh.work[t] },
+        work: stationsNight ? draft.work : { ...draft.work, [t]: fresh.work[t] },
       };
       await save(merged);
       setNote((n) => ({ ...n, [t]: "" }));
@@ -146,21 +175,24 @@ export const NbtEditTonight = ({
                     className={`${box} w-28 text-base font-black tabular-nums text-center`}
                   />
                 </div>
+                {draft.lift[t]?.name?.trim() && <div className="mt-2"><ExercisePicturePicker name={draft.lift[t]!.name} /></div>}
               </div>
 
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] mb-1" style={{ color: `${m.color}cc` }}>Work · one per line, Tab to nest</p>
-                <BulletEditor
-                  key={`${t}-${(draft.work[t] ?? []).join("\n")}`}
-                  defaultValue={(draft.work[t] ?? []).join("\n")}
-                  accent={m.color}
-                  dark
-                  textClassName="text-sm"
-                  className="min-h-[7rem]"
-                  placeholder="One station per line. Enter for the next, Tab to nest."
-                  onSave={(v) => saveWork(t, v)}
-                />
-              </div>
+              {!stationsNight && (
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] mb-1" style={{ color: `${m.color}cc` }}>Work · one per line, Tab to nest</p>
+                  <BulletEditor
+                    key={`${t}-${(draft.work[t] ?? []).join("\n")}`}
+                    defaultValue={(draft.work[t] ?? []).join("\n")}
+                    accent={m.color}
+                    dark
+                    textClassName="text-sm"
+                    className="min-h-[7rem]"
+                    placeholder="One line per exercise. Enter for the next, Tab to nest."
+                    onSave={(v) => saveWork(t, v)}
+                  />
+                </div>
+              )}
 
               {/* The bigger "this isn't going to work" moment: one note, one track rewritten. */}
               <div className="flex gap-2 items-center pt-1">
@@ -168,7 +200,7 @@ export const NbtEditTonight = ({
                   value={note[t]}
                   onChange={(e) => setNote((n) => ({ ...n, [t]: e.target.value }))}
                   onKeyDown={(e) => { if (e.key === "Enter") rewrite(t); }}
-                  placeholder={`Rewrite ${m.label} with a note — e.g. no bikes tonight`}
+                  placeholder={stationsNight ? `Rewrite ${m.label}'s lift with a note — e.g. no barbells tonight` : `Rewrite ${m.label} with a note — e.g. no bikes tonight`}
                   className={`${box} flex-1 text-sm`}
                 />
                 <Button
@@ -185,6 +217,59 @@ export const NbtEditTonight = ({
           );
         })}
       </div>
+
+      {stationsNight && (
+        <section className="rounded-2xl border-2 p-4 space-y-3" style={{ borderColor: `${NBT_AMBER}66` }}>
+          <h2 className="text-lg font-black uppercase tracking-[0.15em]" style={{ color: NBT_AMBER }}>
+            Cardio Stations <span className="text-white/40 text-sm tracking-normal font-bold">· everyone, one block for the room</span>
+          </h2>
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] mb-1" style={{ color: `${NBT_AMBER}cc` }}>Stations · one per line, Tab to nest</p>
+            <BulletEditor
+              key={`stations-${stations.join("\n")}`}
+              defaultValue={stations.join("\n")}
+              accent={NBT_AMBER}
+              dark
+              textClassName="text-sm"
+              className="min-h-[7rem]"
+              placeholder="The header line, then one station per line."
+              onSave={(v) => saveStations(v)}
+            />
+          </div>
+
+          {/* Tonight's station names: rename one for tonight without touching the template. */}
+          <div className="rounded-lg border border-white/10 bg-black/20 p-2 space-y-1.5">
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/55">Station names · tonight only</p>
+            {stations.map((line, i) => {
+              const sm = line.match(/^Station\s+(\d)\s*·\s*([^—]+?)\s*—/);
+              if (!sm) return null;
+              return (
+                <div key={`${i}-${sm[2]}`} className="flex items-center gap-2">
+                  <span className="w-6 text-right text-sm font-black" style={{ color: NBT_AMBER }}>{sm[1]}</span>
+                  <Input
+                    defaultValue={sm[2].trim()}
+                    onBlur={(e) => renameStation(i, e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                    className={`${box} h-8 text-sm font-semibold`}
+                    aria-label={`Station ${sm[1]} name`}
+                  />
+                </div>
+              );
+            })}
+          </div>
+
+          {/* The station moves the kids see under "See the stations" — fix any picture here. */}
+          {(() => {
+            const moves = [...new Set(stationPictures(stations).flatMap((x) => x.moves))];
+            return moves.length ? (
+              <details className="rounded-lg border border-white/10 bg-black/20 p-2">
+                <summary className="cursor-pointer text-[11px] font-bold uppercase tracking-[0.16em] text-white/55">Pictures for the stations ({moves.length})</summary>
+                <div className="mt-2 space-y-2">{moves.map((mv) => <ExercisePicturePicker key={mv} name={mv} />)}</div>
+              </details>
+            ) : null;
+          })()}
+        </section>
+      )}
     </main>
   );
 };

@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  DAYS, DayKey, TRACKS, TRACK_META, Track, NbtBlock, NbtWeek, NbtDay, NbtLog, toDateString, firstOfMonth, monthLabel, mondaysInMonth, dateOfDay, mondayOf, addDays, NBT_AMBER, readableLines, minutesOf, totalMinutes, weekDays,
+  DAYS, DayKey, TRACKS, TRACK_META, stationLines, withStations, Track, NbtBlock, NbtWeek, NbtDay, NbtLog, toDateString, firstOfMonth, monthLabel, mondaysInMonth, dateOfDay, mondayOf, addDays, NBT_AMBER, readableLines, minutesOf, totalMinutes, weekDays,
 } from "@/lib/nbt";
 import { priorWeekBriefs, roomReport, carryOver, dayProblem } from "@/lib/nbtCoaching";
 import { AlertTriangle, Mail } from "lucide-react";
@@ -32,8 +32,8 @@ import NbtEditDay from "@/components/nbt/NbtEditDay";
  * a day written before the stations — an older circuit — which keeps the list.
  */
 const stationsOf = (day: NbtDay) => {
-  const lines = day.work.alpha ?? [];
-  if (!/^\d+ stations/i.test(lines[0] ?? "")) return null;
+  const lines = stationLines(day);
+  if (!lines.length) return null;
   const tiles = lines.slice(1).map((l) => {
     const m = l.match(/^Station\s+(\d)\s*·\s*([^—]+?)\s*—\s*(.*)$/);
     const rest = m ? m[3].trim() : l;
@@ -355,8 +355,13 @@ export const NbtWeekBuilder = ({
       const merged: NbtDay = {
         ...current,
         lift: blockPart === "work" ? current.lift : { ...current.lift, [track]: day.lift[track] },
-        // The Cardio Stations block is one block for the room: both tracks' lines come back together.
-        work: day.work,
+        // The Cardio Stations are one shared block: only "Rewrite stations" changes them. A lift or
+        // track rewrite keeps tonight's stations as they are (it used to replace them every time).
+        work: blockPart === "work"
+          ? withStations(current, stationLines(day)).work
+          : stationLines(current).length
+            ? current.work
+            : { ...current.work, [track]: day.work[track] },
       };
       await saveDay(week, dayKey, merged);
       toast.success(blockPart === "work" ? "Cardio Stations rewritten for the room." : `${TRACK_META[track].label}'s ${blockPart === "lift" ? "lift" : "track"} rewritten.`);

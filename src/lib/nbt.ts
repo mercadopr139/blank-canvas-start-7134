@@ -16,6 +16,29 @@ import { parseBulletLine, type Level } from "@/lib/bulletText";
 export const TRACKS = ["alpha", "bravo"] as const;
 export type Track = (typeof TRACKS)[number];
 
+/* ── The Cardio Stations, shared by both tracks ──
+   Read them through stationLines(); write them through withStations(). Days
+   written before the shared field kept the stations under work.alpha (and a
+   copy under work.bravo); they are still read correctly. */
+export const STATIONS_HEADER = /^\d+ stations/i;
+type WorkHolder = { work?: { shared?: string[]; alpha?: string[]; bravo?: string[] } | null };
+/** The day's Cardio Stations lines (header first), or [] when it has a per-track circuit instead. */
+export const stationLines = (day: WorkHolder): string[] => {
+  const w = day.work;
+  if (w?.shared?.length) return w.shared;
+  if (STATIONS_HEADER.test(w?.alpha?.[0] ?? "")) return w!.alpha!;
+  if (STATIONS_HEADER.test(w?.bravo?.[0] ?? "")) return w!.bravo!;
+  return [];
+};
+/** A track's work block: the shared stations on a stations day, its own circuit otherwise. */
+export const workLines = (day: WorkHolder, t: Track): string[] => {
+  const st = stationLines(day);
+  return st.length ? st : (day.work?.[t] ?? []);
+};
+/** The day with these Cardio Stations, stored once; neither track keeps a copy. */
+export const withStations = <D extends { work: NbtDay["work"] }>(day: D, lines: string[]): D =>
+  ({ ...day, work: { ...day.work, shared: lines, alpha: [], bravo: [] } });
+
 /** The Non-Battle Team's own colour — the page frame on the wall and in admin. */
 export const NBT_AMBER = "#f0a500";
 
@@ -108,6 +131,12 @@ export interface NbtDay {
     title: string;
     /** Retired track — present on days written before 2026-10-03 only. */
     charlie?: string[];
+    /**
+     * The Cardio Stations — ONE block for the whole room, both tracks together,
+     * stored once (Josh, 2026-10-22: "cardio stations should only be one track
+     * because it's shared"). On a stations day alpha and bravo are empty.
+     */
+    shared?: string[];
     bravo: string[];
     alpha: string[];
     result_unit: ResultUnit | string;

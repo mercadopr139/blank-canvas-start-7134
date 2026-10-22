@@ -47,7 +47,7 @@ interface NbtDay {
   minutes?: { prep?: number; lift?: number; work?: number; reset?: number };
   prep?: string[];
   lift?: { pattern?: string; bravo?: Track; alpha?: Track; cues?: string[] };
-  work?: { emphasis?: string; title?: string; bravo?: string[]; alpha?: string[]; result_unit?: string };
+  work?: { emphasis?: string; title?: string; shared?: string[]; bravo?: string[]; alpha?: string[]; result_unit?: string };
   reset?: string[];
 }
 interface PlanBlock { category: string; lines: string[] }
@@ -91,6 +91,8 @@ export function renderWorkout(date: string, day: NbtDay, plan: PlanBlocks | null
   const lift = day.lift ?? {};
   const liftTrack = (t?: Track) => t?.name ? `<p style="margin:0;color:#111;font-size:15px;font-weight:700;">${escapeHtml(t.name)}</p>${t.detail ? `<p style="margin:2px 0 0 0;color:#374151;font-size:14px;">${escapeHtml(t.detail)}</p>` : ""}` : `<p style="margin:0;color:#9ca3af;font-size:13px;">—</p>`;
   const work = day.work ?? {};
+  // The Cardio Stations, stored once (older days kept them under Alpha).
+  const shared: string[] = work.shared?.length ? work.shared : (/^\d+ stations/i.test(work.alpha?.[0] ?? "") ? (work.alpha ?? []) : []);
 
   const planHtml = plan?.blocks.length
     ? h(`Tonight at practice · Non-Battle Team`) +
@@ -120,8 +122,9 @@ export function renderWorkout(date: string, day: NbtDay, plan: PlanBlocks | null
           ${h(work.title === "Cardio Stations" ? "Cardio Stations" : `Cardio${work.title ? ` · ${work.title}` : ""}`, m.work)}
           ${work.emphasis ? `<p style="margin:0 0 8px 0;color:#6b7280;font-size:13px;">${escapeHtml(work.emphasis)}${work.result_unit ? ` · athletes write down ${escapeHtml(work.result_unit)}` : ""}</p>` : ""}
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-            ${trackBox("ALPHA", ALPHA, list(work.alpha) || `<p style="margin:0;color:#9ca3af;font-size:13px;">—</p>`)}
-            ${trackBox("BRAVO", BRAVO, list(work.bravo) || `<p style="margin:0;color:#9ca3af;font-size:13px;">—</p>`)}
+            ${shared.length
+              ? `<td width="100%" valign="top"><div style="border:1px solid ${NLA_RED}66;border-left:4px solid ${NLA_RED};border-radius:10px;padding:10px 12px;"><p style="margin:0 0 4px 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:800;letter-spacing:2px;color:${NLA_RED};">EVERYONE · ONE BLOCK FOR THE ROOM</p>${list(shared)}</div></td>`
+              : trackBox("ALPHA", ALPHA, list(work.alpha) || `<p style="margin:0;color:#9ca3af;font-size:13px;">—</p>`) + trackBox("BRAVO", BRAVO, list(work.bravo) || `<p style="margin:0;color:#9ca3af;font-size:13px;">—</p>`)}
           </tr></table>
 
           ${planHtml}
@@ -146,8 +149,11 @@ export function renderWorkout(date: string, day: NbtDay, plan: PlanBlocks | null
   if (lift.cues?.length) t.push(`Cues: ${lift.cues.join(" · ")}`);
   t.push("");
   t.push(`CARDIO${work.title ? ` · ${work.title}` : ""}${m.work ? ` (${m.work} min)` : ""}`);
-  t.push("Alpha:"); for (const l of work.alpha ?? []) t.push(`  • ${l}`);
-  t.push("Bravo:"); for (const l of work.bravo ?? []) t.push(`  • ${l}`);
+  if (shared.length) { t.push("Everyone:"); for (const l of shared) t.push(`  • ${l}`); }
+  else {
+    t.push("Alpha:"); for (const l of work.alpha ?? []) t.push(`  • ${l}`);
+    t.push("Bravo:"); for (const l of work.bravo ?? []) t.push(`  • ${l}`);
+  }
   t.push("");
   if (plan?.blocks.length) { t.push("TONIGHT AT PRACTICE · NON-BATTLE TEAM"); for (const b of plan.blocks) { t.push(b.category); for (const l of b.lines) t.push(`  • ${l}`); } t.push(""); }
   t.push(`Open the plan to edit: ${PLAN_URL}`);

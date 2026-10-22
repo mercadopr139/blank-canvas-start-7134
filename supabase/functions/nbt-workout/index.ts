@@ -649,8 +649,10 @@ Deno.serve(async (req: Request) => {
       work: {
         emphasis: String(work?.emphasis ?? "").trim(),
         title: "Cardio Stations",
-        bravo: strArray(work?.alpha, 8),
-        alpha: strArray(work?.alpha, 8),
+        // ONE shared block for the room, stored once (Josh, 2026-10-22). The tracks keep no copy.
+        shared: strArray(work?.alpha, 8),
+        bravo: [] as string[],
+        alpha: [] as string[],
         result_unit: (["rounds", "reps", "meters", "minutes", "seconds"].find((u) => String(work?.result_unit ?? "").toLowerCase().includes(u)) ?? "rounds"),
       },
       reset: strArray(parsed?.reset, 4),

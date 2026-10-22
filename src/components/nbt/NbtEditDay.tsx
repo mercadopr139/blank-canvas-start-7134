@@ -12,7 +12,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
-import { DAYS, DayKey, TRACKS, TRACK_META, NbtDay, dayMeta } from "@/lib/nbt";
+import { DAYS, DayKey, TRACKS, TRACK_META, NbtDay, dayMeta, stationLines, NBT_AMBER } from "@/lib/nbt";
 import BulletEditor from "@/components/practice/BulletEditor";
 import { bulletLinesOf } from "@/lib/bulletText";
 
@@ -142,6 +142,22 @@ const NbtEditDay = ({
                 className="h-9 bg-neutral-900 border-neutral-800 text-white text-sm"
               />
             </div>
+            {/* The Cardio Stations are ONE shared block for the room: one editor, stored once (Josh, 2026-10-22). */}
+            {stationLines(draft).length > 0 ? (
+              <div>
+                <p className="text-xs font-bold mb-1" style={{ color: NBT_AMBER }}>
+                  Everyone <span className="text-white/40 font-normal">· one block for the room, both tracks together</span>
+                </p>
+                <BulletEditor
+                  defaultValue={stationLines(draft).join("\n")}
+                  accent={NBT_AMBER}
+                  textClassName="text-sm"
+                  className="min-h-[6rem] !bg-neutral-900 !border-neutral-800"
+                  placeholder="The header line, then one station per line."
+                  onSave={(v) => set((d) => { d.work.shared = bulletLinesOf(v); d.work.alpha = []; d.work.bravo = []; })}
+                />
+              </div>
+            ) : (
             <div className="grid gap-2 md:grid-cols-2">
               {TRACKS.map((t) => (
                 <div key={t}>
@@ -159,6 +175,7 @@ const NbtEditDay = ({
                 </div>
               ))}
             </div>
+            )}
             <div className="mt-2">
               <Label className="text-xs text-white/50">What athletes write down</Label>
               <Input

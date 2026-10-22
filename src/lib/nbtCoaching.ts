@@ -16,6 +16,7 @@ import {
   DayKey, NbtDay, NbtLog, NbtWeek, Track, TRACKS, heaviestSet, totalReps, isRoundsLine,
 } from "@/lib/nbt";
 import { roomFor, absentKit, KIT_PATTERNS, fixtureOf, trackName, type Room } from "@/lib/nbtRooms";
+import { stationLines, workLines } from "@/lib/nbt";
 
 /* ───── 1. Earlier weeks of this block ───── */
 
@@ -250,7 +251,7 @@ const linesOf = (day: NbtDay, only?: Track): string[] => {
   const perTrack = tracks.flatMap((t) => [
     day.lift?.[t]?.name ?? "",
     day.lift?.[t]?.detail ?? "",
-    ...(day.work?.[t] ?? []),
+    ...workLines(day, t),
   ]);
   if (only) return perTrack;
   return [
@@ -309,9 +310,9 @@ export const spaceViolation = (day: NbtDay, dayKey: DayKey, only?: Track): strin
 
 const liftText = (day: NbtDay, track: Track) =>
   [day.lift?.[track]?.name ?? "", day.lift?.[track]?.detail ?? ""].join(" \n ");
-const workText = (day: NbtDay, track: Track) => (day.work?.[track] ?? []).join(" \n ");
+const workText = (day: NbtDay, track: Track) => workLines(day, track).join(" \n ");
 /** The work block is the Cardio Stations — one block for the room, both tracks together. */
-export const isStations = (day: NbtDay) => /^\d+ stations/i.test(day.work?.alpha?.[0] ?? day.work?.bravo?.[0] ?? "");
+export const isStations = (day: NbtDay) => stationLines(day).length > 0;
 
 const bothNames = (users: Track[]) => users.map(trackName).join(" and ");
 
@@ -370,7 +371,7 @@ export const missingKit = (day: NbtDay, dayKey: DayKey, only?: Track): string | 
   for (const key of absentKit(room)) {
     const re = KIT_PATTERNS[key];
     for (const t of tracks) {
-      const lines = [day.lift?.[t]?.name ?? "", day.lift?.[t]?.detail ?? "", ...(day.work?.[t] ?? [])];
+      const lines = [day.lift?.[t]?.name ?? "", day.lift?.[t]?.detail ?? "", ...workLines(day, t)];
       const bad = lines.find((l) => re.test(l));
       if (bad) {
         return (
@@ -471,7 +472,7 @@ export const liftRepeated = (day: NbtDay): string | null => {
   for (const t of TRACKS) {
     const lift = day.lift?.[t]?.name ?? "";
     if (!lift) continue;
-    const lines = day.work?.[t] ?? [];
+    const lines = workLines(day, t);
     for (const movement of coreMovements(lift)) {
       const re = new RegExp(`\\b${escapeRe(movement)}\\b`);
       const hit = lines.find((line) => {
@@ -507,7 +508,7 @@ const TIME_FIRST =
 export const unreadableLine = (day: NbtDay): string | null => {
   for (const t of TRACKS) {
     const name = t[0].toUpperCase() + t.slice(1);
-    for (const line of day.work?.[t] ?? []) {
+    for (const line of workLines(day, t)) {
       if (HEADER_LINE.test(line)) {
         return (
           `${name}'s circuit has a heading with nothing on it: "${line.trim()}". Every line must be complete on ` +
@@ -540,7 +541,7 @@ export const courtLanguage = (day: NbtDay, dayKey: DayKey, only?: Track): string
   if (!roomFor(dayKey).canRun) return null;
   const tracks = only ? [only] : [...TRACKS];
   for (const t of tracks) {
-    const lines = [day.lift?.[t]?.name ?? "", day.lift?.[t]?.detail ?? "", ...(day.work?.[t] ?? [])];
+    const lines = [day.lift?.[t]?.name ?? "", day.lift?.[t]?.detail ?? "", ...workLines(day, t)];
     const bad = lines.find((l) => FLOOR_DISTANCE.test(l) && !MACHINE_LINE.test(l));
     if (bad) {
       return (
@@ -563,7 +564,8 @@ export const courtLanguage = (day: NbtDay, dayKey: DayKey, only?: Track): string
 const BASELINE = /\bbaseline to baseline\b/i;
 const SIDELINE = /\bsideline to sideline\b/i;
 export const courtAxisClash = (day: NbtDay): string | null => {
-  const lines = TRACKS.flatMap((t) => day.work?.[t] ?? []);
+  // The shared stations once (two tracks reading the same block would double-count it).
+  const lines = stationLines(day).length ? stationLines(day) : TRACKS.flatMap((t) => day.work?.[t] ?? []);
   const along = lines.filter((l) => BASELINE.test(l));
   const across = lines.filter((l) => SIDELINE.test(l));
   if (along.length && across.length) {
