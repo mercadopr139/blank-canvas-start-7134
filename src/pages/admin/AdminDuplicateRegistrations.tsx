@@ -30,7 +30,10 @@ interface DupeRow {
   // 'strong'  = two rows share a birthday (high confidence).
   // 'possible' = same first+last name but the birthday differs/is missing —
   //              likely the same kid with a mistyped DOB, but verify first.
-  match_type?: "strong" | "possible";
+  // 'name_changed' = same first name and birthday, a different last name,
+  //              in different program years — the auto-linker leaves these
+  //              for a person on purpose (found on this page, not by the RPC).
+  match_type?: "strong" | "possible" | "name_changed";
   // Which program year the row belongs to. A group spanning two years is the
   // same kid re-registered -- Link it, never Merge it.
   program_year?: string | null;
@@ -73,6 +76,60 @@ export default function AdminDuplicateRegistrations() {
       const { data, error } = await supabase.rpc("admin_get_duplicate_registrations");
       if (error) throw error;
       return (data || []) as DupeRow[];
+    },
+  });
+
+  // Kids whose last name changed between years: same first name and birthday,
+  // a different last name, different program years, not already linked. The
+  // auto-linker (first + last + birthday, twin-safe) leaves these for a person.
+  const { data: nameChangedRows = [] } = useQuery({
+    queryKey: ["admin-duplicate-registrations", "name-changed"],
+    queryFn: async (): Promise<DupeRow[]> => {
+      const { data, error } = await supabase
+        .from("youth_registrations")
+        .select("id, child_first_name, child_last_name, child_boxing_program, child_date_of_birth, parent_first_name, parent_last_name, created_at, approved_for_attendance, youth_link_id, program_year")
+        .not("child_date_of_birth", "is", null);
+      if (error) throw error;
+      type Reg = { id: string; child_first_name: string | null; child_last_name: string | null; child_boxing_program: string | null; child_date_of_birth: string | null; parent_first_name: string | null; parent_last_name: string | null; created_at: string; approved_for_attendance: boolean | null; youth_link_id: string | null; program_year: string | null };
+      const norm = (v: string | null | undefined) => (v ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+      const regs = ((data ?? []) as unknown as Reg[]).filter((r) => norm(r.child_first_name) && norm(r.child_last_name));
+      const byKey = new Map<string, Reg[]>();
+      for (const r of regs) {
+        const k = `${norm(r.child_first_name)}|${r.child_date_of_birth}`;
+        if (!byKey.has(k)) byKey.set(k, []);
+        byKey.get(k)!.push(r);
+      }
+      const picked: { key: string; regs: Reg[] }[] = [];
+      for (const [k, list] of byKey) {
+        if (list.length < 2) continue;
+        const identities = new Set(list.map((r) => r.youth_link_id ?? r.id));
+        const lastNames = new Set(list.map((r) => norm(r.child_last_name)));
+        const years = new Set(list.map((r) => r.program_year ?? ""));
+        if (identities.size > 1 && lastNames.size > 1 && years.size > 1) picked.push({ key: k, regs: list });
+      }
+      if (!picked.length) return [];
+      const ids = picked.flatMap((p) => p.regs.map((r) => r.id));
+      const { data: att, error: attErr } = await supabase.from("attendance_records").select("registration_id, check_in_date").in("registration_id", ids);
+      if (attErr) throw attErr;
+      const stats = new Map<string, { n: number; first: string | null; last: string | null }>();
+      for (const a of (att ?? []) as { registration_id: string; check_in_date: string }[]) {
+        const st = stats.get(a.registration_id) ?? { n: 0, first: null, last: null };
+        st.n += 1;
+        if (!st.first || a.check_in_date < st.first) st.first = a.check_in_date;
+        if (!st.last || a.check_in_date > st.last) st.last = a.check_in_date;
+        stats.set(a.registration_id, st);
+      }
+      return picked.flatMap((p) => p.regs.map((r): DupeRow => {
+        const st = stats.get(r.id) ?? { n: 0, first: null, last: null };
+        return {
+          id: r.id, child_first_name: r.child_first_name ?? "", child_last_name: r.child_last_name ?? "",
+          child_boxing_program: r.child_boxing_program ?? "", child_date_of_birth: r.child_date_of_birth,
+          parent_first_name: r.parent_first_name, parent_last_name: r.parent_last_name,
+          registered_on: r.created_at.slice(0, 10), approved_for_attendance: !!r.approved_for_attendance,
+          attendance_count: st.n, first_attendance: st.first, last_attendance: st.last,
+          dup_key: `name-changed:${p.key}`, match_type: "name_changed", program_year: r.program_year,
+        };
+      }));
     },
   });
 
@@ -125,7 +182,9 @@ export default function AdminDuplicateRegistrations() {
   // spelled differently across their registrations.
   const groups = useMemo(() => {
     const map = new Map<string, DupeRow[]>();
-    rows.forEach((r) => {
+    const known = new Set(rows.map((r) => r.id));
+    const extra = nameChangedRows.filter((r) => !known.has(r.id));
+    [...rows, ...extra].forEach((r) => {
       if (!map.has(r.dup_key)) map.set(r.dup_key, []);
       map.get(r.dup_key)!.push(r);
     });
@@ -142,7 +201,8 @@ export default function AdminDuplicateRegistrations() {
       // Merge on these deleted last year's record and its history on
       // 2026-09-02; the page now says so and refuses.
       const crossYear = new Set(groupRows.map((r) => r.program_year ?? "")).size > 1;
-      return { key, ckey: canonicalKey(sorted), firstName: top.child_first_name.trim(), lastName: top.child_last_name.trim(), dob: top.child_date_of_birth, parentName, possible, crossYear, rows: sorted };
+      const nameChanged = groupRows.some((r) => r.match_type === "name_changed");
+      return { key, ckey: canonicalKey(sorted), firstName: top.child_first_name.trim(), lastName: top.child_last_name.trim(), dob: top.child_date_of_birth, parentName, possible, crossYear, nameChanged, rows: sorted };
     });
     // Sort groups by impact (rows with attendance first, then by name).
     arr.sort((a, b) => {
@@ -152,7 +212,7 @@ export default function AdminDuplicateRegistrations() {
       return a.lastName.localeCompare(b.lastName);
     });
     return arr;
-  }, [rows]);
+  }, [rows, nameChangedRows]);
 
   const visibleGroups = useMemo(() => groups.filter((g) => !dismissedKeys.has(g.ckey)), [groups, dismissedKeys]);
   const dismissedGroups = useMemo(() => groups.filter((g) => dismissedKeys.has(g.ckey)), [groups, dismissedKeys]);
@@ -323,6 +383,11 @@ export default function AdminDuplicateRegistrations() {
                       {g.possible && (
                         <Badge className="bg-amber-500/15 text-amber-300 border-amber-400/30 text-[10px]">
                           Possible · birthday differs
+                        </Badge>
+                      )}
+                      {g.nameChanged && (
+                        <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-400/30 text-[10px]" title="Same first name and birthday, a different last name in another program year — the auto-linker leaves these for you">
+                          Last name changed · {[...new Set(g.rows.map((r) => r.child_last_name.trim()))].join(" / ")}
                         </Badge>
                       )}
                       {g.crossYear && (

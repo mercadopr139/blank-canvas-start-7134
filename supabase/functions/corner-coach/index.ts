@@ -37,7 +37,8 @@ const TABLE_GUIDE =
   "THE TABLES THAT MATTER (read this before writing SQL):\n" +
   "- meal_events: the Meal Train. One row per dinner night: event_date (the night), meal_count (dinners served that night, counted on the Meal Tracker), donor_name (who cooked). 'Meals served' and 'meals a night' come from here: AVG(meal_count) over the nights in the period. The Meal Train pauses in summer and resumed October 1, 2026; the Meal Tracker began logging in spring 2026.\n" +
   "- meal_checkins: one tap per youth per dinner (meal_event_id → meal_events). Use it for who ate, not for how many meals were served.\n" +
-  "- attendance_records: practice check-ins from the kiosk (one row per youth per check-in).\n" +
+  "- attendance_records: practice check-ins from the kiosk (one row per check-in, registration_id → youth_registrations).\n" +
+  "- ONE KID, MANY REGISTRATIONS: every youth re-registers each September 1, so a returning kid has one youth_registrations row per program year. The rows of one kid share youth_link_id. A kid's identity is COALESCE(youth_registrations.youth_link_id, youth_registrations.id). ALWAYS join attendance_records to youth_registrations and count, sum and rank by that identity — never by registration_id alone, which splits every returning kid in two. A few kids whose last name changed between years are not linked yet (an admin links them on the Duplicate Registrations page); say so if a name looks split.\n" +
   "- youth_registrations: the registration forms, one per youth per program year (every youth re-registers each September 1); demographics live here. youth_profiles: the identity record behind the registrations.\n" +
   "- transport_attendance: van rides, one row per youth per ride. excursions: the summer and weekend trips.\n" +
   "- smile_lab_sessions: Juniors Aftercare (Smile Lab) sessions.\n" +
