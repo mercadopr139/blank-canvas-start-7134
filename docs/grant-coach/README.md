@@ -26,6 +26,30 @@ between machines; this file does.
 6. **Reviewer** (`GrantReviewer.tsx`, mode `review`, `review.ts`): plain pre-submit checks plus a skeptical-panel score per criterion, the three weakest answers with Fix it, contradictions, and numbers that do not match the back end.
 Models: the strategy, story answers, story write-ups and the reviewer use `createBest` (claude-fable-5-1, then claude-opus-5-5, then claude-opus-5 on an error or refusal); strategy and review run at medium effort to stay inside the edge function time limit. Migrations 20261022120000 through 20261022190000 are applied; grant-writer is deployed. Josh has run it end to end only through the first two portal screens.
 
+**2026-10-23 afternoon (laptop) — THE SNAPSHOT (planned, NOT built; Josh approved the plan at C:\Users\joshm\.claude\plans\fizzy-floating-rabin.md, then said "let's take our time").**
+Josh: Grant Coach rebuilds the same paragraphs from scratch each time. Instead: **the Program Year Snapshot ("the Snapshot")** — one fixed, funder-neutral block per program year (2025-26 now), four sections, drafted by Grant Coach from the live numbers + website, approved section by section, **locked until Josh unlocks** (dated), copy-paste into any application, and read by Grant Coach as **source 2** (after the website, before the raw live numbers): where the Snapshot states a figure or sentence, it is used as written. Build = table `grant_year_snapshots` (migration — hand Josh the SQL), `src/lib/grantCoach/snapshot.ts`, a fourth tab on Grant Coach home (`YearSnapshot.tsx`, GcCard per section, Draft / Approve / Unlock (useAsk) / Copy / Copy all), writer mode `snapshot` at high effort, `draftWithGrantCoach` sends approved sections, SOURCES order updated. New live numbers it needs: Junior/Senior Boxer split, demographics from registration (race shares), **check-ins by race** (share of practice check-ins since spring 2026), riders by town from the Transport dashboard (73 riders: Woodbine 49, Wildwood 24; 86% economically disadvantaged, 89%/78%) — align the live rider count (74) to the dashboard's 73.
+The four sections: 1 Who we served · 2 What NLA provides (the five things in order, each with its number) · 3 Organization overview (founded 2020, 501(c)(3), 14,000 sq ft, two full-time staff, year-round, trusted partner) · 4 Capacity and partners (personnel, partners, awards, past grants, reporting record).
+
+**Section 1, "Who we served", AGREED WORD FOR WORD (brackets fill from live numbers):**
+```
+WHO WE SERVED · 2025–26
+
+No Limits Academy (NLA) is a free, year-round boxing and youth development center in Rio Grande serving Cape May County youth ages 7–19. Senior Boxing, ages 11–19, runs Monday through Friday, 2:30–8:30 PM, during the school year and four days a week in summer. Junior Boxing, ages 7–10, meets on Tuesdays.
+
+In the 2025–26 program year, 518 youth registered: [N] Senior Boxers ([x]%) and [N] Junior Boxers ([x]%). The registration forms show who they are:
+
+- 373 (72%) economically disadvantaged: household income under $35,000 or eligible for free or reduced-price lunch — a conservative measure; CSBG's 200% of poverty line is higher.
+- Demographics: 36% White, 31% Hispanic or Latino, 20% Black, 11% multiracial, 2% Asian, Pacific Islander or Native American.
+- Daily attendance: Hispanic or Latino youth account for 46% of practice check-ins, Black youth 24%, White youth 19%, all others 11%.
+- 358 boys (69%) and 160 girls (31%).
+- 147 (28%) live in a single-parent household (Mom Only or Dad Only on the form).
+- NLA's reach runs across Cape May County's school districts: [Lower Township x%, Middle Township x%, Wildwood 15%, Woodbine 12%, Cape May x%, Dennis x%, Upper x%].
+
+Wildwood and Woodbine are among New Jersey's most economically distressed municipalities, and NLA's own vans run to both year-round, free. In 2025–26, 73 youth rode: 49 from Woodbine and 24 from Wildwood, and 86% of those riders are economically disadvantaged (89% in Woodbine, 78% in Wildwood).
+```
+Decisions behind it (do not re-litigate): the ask stays OUT (funder-specific); one base (518) for every percentage, single-parent = 28% not 33%; boys AND girls; Wildwood/Woodbine are school districts ("attend school in"); "among New Jersey's most economically distressed" (state, not county) — needs a source in the Vault's statement of need; vans run year-round; NO trip or ride totals (driver app was not complete all year) — rider headcount only; NO "341 checked in" headcount (old check-in system before the kiosk) — percentages only, rates not totals; NO "no single group is a majority"; NO returning-youth/retention line; demographics line = registration shares, attendance line = share of check-ins. Open: whether any of the 518 live outside Cape May County ("primarily" if so).
+**Next (evening):** shape sections 2–4 the same way (talk each through, agree the words), THEN build per the plan.
+
 **2026-10-23 (laptop, pushed a99b62e2) — THE WRITING, rebuilt around Josh's own writing.** Josh: "The grant coach officially sucks" after three rounds of me describing a voice in rules. What fixed it:
 - **SOURCES, IN ORDER (in the writer's system prompt):** 1 the website (a snapshot of every public page's words, `src/lib/grantCoach/siteText.ts`, generated by `scripts/make-site-text.mjs` on `prebuild` and sent with every call by `draftWithGrantCoach`), 2 the live numbers for every figure, 3 the Vault for facts the site lacks and Josh's corrections, 4 the house example, 5 the funder's rules, 6 what is already approved. Live numbers beat the website on figures; the Vault beats the website on corrected facts; the funder beats everything on format.
 - **THE HOUSE EXAMPLE:** Josh's CSBG narrative (clean, confident, institutional prose; short declarative sentences; bullets for services/needs/personnel; a heading per topic when long; confident claims the record supports) lives in the Vault as `writing_examples` and goes first in every call as "write like this". The WRITING STANDARD is "match it". Word bans are gone except plain filler. NOT storytelling — the "one human beat" idea was mine and was wrong.
