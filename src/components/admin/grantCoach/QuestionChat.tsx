@@ -145,11 +145,6 @@ Left out: ${left.join("; ")}` : "");
     qc.invalidateQueries({ queryKey: key });
   };
 
-  // A few ways in, for a question with no conversation yet.
-  const starters = item.needs_case
-    ? ["Which of our programs is strongest for this funder?", "What numbers back that up?", "Write it"]
-    : ["Write it", "What should this say?", "Make it stronger"];
-
   return (
     <div className="rounded-xl border overflow-hidden" style={{ borderColor: `${GC_BLUE}66`, backgroundColor: `${GC_BLUE}0f` }}>
       {/* The chat wears the Finance blue: a header band and a tint, so it never reads as the answer box under it. */}
@@ -204,15 +199,6 @@ Left out: ${left.join("; ")}` : "");
             </div>
           ))}
           {thinking && <p className="text-sm text-white/50 inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" style={{ color: GC_BLUE }} /> Grant Coach is thinking…</p>}
-        </div>
-      )}
-      {msgs.length === 0 && !thinking && (
-        <div className="px-3 pt-3 flex flex-wrap gap-1.5">
-          {starters.map((t) => (
-            <button key={t} type="button" onClick={() => void send(t)} className="rounded-full border border-white/15 px-2.5 py-1 text-[12px] text-white/75 hover:bg-white/10 hover:text-white inline-flex items-center gap-1">
-              <Sparkles className="w-3 h-3" style={{ color: GC_BLUE }} /> {t}
-            </button>
-          ))}
         </div>
       )}
       <div className="p-3 flex gap-2 items-end">
