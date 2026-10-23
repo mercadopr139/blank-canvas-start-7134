@@ -33,7 +33,6 @@ import { readDocxText } from "@/lib/grantCoach/readDocx";
 import GcCard, { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
 import { loadMemory, remember, forget, shouldRemember, type MemoryRow } from "@/lib/grantCoach/memory";
 
-const NLA_RED = "#bf0f3e";
 /** The kinds the database accepts (grant_checklist_items_kind_check). Anything else the reader says is saved as a plain field. */
 const QUESTION_KINDS = new Set(["eligibility", "field", "narrative", "upload", "acknowledgment", "signature", "task", "choice"]);
 const WRITERS_AT_ONCE = 3;
@@ -480,7 +479,7 @@ export default function GrantApplication({ folderId, folder, items, library, get
         <AlertCircle className="w-5 h-5 text-amber-300 shrink-0" />
         <p className="flex-1 min-w-[220px] text-sm text-amber-100">{problem.message}</p>
         {(problem.paths.length > 0 || problem.text) && (
-          <Button size="sm" onClick={() => void readAndAnswer(problem.paths, problem.text)} className="text-white" style={{ backgroundColor: NLA_RED }}><RefreshCw className="w-4 h-4 mr-1.5" /> Try again</Button>
+          <Button size="sm" onClick={() => void readAndAnswer(problem.paths, problem.text)} className="font-bold" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}><RefreshCw className="w-4 h-4 mr-1.5" /> Try again</Button>
         )}
         <Button size="sm" variant="outline" onClick={() => setProblem(null)} className="bg-transparent border-white/20 text-white/70 hover:bg-white/10 hover:text-white">Dismiss</Button>
       </div>
@@ -516,7 +515,7 @@ export default function GrantApplication({ folderId, folder, items, library, get
       <input ref={fileInput} type="file" multiple accept="image/png,image/jpeg,image/webp,application/pdf,.pdf,.docx" className="hidden" onChange={(e) => { takeFiles(e.target.files); e.target.value = ""; }} />
       {busy ? (
         <div className="flex flex-col items-center gap-2">
-          <Loader2 className="w-8 h-8 animate-spin" style={{ color: NLA_RED }} />
+          <Loader2 className="w-8 h-8 animate-spin" style={{ color: GC_BLUE }} />
           <p className="font-semibold">{stage}</p>
           <p className="text-[12px] text-white/45">Answers appear below as they land. You can keep pasting the next screens.</p>
         </div>
@@ -733,7 +732,7 @@ export default function GrantApplication({ folderId, folder, items, library, get
             <p className="text-[12px] text-white/50">{folder.funder} · {approvedCount} of {live.length} approved</p>
           </DialogHeader>
           <div className="flex gap-2">
-            <Button size="sm" onClick={() => void copy(applicationText(), "The whole application is copied")} className="text-white" style={{ backgroundColor: NLA_RED }}><Copy className="w-4 h-4 mr-1.5" /> Copy all</Button>
+            <Button size="sm" onClick={() => void copy(applicationText(), "The whole application is copied")} className="font-bold" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}><Copy className="w-4 h-4 mr-1.5" /> Copy all</Button>
             <Button size="sm" variant="outline" onClick={onPrint} disabled={printing} className="bg-transparent border-white/20 text-white/85 hover:bg-white/10 hover:text-white"><Printer className="w-4 h-4 mr-1.5" /> Print</Button>
           </div>
           <div className="overflow-y-auto pr-1 space-y-6 mt-2">
@@ -821,9 +820,11 @@ function QuestionRow({ item, pastFunder, storyTitle, focused, forceOpen, onClose
             <p className="mt-2 text-sm text-white/50 inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Writing…</p>
           ) : editing ? (
             <div className="mt-2 space-y-2">
-              <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={fact ? 1 : Math.min(12, Math.max(4, Math.ceil(draft.length / 90)))} placeholder={typeIn ? "Type it here" : "Edit the answer"} className="bg-neutral-950 border-white/15 text-white text-sm" autoFocus={rejecting} />
-              {/* Talk it through with Grant Coach; its answer lands in the box above. */}
+              {/* The conversation first, the answer box right under the typing box —
+                  so the answer being talked about stays in view while typing. */}
               {renderChat(draft, (text, storyId) => { setDraft(text); setFromCoach({ text, storyId }); })}
+              {!fact && <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/50 pt-1">Your answer · what goes into the portal</p>}
+              <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={fact ? 1 : Math.min(12, Math.max(4, Math.ceil(draft.length / 90)))} placeholder={typeIn ? "Type it here" : "Edit the answer"} className="bg-neutral-950 border-white/15 text-white text-sm" autoFocus={rejecting} />
               <div className="flex flex-wrap items-center gap-2">
                 <Button size="sm" onClick={() => void approveNext()} disabled={saving || busy || !draft.trim()} className="bg-emerald-700 hover:bg-emerald-600 text-white">
                   {saving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Check className="w-4 h-4 mr-1.5" />} Approve and next

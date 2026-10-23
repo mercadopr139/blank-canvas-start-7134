@@ -108,6 +108,8 @@ async function createBest(anthropic: Anthropic, params: Record<string, any>) {
 }
 type Req = {
   mode: "item" | "narrative" | "chat" | "read_screens" | "classify" | "strategy" | "story" | "review" | "funder_brief";
+  /** The public website's words, as published — Grant Coach's first source (scripts/make-site-text.mjs). */
+  siteText?: string | null;
   folder: Folder;
   item?: Item;
   narrativeItems?: Item[];
@@ -117,6 +119,8 @@ type Req = {
   instruction?: string;
   /** chat: the conversation so far, oldest first, and the new message last. */
   messages?: Msg[];
+  /** The last draft card in the conversation — the text a requested change is applied to. */
+  currentDraft?: string | null;
   /** read_screens: storage paths of the portal screenshots or PDFs, in order. */
   screens?: string[];
   /** read_screens: the application as text (pasted, or read from a Word file). */
@@ -150,17 +154,42 @@ const NARRATIVE_WORD_LIMIT = 1350;
 
 const SYSTEM = `You are Grant Coach, the grant writer for No Limits Academy (NLA), a free, year-round youth development center in Rio Grande, Cape May County, New Jersey. You write in NLA's own voice: first person plural ("we"), plain and concrete, confident without boasting, no jargon, no filler, no buzzwords. American English.
 
+SOURCES, IN THIS ORDER (Josh, 2026-10-23)
+1. THE WEBSITE — what NLA is, what it offers, how the day runs, the mission's words. The substance and the voice come from here first. If the website describes a program, a schedule or a value, use its description.
+2. THE LIVE NUMBERS — every figure, no exceptions. The website says "500+"; the live numbers say exactly how many, and for which year.
+3. THE ABOUT NLA LIBRARY (the Grant Vault) — the facts the website does not carry: EIN, board, budget, the 990, past grants, partner letters, and any correction Josh typed over the website's words.
+4. THE HOUSE EXAMPLE — Josh's own proposals: how the answer should read.
+5. THE FUNDER — their rules and rubric: what to emphasize, in what order, inside what limits.
+6. ALREADY WRITTEN IN THIS FOLDER — consistency across answers: the same program name, amounts, counts and dates.
+When they disagree: the live numbers beat the website on any figure; the library beats the website on any fact Josh corrected; the funder beats everything on format, order and length.
+
 HARD RULES
 1. Every number you write must come from the LIVE NUMBERS or the ABOUT NLA LIBRARY you are given. Never invent, round up, or extrapolate a figure. If a figure the question needs is not provided, write a short bracketed note in its place like [NEED: number of Meal Train volunteers] and move on.
 1a. THE YEAR. The live numbers cover NLA's last complete program year (September 1 to August 31). Use that year for every count of youth, check-ins, meals, rides and demographics, and name it the first time ("in the 2025–26 program year…"). A complete year is an honest picture; never present a partial year as if it were a year.
 1c. YOUNG LOGS: USE RATES, NOT TOTALS. NLA's logging systems (the check-in kiosk, the Meal Tracker, the driver app) are new, so some live numbers say "records on file <date> to <date> only, not the whole year". For those, do NOT cite the total as if it were the year's. Instead cite the RATES the fact gives from its full months: "NLA serves an average of 58 meals a night" or "in May 2026, a full month of logging, NLA served 62 meals a night over 20 nights". You may lead with the strongest full month, named as such; you may give the average across full months; you may say the rate was measured in the school year and that these months were not peak season (January and February are NLA's busiest), but never project a number beyond what was measured and never state a year's total from a partial log. Take the program's shape (five dinners a week in the school year, year-round programming) from the library. Never propose to "expand" from a partial count: NLA already runs at full size; the log is what is new.
+1d. YOUTH SERVED = YOUTH REGISTERED. For any program year, the number of youth NLA served is the number registered that year (every youth re-registers each September 1; the registration is the enrolment). The kiosk's "unduplicated youth served" is a young log — it began in spring 2026 — so it is a partial-year count: never lead with it, never put it beside the registered count as if the two measured the same thing ("served 275 and registered 518" reads as a contradiction). Use the kiosk for what it measures: attendance rates, nights a week, the share of registered youth who checked in, named as from the months on file.
 1b. WHERE NUMBERS COME FROM. Every statistic about NLA's youth — how many served or registered, attendance, nights, meals, rides, ages, sex, race, school districts, single-parent homes, economically disadvantaged share, Wildwood and Woodbine counts — comes ONLY from the LIVE NUMBERS section. The ABOUT NLA LIBRARY is for story, voice, programs, partners, people, money and history. Library entries marked [STORY AND CONTEXT ONLY] were written from the website and an earlier proposal and contain youth statistics from another moment: take their wording and flow, never their figures, even where the live numbers have no match (write [NEED: …] instead). Numbers that are not about NLA's youth — county or school-district poverty rates from the census, the facility's size, revenue and budget figures, award amounts, dates — may be cited from the library, naming the source the library gives.
 2. NLA is year-round, five days a week in the school year and four in summer. Never call it a 10-month or seasonal program.
 3. Solutions and partnerships, never blame. Describe the community's need with facts and respect, never as a failing of families, schools or towns.
 4. Two full-time staff running a program of this size on this revenue is efficiency; say so plainly where capacity or staffing is asked about.
 5. Stay consistent with what is ALREADY WRITTEN in this folder (program name, amount, counts, dates). If something already written conflicts with a fact, follow the fact and note the conflict in brackets.
 6. Answer the funder's question as asked, in the order asked, and nothing else. No preamble, no headings inside a single answer, no sign-off.
-7. NEVER UNDERSELL NLA (Josh, 2026-10-22: a funding purpose left out the summer excursions, and that loses money for the kids). Before writing any answer about the program — its purpose, design, activities, schedule, who it serves, the need it meets, what the money pays for, outcomes — go through EVERY program and service in the library ("Programs", "How the program runs through the year") and EVERY relevant live number, and include each one that answers the question. A reviewer can only score what is on the page. When the limit is tight, cut words, not programs: a clause per program beats a paragraph on one. If something must still be left out, say so in "left_out" with the reason. Never claim more than the records show: if the live numbers count it, use the count; if they don't, describe it without a number.
+7. NEVER UNDERSELL NLA (Josh, 2026-10-22: a funding purpose left out the summer excursions, and that loses money for the kids). Before writing any answer about the program — its purpose, design, activities, schedule, who it serves, the need it meets, what the money pays for, outcomes — go through EVERY program and service in the library ("Programs", "How the program runs through the year") and EVERY relevant live number, and include each one that answers the question. A reviewer can only score what is on the page. When the limit is tight, cut words, not substance. A string of program names with nothing behind them is not coverage; a reviewer scores what is shown, not what is listed. For a BRIEF PROGRAM SUMMARY the five things below are the spine (rule 8) and everything else is one closing clause or a "left_out" entry.
+8. THE FIVE THINGS NLA OFFERS. The library entry "What NLA offers · the five, in order" is the spine of every brief program summary — a funding purpose, an organizational overview, a program description, "describe your program", "what does your organization do". Write those answers on the five, in that order, one sentence or two each, each carrying its strongest live number (youth served and the economically disadvantaged share for 1; meals a night for 2; the grades and the Pads for 3; the hours and the five days for 4; excursion count and riders for 5). Do not bury them in a list of every program. Other programs and partners appear only as one closing clause ("alongside Real Talk, Juniors Aftercare and partner programs with Cape Assist and Acenda") or in "left_out" — never as equals in the same sentence as the five. If something must still be left out, say so in "left_out" with the reason. Never claim more than the records show: if the live numbers count it, use the count; if they don't, describe it without a number.
+
+WRITING STANDARD (Josh, 2026-10-23): WRITE LIKE THE HOUSE EXAMPLE.
+Every call carries a section called THE HOUSE EXAMPLE — proposals Josh wrote and is proud of. That is the voice. Match it: its register, its sentence length, its confidence, its shape. Do not write a story, do not set a scene, do not reach for a picture. Do not write a spreadsheet either. Write the way the example writes.
+What the example does, so you do it too:
+- Clean, confident, professional prose. Short declarative sentences. "NLA operates five days per week from 3:00 PM to 8:30 PM." Not "At 2:30 on a school day the first youth come through the door."
+- It states what NLA provides, plainly, as a list of services with who delivers each and how: academic support by certified teachers, dinner by the Meal Train, rides in two 15-passenger vans with CDL drivers, counseling through named partners.
+- It uses a bulleted list whenever the answer is a list — services, needs met, gaps filled, personnel. One line per bullet, each with a concrete noun in it. Prose for the rest.
+- It uses a short bold-style heading per topic when the field is long enough for sections (a narrative, a multi-part text box). A single short text box is one paragraph, no heading.
+- It makes confident claims the record supports: "the only program in Cape May County that…", "a trusted partner for schools, families and agencies", "local school districts regularly refer students". Make them where the library and the numbers back them; never invent one.
+- It puts numbers where it has them (500 youth a year, 14,000 sq. ft., 130 youth, ages 7–19, $200,000) and does not strain for more. Numbers come from the LIVE NUMBERS and the library under the hard rules above; the example's own figures are from an earlier moment and are never copied as current.
+- It ends with the ask or the capacity claim, not a flourish.
+Plain-filler phrases still go: "in order to", "it is important to note", "we believe", "we strive", "reach their full potential". Everything else the example says, you may say.
+Length: the shortest that holds every fact the question needs. A one-sentence field gets one sentence. Short form fields (a name, an amount, a date, a choice) get the value and nothing else. Never pad toward a limit.
+Before returning an answer, one editing pass: put it beside the house example and ask whether Josh would recognise it as his. If a sentence would not appear in his proposal, rewrite it until it would.
 
 THE FUNDER
 (This section describes O.C.E.A.N.; it is replaced for any other funder.)
@@ -194,6 +223,9 @@ You are the best grant writer NLA could hire, sitting next to Josh (Program Dire
 - When you write an answer about the program, check it against EVERY program, service and number in the library and live numbers first (rule 7). If anything that bears on the question is not in it, your reply says so in one line: "Left out: X, because …". Never leave something out silently.
 - If they tell you a real story, keep it in their words in "story_draft" so they can save it to the story bank.
 - Be brief: two to four sentences, plain words, no headings, no bullet walls, unless they ask for more. Never pad. Never repeat the question back.
+- When they say a draft is weak, wordy or sloppy, rewrite it from scratch under the WRITING STANDARD and put the new version in "answer". Do not defend the old one and do not patch it sentence by sentence.
+- ONE REQUESTED CHANGE CHANGES ONE THING. When THE CURRENT DRAFT exists and Josh asks for a specific change ("cut the van details", "lead with the 275", "shorter last sentence"), the new "answer" is THE CURRENT DRAFT with exactly that change applied. Every other sentence stays word for word — same order, same numbers, same wording, same punctuation. Do not re-open sentences he did not mention, do not "improve" them, do not reshuffle. Your "reply" names precisely what changed and nothing else ("Cut the rider counts from the transportation clause; nothing else touched."). If the change he asks for forces a second change (a word count, a number that now contradicts), make the smallest one and say so. Rewrite from scratch ONLY when he says so ("rewrite", "start over", "try a different version", "redo it").
+- When they paste text — an executive summary, a paragraph from another proposal, notes — it is SOURCE MATERIAL. Adapt it to this question, this funder and this limit, keep its claims where the library supports them, and replace its figures with the LIVE NUMBERS. Do not ignore it and do not copy it unchanged.
 - Every rule above about numbers, the year, young logs, and the library still applies.`;
 
 const STRATEGY_RULES = `
@@ -222,7 +254,14 @@ const describeFolder = (f: Folder) =>
     f.notes ? `Josh's notes on this grant: ${f.notes}` : null,
   ].filter(Boolean).join("\n");
 
-const describeLibrary = (lib: Entry[]) => lib.map((e) => `• ${e.label}${e.storyOnly ? " [STORY AND CONTEXT ONLY — do not cite its youth statistics; use LIVE NUMBERS]" : ""}:\n${e.value}`).join("\n\n");
+/** The public website, as published — read first for what NLA is and offers. */
+const siteBlock = (body: Req) => body.siteText?.trim() ? block("THE WEBSITE — nolimitsboxingacademy.org as published (source 1: the substance and the voice; figures still come from LIVE NUMBERS)", body.siteText) : "";
+/** Josh's proposals, as THE HOUSE EXAMPLE — the voice every answer matches. */
+const houseExample = (lib: Entry[] | undefined) => {
+  const ex = (lib ?? []).find((e) => e.key === "writing_examples");
+  return ex && ex.value.trim() ? block("THE HOUSE EXAMPLE — write like this (its figures are from an earlier proposal; take counts from LIVE NUMBERS)", ex.value) : "";
+};
+const describeLibrary = (lib: Entry[]) => lib.filter((e) => e.key !== "writing_examples").map((e) => `• ${e.label}${e.storyOnly ? " [STORY AND CONTEXT ONLY — do not cite its youth statistics; use LIVE NUMBERS]" : ""}:\n${e.value}`).join("\n\n");
 const describeFacts = (facts: Fact[]) => facts.map((f) => `• ${f.label}: ${f.value} — ${f.period} (source: ${f.source})`).join("\n");
 const describeAnswered = (a: Req["answered"]) => a.map((x) => `• [${x.section}] ${x.label}:\n${x.answer}`).join("\n\n");
 
@@ -441,7 +480,7 @@ Check: every criterion the funder scores; whether each answer answers exactly wh
         block("THE GRANT", describeFolder(body.folder)) +
         block("THE STORY QUESTIONS WAITING FOR THE CASE (the case must let every one be answered well)", waiting.map((w) => `• ${w.label}${w.help ? " — " + w.help : ""}${w.limit_value ? ` (limit ${w.limit_value} ${w.limit_kind})` : ""}`).join("\n")) +
         (body.caseBrief ? block("THE CASE AS IT STANDS (revise it if the conversation changes it)", describeCase(body.caseBrief)) : "") +
-        block("ABOUT NLA LIBRARY", describeLibrary(body.library)) +
+        siteBlock(body) + houseExample(body.library) + block("ABOUT NLA LIBRARY", describeLibrary(body.library)) +
         block("THE STORY BANK", describeStories(body.stories ?? [])) +
         block("LIVE NUMBERS (as of today, from the back end)", describeFacts(body.facts)) +
         block("ALREADY WRITTEN IN THIS FOLDER", describeAnswered(body.answered ?? []));
@@ -476,14 +515,14 @@ Check: every criterion the funder scores; whether each answer answers exactly wh
       if (!history.length || history[history.length - 1].role !== "user") return json({ error: "Say something first." }, 400);
       const it = body.item;
       const subject = it
-        ? `THE OPEN QUESTION\nSection: ${it.section}\nQuestion: ${it.label}${it.detail ? `\nThe funder's note: ${it.detail}` : ""}\nKind of field: ${it.kind}${limitLine(it)}${it.answer ? `\nCurrent answer in the box:\n${it.answer}` : "\n(no answer yet)"}`
+        ? `THE OPEN QUESTION\nSection: ${it.section}\nQuestion: ${it.label}${it.detail ? `\nThe funder's note: ${it.detail}` : ""}\nKind of field: ${it.kind}${limitLine(it)}${body.currentDraft?.trim() ? `\n\nTHE CURRENT DRAFT (the last draft card in this conversation — a requested change is applied to THIS text, word for word, and nothing else moves):\n${body.currentDraft.trim()}` : ""}${it.answer && it.answer.trim() !== (body.currentDraft ?? "").trim() ? `\nThe answer box holds:\n${it.answer}` : !body.currentDraft?.trim() ? "\n(no draft yet)" : ""}`
         : "THE OPEN SUBJECT: the grant as a whole (which program to propose, how much to ask, what to lead with).";
       const sibs = Array.isArray(body.siblings) ? body.siblings : [];
       const context =
         block("THE GRANT", describeFolder(body.folder)) +
         (sibs.length ? block("THE OTHER QUESTIONS ON THIS SCREEN (fill one ONLY when asked, by its number)", sibs.map((q) => `[${q.i}] ${q.label}${q.help ? " — " + q.help : ""}${q.limit_value ? ` (limit ${q.limit_value} ${q.limit_kind})` : ""}\n    now: ${q.answer?.trim() ? q.answer.trim() : "(empty)"}`).join("\n")) : "") +
         (body.caseBrief ? block("THE CASE NLA SETTLED ON", describeCase(body.caseBrief)) : "") +
-        block("ABOUT NLA LIBRARY", describeLibrary(body.library)) +
+        siteBlock(body) + houseExample(body.library) + block("ABOUT NLA LIBRARY", describeLibrary(body.library)) +
         ((body.stories ?? []).length ? block("THE STORY BANK", describeStories(body.stories ?? [], body.usedStoryIds ?? [])) : "") +
         block("LIVE NUMBERS (as of today, from the back end)", describeFacts(body.facts)) +
         block("ALREADY WRITTEN IN THIS FOLDER", describeAnswered(body.answered ?? []));
@@ -495,12 +534,16 @@ Check: every criterion the funder scores; whether each answer answers exactly wh
         `"fills":[{"i":<number of another question on this screen>,"answer":"<its answer>"}] (ONLY when asked to fill other questions; otherwise omit),` +
         `"story_draft":{"title":"","story":"<their story, 60-140 words, only what they said, first names only>","program":"","proves":[],"people":""} (ONLY when they just told a new real story; otherwise omit),` +
         `"story_id":"<the story-bank id the answer tells, or null>","left_out":["<what bears on the question but is not in the answer> — <why>"] (only when writing an answer)}`;
+      // A conversation should feel like one: medium on the best model answers in seconds.
+      // When the last line asks for writing, the writing gets the full effort — that is
+      // the work that wins or loses the grant (Josh, 2026-10-23).
+      const lastLine = history[history.length - 1].content;
+      const asksToWrite = /\b(write|draft|rewrite|redo|redraft|tighten|shorten|fill|go ahead|go|do it|make it|polish|fix it|try again)\b/i.test(lastLine);
       const response = await createBest(anthropic, {
         max_tokens: 10000,
         system: systemFor(body.folder, body.funderBrief) + CHAT_RULES + ((body.stories ?? []).length ? STORY_RULES : ""),
         messages: [{ role: "user", content: userContent }],
-        // A conversation should feel like one: medium on the best model answers in seconds, not minutes.
-        ...thinking("medium"),
+        ...thinking(asksToWrite ? "high" : "medium"),
       });
       const parsed = extractJson(textOf(response as never));
       const reply = String(parsed.reply ?? "").trim();
@@ -522,7 +565,7 @@ Check: every criterion the funder scores; whether each answer answers exactly wh
     const context =
       block("THE GRANT", describeFolder(body.folder)) +
       (body.caseBrief ? block("THE LOCKED CASE — write this answer FROM it: same program, same numbers, same story; consistent with every other answer", describeCase(body.caseBrief)) : "") +
-      block("ABOUT NLA LIBRARY", describeLibrary(body.library)) +
+      siteBlock(body) + houseExample(body.library) + block("ABOUT NLA LIBRARY", describeLibrary(body.library)) +
       ((body.stories ?? []).length ? block("THE STORY BANK", describeStories(body.stories ?? [], body.usedStoryIds ?? [])) : "") +
       block("LIVE NUMBERS (as of today, from the back end)", describeFacts(body.facts)) +
       block("ALREADY WRITTEN IN THIS FOLDER", describeAnswered(body.answered ?? []));
@@ -554,7 +597,7 @@ Check: every criterion the funder scores; whether each answer answers exactly wh
         (it.kind === "acknowledgment" || it.kind === "signature" ? `\n\nThis is a certification or signature: say in one line what to tick or sign and who should, e.g. "Tick the box — certified by Josh Mercado, Program Director." Do not certify anything the library contradicts.` : "") +
         context +
         `\n\nIf a fact the answer needs is missing, keep the [NEED: …] note in the answer and set "needs" to ONE short line asking for it (e.g. "How is 200% FPL income verified at enrollment?"); otherwise "needs" is null.` +
-        ((body.caseBrief || it.kind === "narrative")
+        ((body.caseBrief || !(it.kind === "field" || it.kind === "choice" || it.kind === "acknowledgment" || it.kind === "signature"))
           ? `\n\nWrite it to SCORE: a reviewer reads this against the funder's criteria. Lead with the strongest evidence, name numbers and periods exactly, and make the link to what the funder rewards obvious. Then set "score_note" to ONE line for Josh: which of the funder's scoring criteria this answer earns points on, and the evidence in it that earns them (e.g. "Community need & CSBG alignment — 71% of youth below 200% FPL, Wildwood and Woodbine named"). If the answer is weak on a criterion it should cover, say so in the note.`
           : "") +
         `\n\nReturn ONLY JSON: {"answer":"<the answer, ready to paste into the form>","needs":null,"story_id":"<the id of the story-bank story you told, or null>","score_note":null,"left_out":["<a program, service or number from the library or live numbers that bears on this question but is not in the answer> — <why>"]}`;
@@ -562,9 +605,11 @@ Check: every criterion the funder scores; whether each answer answers exactly wh
       effort = "medium";
     }
 
-    // Story answers written from the case get the best writer; everything else the usual model.
+    // Every written answer gets the best writer at full effort; short fields,
+    // choices and certifications keep the usual model (Josh, 2026-10-23).
     const withStories = (body.stories ?? []).length ? STORY_RULES : "";
-    const response = body.caseBrief && mode === "item"
+    const writes = mode === "item" && !!body.item && !(body.item.kind === "field" || body.item.kind === "choice" || body.item.kind === "acknowledgment" || body.item.kind === "signature");
+    const response = (body.caseBrief || writes) && mode === "item"
       ? await createBest(anthropic, { max_tokens: maxTokens, system: systemFor(body.folder, body.funderBrief) + withStories, messages: [{ role: "user", content: userContent }], ...thinking("high") })
       : await anthropic.messages.create({
         model: MODEL,

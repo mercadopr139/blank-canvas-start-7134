@@ -8,6 +8,7 @@
 // the private grant-documents bucket, or as a link, one per catalog entry.
 // Steps 2–4 (grant folders, the writer, reporting) build on this page.
 import { useMemo, useRef, useState } from "react";
+import { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,7 +27,6 @@ import PastAnswers from "@/components/admin/grantCoach/PastAnswers";
 import StoryBank from "@/components/admin/grantCoach/StoryBank";
 import { ORG_DOCUMENTS, GRANT_DOCUMENTS_BUCKET, orgDocumentPath, type OrgDocument } from "@/lib/grantCoach/orgDocuments";
 
-const NLA_RED = "#bf0f3e";
 
 interface FieldRow { key: string; value: string | null; updated_at: string }
 interface DocRow {
@@ -237,7 +237,7 @@ const AdminGrantCoach = () => {
   const oceanDone = oceanDocs.filter((d) => docs[d.key]).length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full max-w-5xl mx-auto px-4 lg:px-8">
       {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -257,7 +257,7 @@ const AdminGrantCoach = () => {
               onClick={() => setTab(t.k)}
               className={`rounded-xl border px-4 py-2 text-left transition-colors ${tab === t.k ? "border-white/30 bg-white/10" : "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]"}`}
             >
-              <span className="flex items-center gap-2 font-semibold text-sm"><t.icon className="w-4 h-4" style={{ color: NLA_RED }} /> {t.label}</span>
+              <span className="flex items-center gap-2 font-semibold text-sm"><t.icon className="w-4 h-4" style={{ color: GC_BLUE }} /> {t.label}</span>
               <span className="block text-[11px] text-white/45">{t.sub}</span>
             </button>
           ))}
@@ -292,7 +292,7 @@ const AdminGrantCoach = () => {
             {folders.length === 0 && <p className="p-4 text-sm text-white/40">No grants yet.</p>}
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => void startBlank()} disabled={starting} className="text-white" style={{ backgroundColor: NLA_RED }}>
+            <Button onClick={() => void startBlank()} disabled={starting} className="font-bold" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}>
               {starting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FolderPlus className="w-4 h-4 mr-2" />} New grant
             </Button>
           </div>
@@ -317,7 +317,7 @@ const AdminGrantCoach = () => {
                 : " · each box saves when you click out of it"}
             </p>
             <div className="mt-2 h-2 rounded-full bg-white/10 overflow-hidden">
-              <div className="h-full rounded-full transition-all" style={{ width: `${completeness.total ? Math.round((completeness.done / completeness.total) * 100) : 0}%`, backgroundColor: NLA_RED }} />
+              <div className="h-full rounded-full transition-all" style={{ width: `${completeness.total ? Math.round((completeness.done / completeness.total) * 100) : 0}%`, backgroundColor: GC_BLUE }} />
             </div>
             <p className="mt-2 text-[12px] text-white/45 flex items-center gap-1.5">
               <Globe className="w-3.5 h-3.5" /> Text marked <span className="rounded px-1 bg-sky-500/15 text-sky-200">from the website</span> was seeded from the public site. Edit it here and every draft uses your edit; Reset brings the website text back.
@@ -449,7 +449,7 @@ const AdminGrantCoach = () => {
                         <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Open
                       </Button>
                     )}
-                    <Button size="sm" onClick={() => fileInputs.current[doc.key]?.click()} disabled={busy} className="text-white" style={{ backgroundColor: NLA_RED }}>
+                    <Button size="sm" onClick={() => fileInputs.current[doc.key]?.click()} disabled={busy} className="font-bold" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}>
                       {busy ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Upload className="w-3.5 h-3.5 mr-1.5" />} {row ? "Replace" : "Upload"}
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => void linkDoc(doc)} disabled={busy} className="bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white">

@@ -127,7 +127,7 @@ export default function StoryBank() {
           <p className="text-sm font-semibold">Tell Grant Coach a story</p>
           <p className="text-[12px] text-white/50">In your own words, rough is fine: what happened, who (first names only), what changed. Grant Coach writes it up; you check it and say whether the family is OK with it being used.</p>
           <Textarea value={raw} onChange={(e) => setRaw(e.target.value)} rows={4} placeholder="e.g. Marcus walked in two years ago and wouldn't look anyone in the eye…" className="bg-neutral-950 border-white/15 text-white text-sm" />
-          <Button onClick={() => void writeUp()} disabled={writing || !raw.trim()} className="text-white" style={{ backgroundColor: "#bf0f3e" }}>
+          <Button onClick={() => void writeUp()} disabled={writing || !raw.trim()} className="font-bold" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}>
             {writing ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Wand2 className="w-4 h-4 mr-1.5" />} Write it up
           </Button>
         </div>

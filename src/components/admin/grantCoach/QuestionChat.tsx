@@ -9,14 +9,14 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Send, Sparkles } from "lucide-react";
+import { Check, Loader2, Send, Sparkles } from "lucide-react";
 import { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
 import { StoryDraftCard } from "@/components/admin/grantCoach/StoryBank";
 import { draftWithGrantCoach, type DraftFolder, type LibraryEntry, type FunderBrief, type WriterStory } from "@/lib/grantCoach/writer";
 import type { Fact } from "@/lib/grantCoach/liveFacts";
 import type { StoryDraft } from "@/lib/grantCoach/stories";
 
-interface Msg { id: string; role: "user" | "coach"; content: string; payload: { story_draft?: StoryDraft; story_done?: boolean } | null }
+interface Msg { id: string; role: "user" | "coach"; content: string; payload: { story_draft?: StoryDraft; story_done?: boolean; /** A draft answer Grant Coach wrote; it goes to the box only when Josh clicks. */ draft?: string; draft_story_id?: string | null; draft_words?: number } | null }
 interface Q { id: string; section: string; label: string; detail: string | null; kind: string; answer: string | null; limit_kind?: "words" | "characters" | null; limit_value?: number | null; needs_case?: boolean }
 
 interface Props {
@@ -79,8 +79,10 @@ export default function QuestionChat({ folderId, item, draft, siblings, folder, 
     try {
       await save("user", said);
       const sibs = siblings.map((q, k) => ({ i: k + 1, label: q.label, help: q.detail, kind: q.kind, answer: q.answer, limit_kind: q.limit_kind, limit_value: q.limit_value }));
+      // The last draft card is the text a requested change is applied to.
+      const currentDraft = [...msgs].reverse().find((m) => m.payload?.draft)?.payload?.draft ?? null;
       const res = await draftWithGrantCoach({
-        mode: "chat", folder, library, facts: await getFacts(), answered: answered(), funderBrief, stories, usedStoryIds,
+        mode: "chat", folder, library, facts: await getFacts(), answered: answered(), funderBrief, stories, usedStoryIds, currentDraft,
         item: { id: item.id, section: item.section, label: item.label, detail: item.detail, kind: item.kind, answer: draft.trim() || item.answer, limit_kind: item.limit_kind, limit_value: item.limit_value },
         messages: [...msgs.map((m) => ({ role: m.role, content: m.content })), { role: "user", content: said }],
         siblings: sibs,
@@ -90,8 +92,12 @@ export default function QuestionChat({ folderId, item, draft, siblings, folder, 
       const reply = (res.reply ?? "Here it is.") + (left.length && !/left out/i.test(res.reply ?? "") ? `
 
 Left out: ${left.join("; ")}` : "");
-      await save("coach", reply, res.story_draft ? { story_draft: res.story_draft } : null);
-      if (res.answer) onAnswer(res.answer, res.story_id ?? null);
+      // The draft stays in the chat until Josh says it is the answer.
+      const payload: Msg["payload"] = {
+        ...(res.story_draft ? { story_draft: res.story_draft } : {}),
+        ...(res.answer ? { draft: res.answer, draft_story_id: res.story_id ?? null, draft_words: res.words } : {}),
+      };
+      await save("coach", reply, Object.keys(payload ?? {}).length ? payload : null);
       if (res.fills?.length) {
         const mapped = res.fills.map((f) => ({ id: siblings[f.i - 1]?.id, answer: f.answer })).filter((f): f is { id: string; answer: string } => !!f.id);
         if (mapped.length) { await onFills(mapped); toast.success(`Filled ${mapped.length} more question${mapped.length === 1 ? "" : "s"} on this screen. Approve them when you get there.`); }
@@ -115,7 +121,14 @@ Left out: ${left.join("; ")}` : "");
     : ["Write it", "What should this say?", "Make it stronger"];
 
   return (
-    <div className="rounded-xl border bg-black/30" style={{ borderColor: `${GC_BLUE}40` }}>
+    <div className="rounded-xl border overflow-hidden" style={{ borderColor: `${GC_BLUE}66`, backgroundColor: `${GC_BLUE}0f` }}>
+      {/* The chat wears the Finance blue: a header band and a tint, so it never reads as the answer box under it. */}
+      <div className="px-3 py-2 border-b flex items-center justify-between gap-2" style={{ backgroundColor: `${GC_BLUE}26`, borderColor: `${GC_BLUE}55` }}>
+        <p className="text-[11px] font-black uppercase tracking-[0.18em] inline-flex items-center gap-1.5" style={{ color: GC_BLUE }}>
+          <Sparkles className="w-3.5 h-3.5" /> Grant Coach · the conversation
+        </p>
+        <p className="text-[11px] text-white/45">Drafts land here first · "Use this as my answer" puts one in the box below</p>
+      </div>
       {(msgs.length > 0 || !!draft.trim()) && (
         <div className="px-3 pt-2 flex justify-end items-center gap-2 text-[11px]">
           {confirming ? (
@@ -134,10 +147,25 @@ Left out: ${left.join("; ")}` : "");
           {msgs.map((m) => (
             <div key={m.id} className={m.role === "user" ? "flex justify-end" : "space-y-2"}>
               {m.role === "user" ? (
-                <p className="max-w-[85%] rounded-xl bg-white/[0.08] px-3 py-1.5 text-sm text-white whitespace-pre-wrap">{m.content}</p>
+                <p className="max-w-[85%] rounded-xl bg-white/[0.1] px-3 py-1.5 text-sm text-white whitespace-pre-wrap">{m.content}</p>
               ) : (
                 <>
                   <p className="max-w-[92%] text-sm text-white/90 whitespace-pre-wrap leading-relaxed"><span className="font-bold mr-1.5" style={{ color: GC_BLUE }}>Grant Coach</span>{m.content}</p>
+                  {m.payload?.draft && (
+                    <div className="max-w-[92%] rounded-lg border bg-black/40 overflow-hidden" style={{ borderColor: `${GC_BLUE}66` }}>
+                      <div className="px-3 py-1.5 border-b flex items-center justify-between gap-2" style={{ borderColor: `${GC_BLUE}33`, backgroundColor: `${GC_BLUE}14` }}>
+                        <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: GC_BLUE }}>Draft{m.payload.draft_words ? ` · ${m.payload.draft_words} words` : ""}</p>
+                        {draft.trim() === m.payload.draft.trim() ? (
+                          <p className="text-[11px] font-semibold text-emerald-300 inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" /> In the answer box</p>
+                        ) : (
+                          <button type="button" onClick={() => onAnswer(m.payload!.draft!, m.payload!.draft_story_id ?? null)} className="rounded-md px-2.5 py-1 text-[11px] font-bold text-white hover:opacity-90" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}>
+                            Use this as my answer
+                          </button>
+                        )}
+                      </div>
+                      <p className="px-3 py-2 text-sm text-white whitespace-pre-wrap leading-relaxed">{m.payload.draft}</p>
+                    </div>
+                  )}
                   {m.payload?.story_draft && !m.payload.story_done && (
                     <StoryDraftCard draft={m.payload.story_draft} folderId={folderId} onSaved={() => void settle(m)} onDismiss={() => void settle(m)} />
                   )}
@@ -158,15 +186,24 @@ Left out: ${left.join("; ")}` : "");
         </div>
       )}
       <div className="p-3 flex gap-2 items-end">
-        <Textarea
-          value={line}
-          onChange={(e) => setLine(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(line); } }}
-          rows={1}
-          placeholder="Ask Grant Coach anything about this question, or say “write it”…"
-          className="min-h-[40px] bg-neutral-950 border-white/15 text-white text-sm"
-        />
-        <Button onClick={() => void send(line)} disabled={thinking || !line.trim()} className="text-white shrink-0" style={{ backgroundColor: "#bf0f3e" }} aria-label="Send"><Send className="w-4 h-4" /></Button>
+        {/* Room to see whole paragraphs while typing; the box grows with the text. */}
+        <div className="flex-1 min-w-0">
+          <Textarea
+            value={line}
+            onChange={(e) => {
+              setLine(e.target.value);
+              e.currentTarget.style.height = "auto";
+              e.currentTarget.style.height = `${Math.min(e.currentTarget.scrollHeight, 560)}px`;
+            }}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(line); } }}
+            rows={8}
+            placeholder="Ask Grant Coach anything about this question, or say “write it”…"
+            className="min-h-[200px] max-h-[560px] bg-black/50 text-white text-base leading-relaxed resize-y"
+            style={{ borderColor: `${GC_BLUE}66` }}
+          />
+          <p className="mt-1 text-[11px] text-white/35">Enter sends · Shift+Enter for a new line</p>
+        </div>
+        <Button onClick={() => void send(line)} disabled={thinking || !line.trim()} className="font-bold shrink-0 mb-5" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }} aria-label="Send"><Send className="w-4 h-4" /></Button>
       </div>
     </div>
   );

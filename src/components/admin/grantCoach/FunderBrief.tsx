@@ -103,7 +103,7 @@ export default function FunderBrief({ folderId, folder, docs, brief, briefAt, br
       {!reading && (!brief || stale) && sources.length > 0 && (
         <div className="space-y-1.5">
           {stale && <p className="text-[12px] text-amber-300">The documents changed since this was read.</p>}
-          <Button size="sm" onClick={() => void read()} className="text-white" style={{ backgroundColor: "#bf0f3e" }}>
+          <Button size="sm" onClick={() => void read()} className="font-bold" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}>
             <BookOpenCheck className="w-4 h-4 mr-1.5" /> {brief ? "Read them again" : `Read the ${sources.length} document${sources.length === 1 ? "" : "s"}`}
           </Button>
         </div>

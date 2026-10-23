@@ -56,6 +56,60 @@ const SCHEDULE =
   "across South Jersey, Philadelphia and the shore. Junior Boxing pauses for the summer and resumes the last " +
   "Tuesday of September. Every youth re-registers each September 1.";
 
+/**
+ * Josh's own writing, the way he wants every answer to read (2026-10-23, from
+ * the CSBG narrative he is proud of). The writer is told to match it. Its
+ * figures are from that proposal's moment — the live numbers win on counts.
+ */
+const WRITING_EXAMPLES = `No Limits Academy – CSBG Program Narrative
+
+Organizational Overview: No Limits Academy (NLA) is a 501(c)(3) youth development organization founded in 2020 in Rio Grande, New Jersey. NLA operates a 14,000 sq. ft. facility that provides year-round academic support, boxing and fitness training, behavioral health services, nutrition, transportation, and mentoring at no cost to youth or their families. Serving over 500 youth per year, NLA has become a trusted partner for schools, families, and agencies throughout Cape May County. Local school districts regularly refer students for academic, behavioral, and social support, demonstrating the organization's strong reputation and community impact.
+
+Program Approach: NLA operates five days per week from 3:00 PM to 8:30 PM, creating a structured, holistic after-school environment. Youth arrive through district transportation, parent drop-offs, or NLA's two 15-passenger vans operated by trained CDL drivers. Upon arrival, youth receive healthy snacks, complete homework in the Learning Center with support from certified teachers, and then participate in fitness, boxing, and recreational activities.
+Daily programming includes:
+- Academic Tutoring & Homework Support delivered by certified NJ educators
+- Boxing & Fitness Training led by former professional boxer and educator Josh Mercado
+- Behavioral Health Counseling through partners such as Cape Assist, CARA, and NJ4S
+- Daily Nutrition including snacks and full dinners provided by the NLA Meal Train
+- Recreational Activities including basketball, structured gym time, and supervised peer interaction
+- Weekend Excursions that provide cultural, recreational, and personal growth experiences
+This approach integrates physical wellness, academic achievement, behavioral health, mentorship, and social development into one coordinated system.
+
+Community Need & Target Population (≤200% FPL): Cape May County includes multiple communities where youth experience poverty, food insecurity, academic struggles, unstable home environments, and limited access to transportation or enrichment programs. Most of the families NLA serves fall at or below 200% of the Federal Poverty Level, particularly those in Woodbine, Wildwood, Rio Grande, and other underserved pockets of the county. NLA addresses critical community needs by providing:
+- Safe, structured after-school programming during high-risk hours
+- Transportation for youth with no other way to attend programming
+- Daily nutritious meals for youth facing food insecurity
+- Academic support for students struggling in school
+- On-site access to mental health professionals
+- Long-term mentorship and positive adult relationships
+
+Anticipated Number and Age Range of Participants: NLA will serve 130 CSBG-funded youth, ages 7–19. Participant surveys will demonstrate improvement across key domains of well-being, including academic, social, emotional, and physical development.
+
+Service Gaps Addressed: NLA fills major service gaps in Cape May County, including the lack of affordable or free youth programs, limited access to mental health support, insufficient after-school services in rural areas, no consistent transportation for low-income youth, food insecurity among school-age children, and a shortage of safe, structured environments during after-school hours. No other program in the region offers NLA's comprehensive combination of academic support, fitness, mental health, nutrition, and transportation.
+
+Organizational Capacity & Key Personnel: NLA has the staffing, infrastructure, and experience necessary to implement the CSBG-funded program successfully. Key personnel include:
+- Josh Mercado, Program Director – Former professional boxer, national collegiate champion, and certified educator with extensive experience in youth development, school-based intervention, and program leadership.
+- Chrissy Casiello, Program Coordinator – Full-time staff overseeing daily supervision, academic programming, scheduling, logistics, and youth services.
+- Certified Teachers – Deliver academic support in core subjects.
+- CDL Drivers – Provide safe transportation for scholarship youth throughout the county.
+- Behavioral Health Partners – Licensed counselors providing on-site services.
+- Administrative Support Staff & CPA Services – Ensure compliance, financial management, and reporting.
+NLA has demonstrated the ability to manage complex operations, deliver multi-component youth programs, maintain accurate documentation, and meet all grant reporting and accountability requirements.
+
+Why NLA Is Best Suited to Deliver These Services: NLA is the only program in Cape May County that provides a fully integrated model of tutoring, nutrition, counseling, mentoring, transportation, and athletics under one roof. Its strong community partnerships, experienced leadership, operational capacity, and proven track record make it uniquely equipped to deliver high-quality, outcomes-driven services for low-income youth. NLA is requesting $200,000 to serve 130 youth.`;
+
+/**
+ * The five things NLA offers, in the order the website sells them (reviewed
+ * 2026-10-23). Every brief program summary is built on these, in this order.
+ */
+const OFFER_TOP5 = [
+  "1. Free, year-round boxing and youth development five days a week — ages 7–19, Monday to Friday, 2:30–8:30 PM; Senior Boxing daily, Junior Boxing on Tuesdays; boxing, fitness and strength training with mentorship and structure, at no cost to any youth or family",
+  "2. A hot, family-style dinner every program night — the Meal Train, five nights a week after programming, cooked and served by donor families, businesses and community groups",
+  "3. The Launch Pad — the after-high-school pipeline for 8th through 12th graders: four Pads (Military & Law Enforcement, College, Trade School, Workforce), a Pathway Coach and an Accountability Coach, placement only with employers who develop young leaders",
+  "4. A structured daily rhythm with adults who show up — roll call, daily reflection, the training block, daily duties, dinner together; a steady, reliable presence five days a week through the most chaotic years of a young person's life",
+  "5. Experiences beyond the gym — summer and weekend excursions (camping, kayaking, tubing, day trips across South Jersey, Philadelphia and the shore) and free transportation so a youth without a ride still comes every day",
+].join("\n");
+
 const PROGRAMS = [
   "Senior Boxing Program — ages 11–19, Monday–Friday: boxing and fitness training with mentorship, accountability, leadership development and life skills",
   "Junior Boxing Program — ages 7–10, Tuesdays: an introduction to boxing, fitness and discipline focused on confidence, listening and teamwork",
@@ -66,7 +120,22 @@ const PROGRAMS = [
   "Strength & Conditioning — a structured lifting programme for the Battle Team and the Non-Battle Team",
   "Real Talk Sessions — influential adults share honest stories of struggle and perseverance",
   "Spiritual Development — reflection, values and purpose in a supportive, respectful setting",
-  "The Launch Pad — mentors, local employers and opportunities that keep young people connected after they leave the gym",
+  "The Launch Pad — the development pipeline for 8th through 12th graders, built so every young person leaves able to answer " +
+  "\"What am I going to do after high school?\" A classroom environment designed around an introspective process that helps " +
+  "each youth identify their strengths and align those gifts with a real, viable future. Each young person chooses one of four " +
+  "Pads and gets a plan built around it: Military & Law Enforcement (ASVAB preparation, recruiter matching, readiness for " +
+  "service); College (SAT prep, scholarship and financial-aid applications, housing and admissions support); Trade School " +
+  "(application support through every phase); Workforce (direct placement within a growing network of local business owners " +
+  "and organizations committed to developing young leaders). Two coaches walk with each youth: a Pathway Coach who helps them " +
+  "discover their strengths and choose their Pad (42 years of business leadership across national beverage and food-service " +
+  "brands; has hired and developed 388 employees) and an Accountability Coach who owns the follow-through so every test, " +
+  "application and deadline is completed. Workforce Standard: youth are placed only with employers committed to developing " +
+  "them as future leaders, owners and decision-makers — a leadership pipeline, not a labor pipeline. The Universal Curriculum " +
+  "every Pad shares: professionalism (how to dress, present and carry yourself), work ethic (show up early, stay late, finish " +
+  "the job), the value of starting at the bottom and earning your way up, communication, conduct and character, long-term " +
+  "thinking and personal accountability. Beyond the sessions: guest speakers, mentorship, networking, résumés and " +
+  "interviewing. A long-term model: youth graduate high school with a clear plan, the discipline to execute it, and a network " +
+  "of mentors and partners ready to support them",
   "Coaching Boys into Men — the evidence-based violence-prevention programme, in partnership with Cape Assist",
   "Hawk Squad — after-school boxing and mentorship for Cape May County Technical High School students (Tuesdays and Thursdays)",
   "BAM (Body and Mind) — a Friday behavior-incentive programme with Cape May County Special Services, grades 5–12",
@@ -242,11 +311,13 @@ export const ORG_SECTIONS: OrgSection[] = [
       { key: "facility", label: "The facility and the CPF project", kind: "long", seed: FACILITY, help: "The building, the hours, and what the $300,000 award is building. Update as the project is completed." },
       { key: "demographics", label: "Who NLA serves — demographics", kind: "long", seed: DEMOGRAPHICS, help: "A snapshot from the CPF proposal. Drafts pull the live breakdown from Registration Analytics for the period a funder asks about." },
       { key: "schedule", label: "How the program runs through the year", kind: "long", required: true, seed: SCHEDULE, help: "Never \"a 10-month after-school program\": NLA is year-round." },
+      { key: "offer_top5", label: "What NLA offers · the five, in order", kind: "list", required: true, seed: OFFER_TOP5, help: "The spine of every brief program summary — a funding purpose, an overview, \"describe your program\". Grant Coach writes them in this order with the strongest live number behind each. Reorder or reword here and every draft follows." },
       { key: "programs", label: "Programs", kind: "list", required: true, seed: PROGRAMS },
       { key: "outcomes", label: "Outcomes and evaluation language", kind: "long", required: true, seed: OUTCOMES, help: "What is measured and how. Drafts cite this when a funder asks for outcome measures and data tools." },
       { key: "impact", label: "Impact numbers, from the website", kind: "list", seed: IMPACT, help: "Headline figures. Drafts pull live counts from the back end for the period a funder asks about." },
       { key: "awards", label: "Awards and recognition", kind: "list", seed: AWARDS },
       { key: "partners", label: "Partners", kind: "list", required: true, seed: PARTNERS, help: "Funders ask about coordination and duplicated services; name who NLA works with and on what." },
+      { key: "writing_examples", label: "Writing examples — how NLA's proposals read", kind: "long", seed: WRITING_EXAMPLES, help: "Grant Coach writes to match this. Paste in any proposal you are proud of; the more the better. Its figures are from their moment — drafts take counts from the live numbers." },
       { key: "partner_quotes", label: "What partners say", kind: "list", seed: QUOTES, help: "Attributed lines from the letters of support. The writer quotes these where a funder asks about coordination, experience or effectiveness." },
     ],
   },

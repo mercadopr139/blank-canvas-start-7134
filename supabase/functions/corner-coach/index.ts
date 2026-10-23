@@ -25,10 +25,23 @@ const corsHeaders = {
 
 // Reports use Sonnet 5 (polished PDFs — quality matters most there).
 const MODEL = "claude-sonnet-5";
-// Chat Q&A uses Haiku for speed — most questions are straightforward pulls,
-// and the tool loop auto-retries if a query errors. Swap back to MODEL here
-// if accuracy on complex multi-table questions ever slips.
-const CHAT_MODEL = "claude-haiku-4-5-20251001";
+// Chat Q&A ran on Haiku for speed until 2026-10-23, when it read "October" as
+// an earlier year and told Josh the Meal Tracker had nothing. Sonnet 5 now.
+const CHAT_MODEL = MODEL;
+
+/** Today in the academy's time zone — every date in the building is America/New_York. */
+const todayNY = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+
+/** What the tables that matter most actually hold — a schema dump cannot say this. */
+const TABLE_GUIDE =
+  "THE TABLES THAT MATTER (read this before writing SQL):\n" +
+  "- meal_events: the Meal Train. One row per dinner night: event_date (the night), meal_count (dinners served that night, counted on the Meal Tracker), donor_name (who cooked). 'Meals served' and 'meals a night' come from here: AVG(meal_count) over the nights in the period. The Meal Train pauses in summer and resumed October 1, 2026; the Meal Tracker began logging in spring 2026.\n" +
+  "- meal_checkins: one tap per youth per dinner (meal_event_id → meal_events). Use it for who ate, not for how many meals were served.\n" +
+  "- attendance_records: practice check-ins from the kiosk (one row per youth per check-in).\n" +
+  "- youth_registrations: the registration forms, one per youth per program year (every youth re-registers each September 1); demographics live here. youth_profiles: the identity record behind the registrations.\n" +
+  "- transport_attendance: van rides, one row per youth per ride. excursions: the summer and weekend trips.\n" +
+  "- smile_lab_sessions: Juniors Aftercare (Smile Lab) sessions.\n" +
+  "DATES: a month named without a year means the most recent one, usually the current year. Use CURRENT_DATE and date math, never a hard-coded earlier year. NLA's program year runs September 1 to August 31.\n";
 import { isSuperAdmin } from "../_shared/superAdmins.ts";
 const MAX_STEPS = 8; // safety cap on the chat tool-use loop
 const REPORT_MAX_STEPS = 12; // reports may need more queries for a full picture
@@ -248,6 +261,7 @@ Deno.serve(async (req) => {
       "- The audience is federal grant funders and boards, so keep it polished and plainspoken. Stat tiles must be scannable — short labels (2–4 words) and compact values; put all comparisons and nuance in the narrative, never crammed onto a tile.\n" +
       "- Use plain ASCII punctuation in labels and values (write '1+' not '≥1').\n" +
       "- Keep the table to at most 100 rows; summarize/aggregate rather than dumping raw personal records.\n\n" +
+      `Today is ${todayNY()} (America/New_York).\n\n` + TABLE_GUIDE + "\n" +
       "Database schema (table_name(columns)):\n\n" + schema;
 
     // ─────────────────────────────────────────────────────────────────────
@@ -324,6 +338,7 @@ Deno.serve(async (req) => {
           "- If you genuinely can't find the data after a couple of tries, say so plainly and suggest what would help.\n" +
           "- You can't build files, PDFs, spreadsheets, or charts yourself — but the operator can turn any answer into a report with the Make Report button, so just answer clearly.\n" +
           "- This data includes minors' personal info — answer the question asked, don't dump raw personal records unless the question truly needs them.\n\n" +
+          `Today is ${todayNY()} (America/New_York).\n\n` + TABLE_GUIDE + "\n" +
           "Here is the database schema (table_name(columns)):\n\n" + schema,
         cache_control: { type: "ephemeral" },
       },

@@ -4,6 +4,7 @@
 // written in this folder — so the function never guesses and Josh can see
 // exactly what it was told.
 import { supabase } from "@/integrations/supabase/client";
+import { SITE_TEXT } from "@/lib/grantCoach/siteText";
 import { ORG_FIELDS, orgFieldValue, formatEin } from "@/lib/grantCoach/orgProfile";
 import type { Fact } from "@/lib/grantCoach/liveFacts";
 import type { StoryDraft } from "@/lib/grantCoach/stories";
@@ -22,7 +23,7 @@ export interface LibraryEntry {
 }
 
 /** Library fields whose youth statistics must never be cited: the live numbers replace them. */
-export const STORY_ONLY_KEYS = new Set(["need", "demographics", "impact", "service_area", "target_population", "story", "facility", "mission"]);
+export const STORY_ONLY_KEYS = new Set(["need", "demographics", "impact", "service_area", "target_population", "story", "facility", "mission", "writing_examples"]);
 
 /** The library as the writer sees it: every field with text, saved value over website seed. */
 export async function loadLibrary(): Promise<LibraryEntry[]> {
@@ -77,6 +78,10 @@ export interface DraftRequest {
   usedStoryIds?: string[];
   /** chat: the conversation so far, the new message last. */
   messages?: ChatMessage[];
+  /** The last draft card in the conversation — what a requested change is applied to. */
+  currentDraft?: string | null;
+  /** The public website's words — added to every call by draftWithGrantCoach. */
+  siteText?: string;
   /** chat: the other questions on the same screen, numbered from 1, which Grant Coach fills only when asked. */
   siblings?: { i: number; label: string; help: string | null; kind: string; answer: string | null; limit_kind?: string | null; limit_value?: number | null }[];
 }
@@ -154,7 +159,8 @@ export const measure = (text: string | null | undefined, kind: "words" | "charac
 
 /** Call the writer. Throws with the function's own reason when it refuses or fails. */
 export async function draftWithGrantCoach(req: DraftRequest): Promise<DraftResult> {
-  const { data, error } = await supabase.functions.invoke("grant-writer", { body: req });
+  // The website goes with every call: Grant Coach's first source (Josh, 2026-10-23).
+  const { data, error } = await supabase.functions.invoke("grant-writer", { body: { ...req, siteText: SITE_TEXT } });
   if (error) {
     let reason = error.message;
     try {

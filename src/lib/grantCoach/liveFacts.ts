@@ -311,7 +311,7 @@ export async function gatherLiveFacts(today = new Date()): Promise<Fact[]> {
       if (error) throw new Error(error.message);
       const s = (data as Served[])?.[0];
       if (s) {
-        facts.push({ key: `youth_served.${p.key}`, label: "Unduplicated youth served, all programs", value: String(s.combined), period: p.label, source: "kiosk check-ins across NLA, Hawk Squad and BAM, one count per person" });
+        facts.push({ key: `youth_served.${p.key}`, label: "Youth who checked in at the kiosk (a partial-year log — the year's headcount is \"Youth registered\")", value: String(s.combined), period: p.label, source: "kiosk check-ins across NLA, Hawk Squad and BAM, one count per person; the kiosk began logging in spring 2026" });
         if (s.hawk_youth) facts.push({ key: `hawk.${p.key}`, label: "Hawk Squad students served", value: String(s.hawk_youth), period: p.label, source: "Hawk Squad check-ins" });
         if (s.bam_youth) facts.push({ key: `bam.${p.key}`, label: "BAM students served", value: String(s.bam_youth), period: p.label, source: "BAM check-ins" });
       }

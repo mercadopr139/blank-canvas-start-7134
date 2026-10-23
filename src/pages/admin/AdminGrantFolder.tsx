@@ -24,7 +24,6 @@ import GrantApplication, { type AppItem } from "@/components/admin/grantCoach/Gr
 import GcCard, { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
 import { useAsk } from "@/components/admin/AskDialog";
 
-const NLA_RED = "#bf0f3e";
 
 interface Folder {
   id: string; name: string; funder: string; program_name: string | null; status: string; due_at: string | null;
@@ -242,7 +241,7 @@ const AdminGrantFolder = () => {
   const left = folder.due_at ? daysLeft(folder.due_at) : null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full max-w-5xl mx-auto px-4 lg:px-8">
       <button onClick={() => navigate("/admin/finance/grant-coach")} className="text-sm text-white/50 hover:text-white inline-flex items-center gap-1.5">
         <ArrowLeft className="w-4 h-4" /> Grant Coach
       </button>
@@ -270,7 +269,7 @@ const AdminGrantFolder = () => {
           <div className="rounded-lg bg-white/[0.04] p-3">
             <p className="text-[11px] text-white/40 uppercase tracking-wide">Application</p>
             <p className="font-semibold">{progress.done} of {progress.total} approved</p>
-            <div className="mt-1.5 h-1.5 rounded-full bg-white/10 overflow-hidden"><div className="h-full rounded-full" style={{ width: `${progress.total ? Math.round((progress.done / progress.total) * 100) : 0}%`, backgroundColor: NLA_RED }} /></div>
+            <div className="mt-1.5 h-1.5 rounded-full bg-white/10 overflow-hidden"><div className="h-full rounded-full" style={{ width: `${progress.total ? Math.round((progress.done / progress.total) * 100) : 0}%`, backgroundColor: GC_BLUE }} /></div>
           </div>
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-4">
@@ -291,29 +290,9 @@ const AdminGrantFolder = () => {
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        {/* The checklist */}
-        <section className="min-w-0">
-          <GrantApplication
-            folderId={id!}
-            folder={draftFolder()}
-            items={items}
-            library={library}
-            getFacts={async () => (facts.length ? facts : (await refetchFacts()).data ?? [])}
-            userId={user?.id ?? null}
-            onPrint={() => void printAnswers()}
-            printing={printing}
-            confirm={(o) => ask.confirm(o)}
-            caseBrief={folder.case_brief ?? null}
-            caseLockedAt={folder.case_locked_at ?? null}
-            review={folder.review ?? null}
-            reviewedAt={folder.reviewed_at ?? null}
-            funderBrief={folder.funder_brief ?? null}
-          />
-        </section>
-
+      <div className="space-y-6">
         {/* Documents, and the numbers the writer uses */}
-        <aside className="space-y-4 min-w-0">
+        <aside className="grid gap-4 lg:grid-cols-2 min-w-0 items-start">
           {/* What the funder sent, and what NLA sends back. */}
           <GcCard icon={<FolderOpen className="w-4 h-4" />} title="Grant/RFP Info Here" blurb="The RFP, guidelines, rubric and every file about this grant">
             <div className="p-4 space-y-3">
@@ -330,7 +309,7 @@ const AdminGrantFolder = () => {
             </p>
             <input ref={fileInput} type="file" className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f); e.target.value = ""; }} />
             <div className="flex gap-2">
-              <Button size="sm" onClick={() => fileInput.current?.click()} disabled={busy} className="text-white" style={{ backgroundColor: NLA_RED }}>
+              <Button size="sm" onClick={() => fileInput.current?.click()} disabled={busy} className="font-bold" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}>
                 {busy ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Upload className="w-3.5 h-3.5 mr-1.5" />} Upload
               </Button>
               <Button size="sm" variant="outline" onClick={() => void link()} className="bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white"><Link2 className="w-3.5 h-3.5 mr-1.5" /> Link</Button>
@@ -368,6 +347,27 @@ const AdminGrantFolder = () => {
             </div>
           </GcCard>
         </aside>
+
+        {/* The application, full width */}
+        <section className="min-w-0">
+          <GrantApplication
+            folderId={id!}
+            folder={draftFolder()}
+            items={items}
+            library={library}
+            getFacts={async () => (facts.length ? facts : (await refetchFacts()).data ?? [])}
+            userId={user?.id ?? null}
+            onPrint={() => void printAnswers()}
+            printing={printing}
+            confirm={(o) => ask.confirm(o)}
+            caseBrief={folder.case_brief ?? null}
+            caseLockedAt={folder.case_locked_at ?? null}
+            review={folder.review ?? null}
+            reviewedAt={folder.reviewed_at ?? null}
+            funderBrief={folder.funder_brief ?? null}
+          />
+        </section>
+
       </div>
       {dialog}
     </div>

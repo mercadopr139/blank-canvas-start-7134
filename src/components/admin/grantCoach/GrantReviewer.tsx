@@ -91,7 +91,7 @@ export default function GrantReviewer({ folderId, folder, items, library, getFac
       title="The reviewer"
       blurb={review ? `${review.overall}/100${stale ? " · answers changed since this review" : ""}` : "Read the application the way the funder's panel will, before you submit"}
       right={
-        <Button size="sm" onClick={() => void run()} disabled={running || busy || waitingForCase > 0 || !live.some((i) => i.answer?.trim())} title={waitingForCase ? "Answer the open questions first" : undefined} className="text-white h-8" style={{ backgroundColor: "#bf0f3e" }}>
+        <Button size="sm" onClick={() => void run()} disabled={running || busy || waitingForCase > 0 || !live.some((i) => i.answer?.trim())} title={waitingForCase ? "Answer the open questions first" : undefined} className="font-bold h-8" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}>
           {running ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Gavel className="w-4 h-4 mr-1.5" />} {review ? "Review again" : "Review the application"}
         </Button>
       }
@@ -104,7 +104,7 @@ export default function GrantReviewer({ folderId, folder, items, library, getFac
           </p>
           {!ready && (
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <Button size="sm" onClick={next} className="h-8 text-white" style={{ backgroundColor: "#bf0f3e" }}><ArrowDownCircle className="w-4 h-4 mr-1.5" /> {cursor === 0 ? "Start at the first one" : "Next"}</Button>
+              <Button size="sm" onClick={next} className="h-8 font-bold" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}><ArrowDownCircle className="w-4 h-4 mr-1.5" /> {cursor === 0 ? "Start at the first one" : "Next"}</Button>
               <span className="text-[12px] text-white/50">Or click any question below to go straight to it.</span>
             </div>
           )}

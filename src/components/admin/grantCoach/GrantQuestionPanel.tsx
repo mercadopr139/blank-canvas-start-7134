@@ -3,6 +3,7 @@
 // it into the funder's portal, and marks it pasted. The folder keeps all of
 // it as NLA's copy of the application. (Josh, 2026-10-17.)
 import { useEffect, useRef, useState } from "react";
+import { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,7 +14,6 @@ import { Loader2, Send, Sparkles, Check, Copy, ClipboardCheck } from "lucide-rea
 import { draftWithGrantCoach, measure, type ChatMessage, type DraftFolder, type DraftItem, type LibraryEntry } from "@/lib/grantCoach/writer";
 import type { Fact } from "@/lib/grantCoach/liveFacts";
 
-const NLA_RED = "#bf0f3e";
 
 interface StoredMessage { id: string; role: "user" | "coach"; content: string; created_at: string }
 
@@ -113,7 +113,7 @@ const GrantQuestionPanel = ({ folderId, folder, item, library, facts, answered, 
           </div>
         )}
         {messages.map((m) => (
-          <div key={m.id} className={`text-[13px] leading-snug rounded-lg px-3 py-2 ${m.role === "user" ? "bg-white/[0.06] text-white ml-8" : "bg-[#bf0f3e]/10 border border-[#bf0f3e]/25 text-white/90 mr-8"}`}>
+          <div key={m.id} className={`text-[13px] leading-snug rounded-lg px-3 py-2 ${m.role === "user" ? "bg-white/[0.06] text-white ml-8" : "bg-[#38bdf8]/10 border border-[#38bdf8]/25 text-white/90 mr-8"}`}>
             <span className="block text-[10px] uppercase tracking-wide text-white/35 mb-0.5">{m.role === "user" ? "You" : "Grant Coach"}</span>
             {m.content}
           </div>
@@ -133,7 +133,7 @@ const GrantQuestionPanel = ({ folderId, folder, item, library, facts, answered, 
           className="bg-neutral-950 border-neutral-800 text-white text-sm"
         />
         <div className="flex flex-col gap-1.5">
-          <Button size="sm" onClick={() => void say(text)} disabled={busy || !text.trim()} className="text-white" style={{ backgroundColor: NLA_RED }} aria-label="Send">
+          <Button size="sm" onClick={() => void say(text)} disabled={busy || !text.trim()} className="font-bold" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }} aria-label="Send">
             <Send className="w-3.5 h-3.5" />
           </Button>
           {item && (
