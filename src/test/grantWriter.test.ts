@@ -2,7 +2,7 @@
 // draft speaks about, the summaries behind the live numbers, the narrative's
 // order and word count, and the Word file.
 import { describe, it, expect } from "vitest";
-import { factPeriods, factYearLabel, summarizeRegistrations, summarizeAttendance, pct, isSingleParent, districtGroup, coverage, fullMonthRates, describeRates } from "@/lib/grantCoach/liveFacts";
+import { factPeriods, factYearLabel, summarizeRegistrations, summarizeAttendance, pct, isSingleParent, districtGroup, homeTown, isWildwood, coverage, fullMonthRates, describeRates } from "@/lib/grantCoach/liveFacts";
 import { narrativeItems, narrativeWordCount, wordCount, NARRATIVE_SECTION, NARRATIVE_WORD_LIMIT, STORY_ONLY_KEYS } from "@/lib/grantCoach/writer";
 import { ORG_FIELDS } from "@/lib/grantCoach/orgProfile";
 import { buildNarrativeDocument, headingFromLabel } from "@/lib/grantCoach/narrativeDocx";
@@ -64,6 +64,13 @@ describe("the summaries behind the live numbers", () => {
   });
 
   it("groups districts the way a funder reads them", () => {
+    expect(homeTown("123 Pacific Ave, North Wildwood, NJ 08260")).toBe("North Wildwood");
+    expect(homeTown("45 Washington Ave Woodbine NJ")).toBe("Woodbine");
+    expect(homeTown("12 Main St, Rio Grande, NJ 08242")).toBe("Rio Grande");
+    expect(homeTown("")).toBe("Not given");
+    expect(homeTown("1 Somewhere Rd, Trenton NJ")).toBe("Other");
+    expect(isWildwood("Wildwood Crest")).toBe(true);
+    expect(isWildwood("Woodbine")).toBe(false);
     expect(districtGroup("Lower Cape May Regional")).toBe("Lower Township");
     expect(districtGroup("Lower Township")).toBe("Lower Township");
     expect(districtGroup("Cape May City")).toBe("Cape May / West Cape May");

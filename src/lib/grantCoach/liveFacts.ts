@@ -65,7 +65,30 @@ export interface RegRow {
   /** The family-structure answer on the registration form ("Mom Only", "Dad and Mom", …). */
   family_structure: string | null;
   child_date_of_birth: string | null;
+  /** The home address as typed on the form, one line. */
+  child_primary_address?: string | null;
 }
+
+/**
+ * The town in a one-line address, as a funder names it. Longer names are
+ * tried first so "North Wildwood" is not read as "Wildwood"; the three
+ * Wildwoods stay separate here and are grouped where a fact asks for it.
+ */
+const TOWNS = [
+  "North Wildwood", "Wildwood Crest", "West Wildwood", "Wildwood", "Woodbine", "Rio Grande", "Cape May Court House",
+  "West Cape May", "Cape May Point", "Cape May", "Villas", "Erma", "Whitesboro", "Burleigh", "Green Creek", "Del Haven",
+  "North Cape May", "Ocean View", "Dennisville", "South Dennis", "Sea Isle City", "Avalon", "Stone Harbor", "Marmora",
+  "Tuckahoe", "Belleplain", "Goshen", "Swainton", "Ocean City", "Petersburg", "Seaville", "Clermont", "Eldora",
+  "Millville", "Vineland", "Egg Harbor", "Somers Point", "Atlantic City", "Pleasantville",
+];
+export const homeTown = (address: string | null | undefined) => {
+  const a = (address ?? "").toLowerCase().replace(/\s+/g, " ");
+  if (!a.trim()) return "Not given";
+  for (const t of TOWNS) if (a.includes(t.toLowerCase())) return t;
+  return "Other";
+};
+/** The three Wildwoods as one place, for the Wildwood-and-Woodbine figure. */
+export const isWildwood = (town: string) => town === "Wildwood" || town === "North Wildwood" || town === "Wildwood Crest" || town === "West Wildwood";
 
 /**
  * Single-parent, by the rule Josh set on 2026-06-16 for the funder snapshot:
@@ -112,6 +135,9 @@ export const summarizeRegistrations = (rows: RegRow[], asOf = new Date()) => {
     sex: tally((r) => r.child_sex),
     race: tally((r) => r.child_race_ethnicity),
     districts: tally((r) => districtGroup(r.child_school_district)),
+    towns: tally((r) => homeTown(r.child_primary_address)),
+    wildwoodByAddress: people.filter((r) => isWildwood(homeTown(r.child_primary_address))).length,
+    woodbineByAddress: people.filter((r) => homeTown(r.child_primary_address) === "Woodbine").length,
     agesKnown: ages.length,
     ageMedian: median,
     ageInRange: ages.filter((a) => a >= 7 && a <= 19).length,
@@ -430,7 +456,7 @@ export async function gatherLiveFacts(today = new Date()): Promise<Fact[]> {
   try {
     const year = periods[0];
     const rows = await fetchAll<RegRow>((a, b) =>
-      from("youth_registrations").select("id, youth_link_id, program_year, child_sex, child_race_ethnicity, household_income_range, free_or_reduced_lunch, child_school_district, family_structure, child_date_of_birth").eq("program_year", year.year).range(a, b) as never);
+      from("youth_registrations").select("id, youth_link_id, program_year, child_sex, child_race_ethnicity, household_income_range, free_or_reduced_lunch, child_school_district, family_structure, child_date_of_birth, child_primary_address").eq("program_year", year.year).range(a, b) as never);
     const s = summarizeRegistrations(rows, new Date(year.to + "T12:00:00"));
     const period = `program year ${shortProgramYear(year.year)} registrations`;
     facts.push({ key: "registered.current", label: "Youth registered", value: String(s.youth), period, source: "registration forms" });
@@ -440,6 +466,8 @@ export async function gatherLiveFacts(today = new Date()): Promise<Fact[]> {
     facts.push({ key: "sex.current", label: "Sex", value: shareList(s.sex, s.youth), period, source: "registration forms" });
     facts.push({ key: "race.current", label: "Race / ethnicity", value: shareList(s.race, s.youth, 6), period, source: "registration forms" });
     facts.push({ key: "districts.current", label: "School districts", value: shareList(s.districts, s.youth, 8), period, source: "registration forms; Lower Cape May Regional and Lower Township counted as one, as are the Cape May districts" });
+    facts.push({ key: "towns.current", label: "Home towns (from the address on the form)", value: shareList(s.towns, s.youth, 8), period, source: "the home address line on the registration form, read for the town" });
+    facts.push({ key: "wildwood_woodbine.current", label: "Youth whose HOME ADDRESS is in Wildwood or Woodbine", value: `${s.wildwoodByAddress + s.woodbineByAddress} of ${s.youth} (${pct(s.wildwoodByAddress + s.woodbineByAddress, s.youth)}%): Wildwood (incl. North Wildwood, Wildwood Crest, West Wildwood) ${s.wildwoodByAddress} (${pct(s.wildwoodByAddress, s.youth)}%), Woodbine ${s.woodbineByAddress} (${pct(s.woodbineByAddress, s.youth)}%)`, period, source: "the home address line on the registration form — say 'live in'; the School districts fact is 'attend school in'" });
   } catch (e) {
     facts.push({ key: "registered.current", label: "Registrations", value: `unavailable (${(e as Error).message})`, period: "the last complete program year", source: "youth_registrations" });
   }
