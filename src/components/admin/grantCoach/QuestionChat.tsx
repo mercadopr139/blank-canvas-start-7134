@@ -40,6 +40,25 @@ interface Props {
   onStartOver: () => Promise<void>;
 }
 
+/** The draft's words: click to edit in place; the edit is kept when focus leaves. */
+function DraftText({ text, onSave }: { text: string; onSave: (t: string) => void }) {
+  const [value, setValue] = useState(text);
+  useEffect(() => { setValue(text); }, [text]);
+  const grow = (el: HTMLTextAreaElement) => { el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; };
+  return (
+    <Textarea
+      value={value}
+      onChange={(e) => { setValue(e.target.value); grow(e.currentTarget); }}
+      onFocus={(e) => grow(e.currentTarget)}
+      onBlur={() => onSave(value)}
+      ref={(el) => { if (el) grow(el); }}
+      rows={3}
+      title="Click to edit this draft in place"
+      className="px-3 py-2 text-sm text-white leading-relaxed bg-transparent border-0 rounded-none shadow-none resize-none min-h-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:bg-white/[0.04]"
+    />
+  );
+}
+
 export default function QuestionChat({ folderId, item, draft, siblings, folder, library, getFacts, answered, funderBrief, stories, usedStoryIds, userId, onAnswer, onFills, onStartOver }: Props) {
   const qc = useQueryClient();
   const key = ["grant-chat", item.id];
@@ -110,6 +129,17 @@ Left out: ${left.join("; ")}` : "");
     }
   };
 
+  // An edit typed into a draft card is kept on the message, so it survives a reload
+  // and is what "Use this as my answer" sends.
+  const editDraft = async (m: Msg, text: string) => {
+    const next = text.trim();
+    if (!next || next === (m.payload?.draft ?? "").trim()) return;
+    const payload = { ...(m.payload ?? {}), draft: next, draft_words: next.split(/\s+/).filter(Boolean).length };
+    qc.setQueryData<Msg[]>(key, (old = []) => old.map((x) => (x.id === m.id ? { ...x, payload } : x)));
+    const { error } = await supabase.from("grant_messages" as never).update({ payload } as never).eq("id", m.id);
+    if (error) toast.error(`Couldn't keep that edit: ${error.message}`);
+  };
+
   const settle = async (m: Msg) => {
     await supabase.from("grant_messages" as never).update({ payload: { ...(m.payload ?? {}), story_done: true } } as never).eq("id", m.id);
     qc.invalidateQueries({ queryKey: key });
@@ -163,7 +193,7 @@ Left out: ${left.join("; ")}` : "");
                           </button>
                         )}
                       </div>
-                      <p className="px-3 py-2 text-sm text-white whitespace-pre-wrap leading-relaxed">{m.payload.draft}</p>
+                      <DraftText text={m.payload.draft} onSave={(t) => void editDraft(m, t)} />
                     </div>
                   )}
                   {m.payload?.story_draft && !m.payload.story_done && (
