@@ -179,7 +179,7 @@ Left out: ${left.join("; ")}` : "");
                   {m.payload?.draft && (
                     <div className="max-w-[92%] rounded-lg border bg-black/40 overflow-hidden" style={{ borderColor: `${GC_BLUE}66` }}>
                       <div className="px-3 py-1.5 border-b flex items-center justify-between gap-2" style={{ borderColor: `${GC_BLUE}33`, backgroundColor: `${GC_BLUE}14` }}>
-                        <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: GC_BLUE }}>Draft{m.payload.draft_words ? ` · ${m.payload.draft_words} words` : ""}</p>
+                        <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: GC_BLUE }}>Draft{m.payload.draft_words ? ` · ${m.payload.draft_words} words` : ""}<span className="ml-2 font-semibold normal-case tracking-normal text-white/40">click to edit · Enter for a new paragraph</span></p>
                         {draft.trim() === m.payload.draft.trim() ? (
                           <p className="text-[11px] font-semibold text-emerald-300 inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" /> In the answer box</p>
                         ) : (
@@ -211,13 +211,14 @@ Left out: ${left.join("; ")}` : "");
               e.currentTarget.style.height = "auto";
               e.currentTarget.style.height = `${Math.min(e.currentTarget.scrollHeight, 560)}px`;
             }}
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(line); } }}
+            // Enter is a new paragraph (Josh, 2026-10-24: paste a whole answer with its paragraphs); Ctrl+Enter sends.
+            onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void send(line); } }}
             rows={8}
             placeholder="Ask Grant Coach anything about this question, or say “write it”…"
             className="min-h-[200px] max-h-[560px] bg-black/50 text-white text-base leading-relaxed resize-y"
             style={{ borderColor: `${GC_BLUE}66` }}
           />
-          <p className="mt-1 text-[11px] text-white/35">Enter sends · Shift+Enter for a new line</p>
+          <p className="mt-1 text-[11px] text-white/35">Enter for a new paragraph · Ctrl+Enter or the arrow sends</p>
         </div>
         <Button onClick={() => void send(line)} disabled={thinking || !line.trim()} className="font-bold shrink-0 mb-5" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }} aria-label="Send"><Send className="w-4 h-4" /></Button>
       </div>

@@ -32,6 +32,8 @@ import { vaultAnswer, documentAnswer, needsFrom, isFactRow, vaultCatalog, pieceI
 import { readDocxText } from "@/lib/grantCoach/readDocx";
 import GcCard, { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
 import { loadMemory, remember, forget, shouldRemember, type MemoryRow } from "@/lib/grantCoach/memory";
+import { isEdit, loadRules, addRules } from "@/lib/grantCoach/corrections";
+import { learnFromEdit } from "@/lib/grantCoach/writer";
 
 /** The kinds the database accepts (grant_checklist_items_kind_check). Anything else the reader says is saved as a plain field. */
 const QUESTION_KINDS = new Set(["eligibility", "field", "narrative", "upload", "acknowledgment", "signature", "task", "choice"]);
@@ -444,10 +446,26 @@ export default function GrantApplication({ folderId, folder, items, library, get
   /** The question whose box is open (Answer, Jump, or "Approve and next"). */
   const [openId, setOpenId] = useState<string | null>(null);
 
+  /** Josh changed Grant Coach's answer: there is a reason. Learn the lesson in the background; it never blocks him. */
+  const learnFrom = (question: string, before: string, after: string) => {
+    void (async () => {
+      try {
+        const rules = await learnFromEdit({ question, before, after, rules: await loadRules() });
+        const added = rules.length ? await addRules(rules, userId) : [];
+        if (added.length) {
+          qc.invalidateQueries({ queryKey: ["grant-library"] });
+          toast.success(`Grant Coach learned from your edit: ${added.join(" · ")}`, { description: "Saved to Josh's corrections in the Grant Vault. Every draft follows it.", duration: 9000 });
+        }
+      } catch { /* learning is a bonus; the answer is already saved */ }
+    })();
+  };
+
   /** Approve this answer, then open the next question that still needs one — top to bottom. */
-  const approveAndNext = async (r: AppItem, answer: string, source: "coach" | "you", storyId: string | null) => {
+  const approveAndNext = async (r: AppItem, answer: string, source: "coach" | "you", storyId: string | null, before: string | null) => {
     await patch(r.id, { answer, status: "done", left_out: [], answer_source: source, story_id: storyId ?? r.story_id ?? null, needs: null, score_note: source === "you" ? null : r.score_note, pasted_at: null });
-    await remember({ ...r, answer, status: "done", answer_source: source }, ctx);
+    const edited = isEdit(before, answer);
+    await remember({ ...r, answer, status: "done", answer_source: source }, ctx, edited ? before : null);
+    if (edited) learnFrom(r.label, before!, answer);
     remembered();
     refresh();
     const order = itemsRef.current.filter((i) => i.status !== "na");
@@ -635,7 +653,7 @@ export default function GrantApplication({ folderId, folder, items, library, get
                     focused={focusId === r.id}
                     forceOpen={openId === r.id}
                     onClosed={() => setOpenId((o) => (o === r.id ? null : o))}
-                    onApproveNext={(answer, source, storyId) => approveAndNext(r, answer, source, storyId)}
+                    onApproveNext={(answer, source, storyId, before) => approveAndNext(r, answer, source, storyId, before)}
                     renderChat={(draft, fill) => (
                       <QuestionChat
                         folderId={folderId}
@@ -669,6 +687,8 @@ export default function GrantApplication({ folderId, folder, items, library, get
                     onCopy={() => void copy(r.answer ?? "")}
                     onRemove={() => void removeRow(r)}
                     onSave={async (answer, toVault) => {
+                      // Saved over Grant Coach's own answer: learn from the change now, before its draft is gone.
+                      if ((r.answer_source === "coach" || r.answer_source === "memory") && isEdit(r.answer, answer)) learnFrom(r.label, r.answer!, answer);
                       const vaultable = !!r.vault_key && !r.vault_key.startsWith("doc:") && !r.vault_part;
                       if (toVault && vaultable) {
                         const { error } = await supabase.from("grant_org_fields" as never).upsert({ key: r.vault_key, value: answer, updated_at: new Date().toISOString(), updated_by: userId } as never, { onConflict: "key" } as never);
@@ -760,7 +780,7 @@ export default function GrantApplication({ folderId, folder, items, library, get
 function QuestionRow({ item, pastFunder, storyTitle, focused, forceOpen, onClosed, onApproveNext, renderChat, writing, busy, onApprove, onUnapprove, onCopy, onRemove, onSave, onRegenerate }: {
   item: AppItem; pastFunder?: string | null; storyTitle?: string | null; focused?: boolean; writing: boolean; busy: boolean;
   forceOpen?: boolean; onClosed?: () => void;
-  onApproveNext: (answer: string, source: "coach" | "you", storyId: string | null) => Promise<void>;
+  onApproveNext: (answer: string, source: "coach" | "you", storyId: string | null, before: string | null) => Promise<void>;
   renderChat: (draft: string, fill: (text: string, storyId: string | null) => void) => ReactNode;
   onApprove: () => void; onUnapprove: () => void; onCopy: () => void; onRemove: () => void;
   onSave: (answer: string, toVault: boolean) => Promise<void>; onRegenerate: (instruction: string) => Promise<void>;
@@ -796,7 +816,9 @@ function QuestionRow({ item, pastFunder, storyTitle, focused, forceOpen, onClose
     setSaving(true);
     try {
       const coachWrote = !!fromCoach && fromCoach.text.trim() === text;
-      await onApproveNext(text, coachWrote ? "coach" : "you", coachWrote ? fromCoach!.storyId : null);
+      // What Grant Coach wrote before Josh touched it: the draft card he used, or the answer it filled in.
+      const before = fromCoach?.text ?? (item.answer_source === "coach" || item.answer_source === "memory" ? item.answer : null);
+      await onApproveNext(text, coachWrote ? "coach" : "you", coachWrote ? fromCoach!.storyId : null, before);
       setRejecting(false); setFromCoach(null);
     } finally { setSaving(false); }
   };

@@ -30,12 +30,14 @@ export async function loadMemory(): Promise<MemoryRow[]> {
 }
 
 /** Keep (or replace) the memory of one approved question. Quiet on failure: memory never blocks the application. */
-export async function remember(it: Rememberable, ctx: { folderId: string; funder: string; userId: string | null }) {
+export async function remember(it: Rememberable, ctx: { folderId: string; funder: string; userId: string | null }, coachDraft?: string | null) {
   if (!shouldRemember(it)) return;
   await supabase.from("grant_answer_memory" as never).upsert({
     item_id: it.id, folder_id: ctx.folderId, funder: ctx.funder, question: it.label, help: it.detail, kind: it.kind,
     answer: it.answer!.trim(), source: it.answer_source ?? null, limit_kind: it.limit_kind ?? null, limit_value: it.limit_value ?? null,
     updated_at: new Date().toISOString(), created_by: ctx.userId,
+    // Grant Coach's draft, when Josh changed it before approving — the change is the lesson.
+    ...(coachDraft !== undefined ? { coach_draft: coachDraft } : {}),
   } as never, { onConflict: "item_id" } as never);
 }
 

@@ -317,6 +317,7 @@ export const ORG_SECTIONS: OrgSection[] = [
       { key: "impact", label: "Impact numbers, from the website", kind: "list", seed: IMPACT, help: "Headline figures. Drafts pull live counts from the back end for the period a funder asks about." },
       { key: "awards", label: "Awards and recognition", kind: "list", seed: AWARDS },
       { key: "partners", label: "Partners", kind: "list", required: true, seed: PARTNERS, help: "Funders ask about coordination and duplicated services; name who NLA works with and on what." },
+      { key: "corrections", label: "Josh's corrections — rules Grant Coach learned from your edits", kind: "list", help: "Each time you change a Grant Coach answer and approve it, Grant Coach writes the lesson here, one per line, and every draft after follows it. Edit or delete any line; add your own." },
       { key: "writing_examples", label: "Writing examples — how NLA's proposals read", kind: "long", seed: WRITING_EXAMPLES, help: "Grant Coach writes to match this. Paste in any proposal you are proud of; the more the better. Its figures are from their moment — drafts take counts from the live numbers." },
       { key: "partner_quotes", label: "What partners say", kind: "list", seed: QUOTES, help: "Attributed lines from the letters of support. The writer quotes these where a funder asks about coordination, experience or effectiveness." },
     ],

@@ -107,7 +107,7 @@ async function createBest(anthropic: Anthropic, params: Record<string, any>) {
   throw lastError ?? new Error("No model answered.");
 }
 type Req = {
-  mode: "item" | "narrative" | "chat" | "read_screens" | "classify" | "strategy" | "story" | "review" | "funder_brief" | "snapshot" | "reporting_plan" | "report" | "fit" | "budget";
+  mode: "item" | "narrative" | "chat" | "read_screens" | "classify" | "strategy" | "story" | "review" | "funder_brief" | "snapshot" | "reporting_plan" | "report" | "fit" | "budget" | "learn";
   /** The public website's words, as published — Grant Coach's first source (scripts/make-site-text.mjs). */
   siteText?: string | null;
   /** The approved Program Year Snapshot (Josh, 2026-10-24): source 2, its words used as written. */
@@ -157,6 +157,11 @@ type Req = {
   memory?: { id: string; question: string; funder: string | null }[];
   /** report: the report being written, and its period. */
   report?: { title: string; kind: string; detail: string | null; period_start: string | null; period_end: string | null };
+  /** learn: Grant Coach's draft, the answer Josh approved instead, and the corrections already on file. */
+  question?: string;
+  before?: string;
+  after?: string;
+  rules?: string[];
   /** report: what the application promised — its approved answers, in portal order. */
   promised?: { label: string; answer: string }[];
 };
@@ -208,6 +213,7 @@ HARD RULES
 1d. YOUTH SERVED = YOUTH REGISTERED. For any program year, the number of youth NLA served is the number registered that year (every youth re-registers each September 1; the registration is the enrolment). The kiosk's "unduplicated youth served" is a young log — it began in spring 2026 — so it is a partial-year count: never lead with it, never put it beside the registered count as if the two measured the same thing ("served 275 and registered 518" reads as a contradiction). Use the kiosk for what it measures: attendance rates, nights a week, the share of registered youth who checked in, named as from the months on file.
 1e. WILDWOOD AND WOODBINE ARE SCHOOL DISTRICTS. The live number for Wildwood and Woodbine counts youth by the school district on the registration form (the "School districts" fact). Write it that way — "attend school in Wildwood and Woodbine", "from the Wildwood and Woodbine school districts" — never "live in" or "from the municipalities of". The same for every other town named from that fact.
 1b. WHERE NUMBERS COME FROM. Every statistic about NLA's youth — how many served or registered, attendance, nights, meals, rides, ages, sex, race, school districts, single-parent homes, economically disadvantaged share, Wildwood and Woodbine counts — comes ONLY from the LIVE NUMBERS section. The ABOUT NLA LIBRARY is for story, voice, programs, partners, people, money and history. Library entries marked [STORY AND CONTEXT ONLY] were written from the website and an earlier proposal and contain youth statistics from another moment: take their wording and flow, never their figures, even where the live numbers have no match (write [NEED: …] instead). Numbers that are not about NLA's youth — county or school-district poverty rates from the census, the facility's size, revenue and budget figures, award amounts, dates — may be cited from the library, naming the source the library gives.
+1f. JOSH'S CORRECTIONS. A library entry named "Josh's corrections" holds rules Josh taught you by editing your answers. Every one is a standing rule for every answer, on every grant: apply it without being asked. On wording they beat the house example and the website.
 2. NLA is year-round, five days a week in the school year and four in summer. Never call it a 10-month or seasonal program.
 3. Solutions and partnerships, never blame. Describe the community's need with facts and respect, never as a failing of families, schools or towns.
 4. Two full-time staff running a program of this size on this revenue is efficiency; say so plainly where capacity or staffing is asked about.
@@ -453,6 +459,23 @@ Deno.serve(async (req) => {
       if (!answer) throw new Error("The section came back empty. Try again.");
       const changed = Array.isArray(parsed.changed) ? parsed.changed.filter((x: unknown) => typeof x === "string" && x.trim()).slice(0, 20) : [];
       return json({ answer, changed });
+    }
+
+    // ── Learning from Josh's edit: the lesson, not the content ──
+    if (body.mode === "learn") {
+      const before = String(body.before ?? "").trim().slice(0, 12000);
+      const after = String(body.after ?? "").trim().slice(0, 12000);
+      if (!before || !after) return json({ rules: [] });
+      const response = await anthropic.messages.create({
+        model: MODEL,
+        max_tokens: 3000,
+        system: "You study how a nonprofit's program director edited a grant answer an AI wrote, and write down the LESSONS: short, general rules the AI should follow in every future answer (wording, spelling, terms, tone, what to always or never include, how to state numbers). Ignore changes that only fit this one question (a different fact, a reordered sentence, a cut for length). Never record a number as a rule. Never repeat a rule already on file, even reworded. Most edits teach zero or one rule; never more than three.",
+        messages: [{ role: "user", content:
+          `QUESTION: ${body.question ?? ""}\n\nTHE AI'S DRAFT:\n${before}\n\nWHAT JOSH APPROVED INSTEAD:\n${after}\n\nRULES ALREADY ON FILE:\n${(body.rules ?? []).map((r) => "• " + r).join("\n") || "(none)"}\n\nReturn ONLY JSON: {"rules":["<one short rule, imperative, e.g. Write year-round, never year around>"]}` }],
+        ...thinking("low"),
+      } as never);
+      const parsed = extractJson(textOf(response as never));
+      return json({ rules: strList(parsed.rules, 3).map((r) => r.slice(0, 240)) });
     }
 
     if (!body?.folder || !Array.isArray(body.library) || !Array.isArray(body.facts)) return json({ error: "Send the folder, the library and the facts." }, 400);

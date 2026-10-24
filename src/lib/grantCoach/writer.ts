@@ -267,6 +267,16 @@ export async function redraftSnapshotSection(input: {
   return { answer: String(data?.answer ?? ""), changed: Array.isArray(data?.changed) ? data.changed : [] };
 }
 
+/* ── Learning from Josh's edits ── */
+
+/** The lessons in one edit: only rules that apply beyond this answer; [] when the change was specific to it. */
+export async function learnFromEdit(input: { question: string; before: string; after: string; rules: string[] }): Promise<string[]> {
+  const { data, error } = await supabase.functions.invoke("grant-writer", { body: { mode: "learn", ...input, folder: null, library: [], facts: [], answered: [] } });
+  if (error) throw await fail(error);
+  if (data?.error) throw new Error(data.error);
+  return Array.isArray(data?.rules) ? data.rules.filter((r: unknown) => typeof r === "string" && r.trim()) : [];
+}
+
 /* ── After the application: reporting, the fit check, the budget ── */
 
 const call = async <T,>(body: Record<string, unknown>): Promise<T> => {
