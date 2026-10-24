@@ -22,3 +22,11 @@ describe("Program Year Snapshot", () => {
     expect(snapshotText([{ body: " A \n" }, { body: "" }, { body: "B" }])).toBe("A\n\n\nB");
   });
 });
+
+import { piecesOf } from "@/lib/grantCoach/snapshot";
+describe("Snapshot pieces for Resources", () => {
+  it("splits paragraphs, gives each bullet its own piece, and drops the heading", () => {
+    const body = "WHO WE SERVED · 2025–26\n\nNLA is free.\nIt is year-round.\n\nThe forms show:\n\n- 358 boys (69%).\n- 373 (72%) economically disadvantaged.";
+    expect(piecesOf(body)).toEqual(["NLA is free. It is year-round.", "The forms show:", "358 boys (69%).", "373 (72%) economically disadvantaged."]);
+  });
+});

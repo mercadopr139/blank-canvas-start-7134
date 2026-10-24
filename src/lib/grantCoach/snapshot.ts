@@ -80,6 +80,20 @@ export async function unlockSection(s: SnapshotSection, userId: string | null): 
 export const snapshotText = (sections: { body: string }[]) =>
   sections.map((s) => s.body.trim()).filter(Boolean).join("\n\n\n");
 
+/** A section's pieces: each paragraph, and each bullet on its own; the heading line is dropped. */
+export const piecesOf = (body: string) =>
+  body
+    .replace(/\r\n/g, "\n")
+    .split(/\n\s*\n/)
+    .flatMap((block) => {
+      const lines = block.split("\n").map((l) => l.trim()).filter(Boolean);
+      // A run of bullets: one piece per bullet. A lead-in line before them stays its own piece.
+      if (lines.some((l) => /^[-•]\s/.test(l))) return lines.map((l) => l.replace(/^[-•]\s+/, ""));
+      return [lines.join(" ")];
+    })
+    .map((t) => t.trim())
+    .filter((t) => t && !/^[A-Z0-9 ·&–—'-]+$/.test(t)); // drop ALL-CAPS headings like "WHO WE SERVED · 2025–26"
+
 /* ── What Grant Coach's writer reads ── */
 
 export interface WriterSnapshot { year: string; sections: { title: string; body: string }[] }

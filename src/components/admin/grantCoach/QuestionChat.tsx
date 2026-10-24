@@ -9,7 +9,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, Loader2, Send, Sparkles } from "lucide-react";
+import { Check, Loader2, Send, Sparkles, Library } from "lucide-react";
+import ResourcePanel from "@/components/admin/grantCoach/ResourcePanel";
 import { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
 import { StoryDraftCard } from "@/components/admin/grantCoach/StoryBank";
 import { draftWithGrantCoach, type DraftFolder, type LibraryEntry, type FunderBrief, type WriterStory } from "@/lib/grantCoach/writer";
@@ -65,6 +66,8 @@ export default function QuestionChat({ folderId, item, draft, siblings, folder, 
   const [line, setLine] = useState("");
   const [thinking, setThinking] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [resources, setResources] = useState(false);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const startOver = async () => {
     const { error } = await supabase.from("grant_messages" as never).delete().eq("item_id", item.id);
     if (error) { toast.error(error.message); return; }
@@ -152,7 +155,17 @@ Left out: ${left.join("; ")}` : "");
         <p className="text-[11px] font-black uppercase tracking-[0.18em] inline-flex items-center gap-1.5" style={{ color: GC_BLUE }}>
           <Sparkles className="w-3.5 h-3.5" /> Grant Coach · the conversation
         </p>
-        <p className="text-[11px] text-white/45">Drafts land here first · "Use this as my answer" puts one in the box below</p>
+        <div className="flex items-center gap-3">
+          <p className="text-[11px] text-white/45 hidden md:block">Drafts land here first · "Use this as my answer" puts one in the box below</p>
+          <button
+            type="button"
+            onClick={() => setResources(true)}
+            className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] font-bold ${resources ? "text-black" : "text-white/85 hover:bg-white/10"}`}
+            style={resources ? { backgroundColor: GC_BLUE, borderColor: GC_BLUE } : { borderColor: `${GC_BLUE}88` }}
+          >
+            <Library className="w-3.5 h-3.5" /> Resources
+          </button>
+        </div>
       </div>
       {(msgs.length > 0 || !!draft.trim()) && (
         <div className="px-3 pt-2 flex justify-end items-center gap-2 text-[11px]">
@@ -201,10 +214,12 @@ Left out: ${left.join("; ")}` : "");
           {thinking && <p className="text-sm text-white/50 inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" style={{ color: GC_BLUE }} /> Grant Coach is thinking…</p>}
         </div>
       )}
+      <ResourcePanel open={resources} onOpenChange={setResources} stories={stories} />
       <div className="p-3 flex gap-2 items-end">
         {/* Room to see whole paragraphs while typing; the box grows with the text. */}
         <div className="flex-1 min-w-0">
           <Textarea
+            ref={inputRef}
             value={line}
             onChange={(e) => {
               setLine(e.target.value);
