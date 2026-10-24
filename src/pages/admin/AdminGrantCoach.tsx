@@ -18,13 +18,16 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
-  BookOpen, FolderLock, Globe, Check, Loader2, Upload, Link2, ExternalLink, Trash2, RotateCcw, AlertCircle, FolderPlus, CalendarClock, ChevronRight,
+  BookOpen, FolderLock, Globe, Check, Loader2, Upload, Link2, ExternalLink, Trash2, RotateCcw, AlertCircle, FolderPlus, CalendarClock, ChevronRight, CalendarRange,
 } from "lucide-react";
 import { checklistProgress } from "@/lib/grantCoach/oceanChecklist";
 import { ORG_SECTIONS, orgFieldValue, orgCompleteness, formatEin, type OrgField } from "@/lib/grantCoach/orgProfile";
 import { useAsk } from "@/components/admin/AskDialog";
 import PastAnswers from "@/components/admin/grantCoach/PastAnswers";
 import StoryBank from "@/components/admin/grantCoach/StoryBank";
+import YearSnapshot from "@/components/admin/grantCoach/YearSnapshot";
+import GrantPipeline from "@/components/admin/grantCoach/GrantPipeline";
+import { documentAge, STATUS_LABEL, type FolderStatus } from "@/lib/grantCoach/lifecycle";
 import { ORG_DOCUMENTS, GRANT_DOCUMENTS_BUCKET, orgDocumentPath, type OrgDocument } from "@/lib/grantCoach/orgDocuments";
 
 
@@ -38,7 +41,7 @@ const when = (iso: string) =>
   new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/New_York" });
 const kb = (n: number | null) => (n == null ? "" : n > 1_000_000 ? `${(n / 1_000_000).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1000))} KB`);
 
-type Tab = "grants" | "about" | "documents";
+type Tab = "grants" | "snapshot" | "about" | "documents";
 
 const AdminGrantCoach = () => {
   const { user } = useAuth();
@@ -47,11 +50,11 @@ const AdminGrantCoach = () => {
   const [tab, setTab] = useState<Tab>("grants");
 
   /* ───── The grants ───── */
-  interface FolderRow { id: string; name: string; funder: string; status: string; due_at: string | null; amount_requested: number | null; template_key: string | null }
+  interface FolderRow { id: string; name: string; funder: string; status: string; due_at: string | null; amount_requested: number | null; amount_awarded: number | null; period_start: string | null; period_end: string | null; template_key: string | null }
   const { data: folders = [] } = useQuery({
     queryKey: ["grant-folders"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("grant_folders" as never).select("id, name, funder, status, due_at, amount_requested, template_key").order("due_at", { ascending: true, nullsFirst: false });
+      const { data, error } = await supabase.from("grant_folders" as never).select("id, name, funder, status, due_at, amount_requested, amount_awarded, period_start, period_end, template_key").order("due_at", { ascending: true, nullsFirst: false });
       if (error) throw error;
       return (data ?? []) as unknown as FolderRow[];
     },
@@ -249,6 +252,7 @@ const AdminGrantCoach = () => {
         <div className="flex gap-2">
           {([
             { k: "grants" as Tab, label: "Grants", icon: FolderPlus, sub: `${folders.filter((f) => f.status === "applying").length} applying · ${folders.filter((f) => f.status === "active").length} active` },
+            { k: "snapshot" as Tab, label: "Snapshot", icon: CalendarRange, sub: "the year, approved and locked" },
             { k: "about" as Tab, label: "Grant Vault", icon: BookOpen, sub: `${completeness.done} of ${completeness.total} required` },
             { k: "documents" as Tab, label: "Documents", icon: FolderLock, sub: `${docsDone} of ${ORG_DOCUMENTS.length} on file` },
           ]).map((t) => (
@@ -266,6 +270,7 @@ const AdminGrantCoach = () => {
 
       {tab === "grants" && (
         <div className="space-y-4">
+          {folders.length > 0 && <GrantPipeline folders={folders} />}
           <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm">
             <p className="font-semibold">One folder per grant, from the day the funder's documents arrive to the day the final report is filed.</p>
             <p className="text-white/50 mt-1">Start a grant, screenshot the funder's online application, and Grant Coach reads every question in. Each one is a conversation: it asks first, recommends, writes when you say so. Approve, copy into the portal, mark it pasted.</p>
@@ -280,7 +285,7 @@ const AdminGrantCoach = () => {
                     <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/40">{f.funder}</p>
                     <p className="font-semibold truncate">{f.name}</p>
                     <p className="text-[12px] text-white/45 mt-0.5 inline-flex items-center gap-3 flex-wrap">
-                      <span className="rounded-full px-2 py-0.5 bg-white/10 text-white/70 text-[10px] font-bold uppercase tracking-wide">{f.status}</span>
+                      <span className="rounded-full px-2 py-0.5 bg-white/10 text-white/70 text-[10px] font-bold uppercase tracking-wide">{STATUS_LABEL[f.status as FolderStatus] ?? f.status}</span>
                       {f.due_at && <span className={`inline-flex items-center gap-1 ${left != null && left <= 7 ? "text-amber-300" : ""}`}><CalendarClock className="w-3.5 h-3.5" /> Due {whenAt(f.due_at)}{left != null && ` · ${left} day${left === 1 ? "" : "s"}`}</span>}
                       {p.total > 0 && <span>{p.done} of {p.total} done</span>}
                     </p>
@@ -407,6 +412,8 @@ const AdminGrantCoach = () => {
         </div>
       )}
 
+      {tab === "snapshot" && <YearSnapshot />}
+
       {tab === "documents" && (
         <div className="space-y-4">
           <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm">
@@ -427,12 +434,19 @@ const AdminGrantCoach = () => {
                       {doc.ocean && <span className="text-[10px] font-bold uppercase tracking-wide rounded px-1.5 py-0.5 bg-white/10 text-white/60">O.C.E.A.N.</span>}
                     </p>
                     <p className="text-[12px] text-white/45">{doc.why}{doc.accepts ? ` · ${doc.accepts}` : ""}</p>
-                    {row ? (
-                      <p className="text-[12px] mt-1 text-emerald-300/90 inline-flex items-center gap-1.5">
-                        <Check className="w-3.5 h-3.5" />
-                        {row.link_url ? "Linked" : row.file_name}{row.size_bytes ? ` · ${kb(row.size_bytes)}` : ""} · {when(row.updated_at)}
-                      </p>
-                    ) : (
+                    {row ? (() => {
+                      // Documents that know their age: a 990 or a budget goes stale after a year.
+                      const age = documentAge(doc.key, row.updated_at);
+                      const tone = age.state === "stale" ? "text-red-300" : age.state === "due" ? "text-amber-300" : "text-emerald-300/90";
+                      return (
+                        <p className={`text-[12px] mt-1 inline-flex items-center gap-1.5 ${tone}`}>
+                          {age.state === "stale" || age.state === "due" ? <AlertCircle className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />}
+                          {row.link_url ? "Linked" : row.file_name}{row.size_bytes ? ` · ${kb(row.size_bytes)}` : ""} · {when(row.updated_at)}
+                          {age.state === "stale" && ` · ${age.ageMonths} months old; funders expect a new one every ${age.months}`}
+                          {age.state === "due" && " · due for a refresh next month"}
+                        </p>
+                      );
+                    })() : (
                       <p className="text-[12px] mt-1 text-amber-300/80 inline-flex items-center gap-1.5"><AlertCircle className="w-3.5 h-3.5" /> Not on file</p>
                     )}
                   </div>

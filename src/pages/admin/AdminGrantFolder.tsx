@@ -23,6 +23,11 @@ import type { Review } from "@/lib/grantCoach/review";
 import GrantApplication, { type AppItem } from "@/components/admin/grantCoach/GrantApplication";
 import GcCard, { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
 import { useAsk } from "@/components/admin/AskDialog";
+import GrantLifecycle from "@/components/admin/grantCoach/GrantLifecycle";
+import GrantReporting from "@/components/admin/grantCoach/GrantReporting";
+import { FitCheckCard, BudgetCard } from "@/components/admin/grantCoach/FitAndBudget";
+import { loadReports } from "@/lib/grantCoach/lifecycle";
+import type { FitCheck, BudgetDraft } from "@/lib/grantCoach/writer";
 
 
 interface Folder {
@@ -32,6 +37,9 @@ interface Folder {
   case_brief?: CaseBrief | null; case_locked_at?: string | null;
   review?: Review | null; reviewed_at?: string | null;
   funder_brief?: FunderBriefT | null; funder_brief_at?: string | null; funder_brief_docs?: string[];
+  submitted_at?: string | null; decided_at?: string | null; closed_at?: string | null; decline_reason?: string | null;
+  reporting_basis?: "as_written" | "changed" | null; applied_from?: string | null;
+  fit_check?: FitCheck | null; fit_checked_at?: string | null; budget?: BudgetDraft | null; budget_at?: string | null;
 }
 interface Doc {
   id: string; folder_id: string; side: "funder" | "ours"; title: string; storage_path: string | null; file_name: string | null;
@@ -80,6 +88,9 @@ const AdminGrantFolder = () => {
       return (data ?? []) as unknown as Doc[];
     },
   });
+
+  const { data: reports = [] } = useQuery({ queryKey: ["grant-reports", id], enabled: !!id, queryFn: () => loadReports(id!) });
+  const refreshFolder = () => { qc.invalidateQueries({ queryKey: ["grant-folder", id] }); qc.invalidateQueries({ queryKey: ["grant-folders"] }); qc.invalidateQueries({ queryKey: ["grant-reports"] }); };
 
   const live = items.filter((i) => i.status !== "na");
   const progress = { done: live.filter((i) => i.status === "done").length, total: live.length };
@@ -289,6 +300,36 @@ const AdminGrantFolder = () => {
           rows={2}
         />
       </div>
+
+      {/* Where it stands: submitted, awarded or declined, reporting, closed, apply again */}
+      <GrantLifecycle
+        folder={folder}
+        draftFolder={draftFolder}
+        items={items}
+        docs={docs}
+        reports={reports}
+        userId={user?.id ?? null}
+        ask={ask}
+        onChanged={refreshFolder}
+      />
+      {(folder.status === "active" || folder.status === "closed") && (
+        <GrantReporting
+          folderId={id!}
+          draftFolder={draftFolder}
+          funderBrief={folder.funder_brief ?? null}
+          reports={reports}
+          promised={items.filter((i) => i.status === "done" && i.answer?.trim() && !["acknowledgment", "signature", "upload"].includes(i.kind)).map((i) => ({ label: i.label, answer: i.answer! }))}
+          library={library}
+          userId={user?.id ?? null}
+          ask={ask}
+        />
+      )}
+      {folder.status === "applying" && (
+        <div className="grid gap-4 lg:grid-cols-2 items-start">
+          <FitCheckCard folderId={id!} draftFolder={draftFolder} funderBrief={folder.funder_brief ?? null} library={library} getFacts={async () => (facts.length ? facts : (await refetchFacts()).data ?? [])} saved={folder.fit_check ?? null} savedAt={folder.fit_checked_at ?? null} onChanged={refreshFolder} />
+          <BudgetCard folderId={id!} draftFolder={draftFolder} funderBrief={folder.funder_brief ?? null} library={library} getFacts={async () => (facts.length ? facts : (await refetchFacts()).data ?? [])} saved={folder.budget ?? null} savedAt={folder.budget_at ?? null} prompt={(a) => ask.prompt(a)} onChanged={refreshFolder} />
+        </div>
+      )}
 
       <div className="space-y-6">
         {/* Documents, and the numbers the writer uses */}

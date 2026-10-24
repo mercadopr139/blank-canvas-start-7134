@@ -50,6 +50,29 @@ export function summarizeMinority(
 // substring-match (e.g. `.includes("0")` wrongly matches "$50,000").
 export const POVERTY_INCOMES = ["Under $25,000", "Less than $25,000", "Less than $35,000"];
 
+// ── Household income: the six choices the registration form offers, in order,
+// word for word (Josh, 2026-10-24). Every report shows these as the family
+// picked them — never regrouped into brackets the form never asked
+// ("$100,000 – $149,999" once stood in for "Greater than $80,001").
+export const FORM_INCOMES = [
+  "Less than $25,000",
+  "Less than $35,000",
+  "Less than $45,000",
+  "Less than $65,000",
+  "Less than $80,000",
+  "Greater than $80,001",
+] as const;
+
+/** The "Less than $X" choices as running shares: the % of households below each line. */
+export const incomeBelowShares = (counts: Record<string, number>) => {
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  let running = 0;
+  return FORM_INCOMES.filter((k) => k.startsWith("Less than")).map((k) => {
+    running += counts[k] ?? 0;
+    return { line: k.replace("Less than ", ""), count: running, pct: total ? Math.round((running / total) * 100) : 0 };
+  });
+};
+
 /** True when a registration record is at/below the poverty line. */
 export const isBelowPoverty = (reg: {
   household_income_range?: string | null;

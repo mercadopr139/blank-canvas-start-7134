@@ -1,3 +1,4 @@
+import { FORM_INCOMES } from "@/lib/demographics";
 import { useState, useMemo } from "react";
 import { todayNY } from "@/lib/programYear";
 import { supabase } from "@/integrations/supabase/client";
@@ -212,22 +213,16 @@ function normalizeSchoolDistrict(val: string): string | null {
 
 function normalizeHouseholdIncome(val: string): string | null {
   const v = val.trim().toLowerCase();
-  const incomes = ["Under $25,000", "$25,000 - $49,999", "$50,000 - $74,999", "$75,000 - $99,999", "$100,000 - $149,999", "$150,000 or more", "Less than $25,000", "Less than $35,000", "Less than $45,000", "Less than $65,000", "Less than $80,000", "Greater than $80,001"];
-  const exact = incomes.find((i) => i.toLowerCase() === v);
+  const exact = FORM_INCOMES.find((i) => i.toLowerCase() === v);
   if (exact) return exact;
-  // Fuzzy
-  if (v.includes("under") && v.includes("25")) return "Under $25,000";
-  if (v.includes("less") && v.includes("25")) return "Less than $25,000";
+  // The form's wording, loosely typed. A range the form never offered
+  // ("$25,000 - $49,999") is left blank rather than guessed into a choice.
+  if ((v.includes("under") || v.includes("less")) && v.includes("25")) return "Less than $25,000";
   if (v.includes("less") && v.includes("35")) return "Less than $35,000";
   if (v.includes("less") && v.includes("45")) return "Less than $45,000";
   if (v.includes("less") && v.includes("65")) return "Less than $65,000";
   if (v.includes("less") && v.includes("80")) return "Less than $80,000";
   if (v.includes("greater") || v.includes("80,001") || v.includes("80001")) return "Greater than $80,001";
-  if (v.includes("150")) return "$150,000 or more";
-  if (v.includes("100")) return "$100,000 - $149,999";
-  if (v.includes("75")) return "$75,000 - $99,999";
-  if (v.includes("50")) return "$50,000 - $74,999";
-  if (v.includes("25")) return "$25,000 - $49,999";
   return null;
 }
 

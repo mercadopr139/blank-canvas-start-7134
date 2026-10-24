@@ -66,6 +66,7 @@ describe("the summaries behind the live numbers", () => {
   it("groups districts the way a funder reads them", () => {
     expect(districtGroup("Lower Cape May Regional")).toBe("Lower Township");
     expect(districtGroup("Lower Township")).toBe("Lower Township");
+    expect(districtGroup("Dennis Township")).toBe("Middle Township");
     expect(districtGroup("Cape May City")).toBe("Cape May / West Cape May");
     expect(districtGroup("Wildwood")).toBe("Wildwood");
     expect(districtGroup(null)).toBe("Not given");

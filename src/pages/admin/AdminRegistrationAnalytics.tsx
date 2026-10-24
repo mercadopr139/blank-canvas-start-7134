@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell } from "recharts";
 import { YouthDistrictMap } from "@/components/admin/YouthDistrictMap";
-import { summarizeMinority, isBelowPoverty } from "@/lib/demographics";
+import { summarizeMinority, isBelowPoverty, FORM_INCOMES, incomeBelowShares } from "@/lib/demographics";
 
 const COLORS = [
   "#bf0f3e",
@@ -305,30 +305,17 @@ const AdminRegistrationAnalytics = () => {
     if (inc) acc[inc] = (acc[inc] || 0) + 1;
     return acc;
   }, {} as Record<string, number>) || {};
-  // Normalize duplicate "Under / Less than" brackets into a single set of ordered buckets
-  const incomeOrder = [
-    "Under $25,000",
-    "$25,000 - $49,999",
-    "$50,000 - $74,999",
-    "$75,000 - $99,999",
-    "$100,000 - $149,999",
-    "$150,000 or more",
-  ];
-  const mergedIncome: Record<string, number> = {};
-  incomeOrder.forEach((k) => { mergedIncome[k] = 0; });
-  Object.entries(incomeCounts).forEach(([k, v]) => {
-    if (mergedIncome[k] !== undefined) { mergedIncome[k] += v; return; }
-    // Map legacy "Less than" values into the merged buckets
-    if (k === "Less than $25,000") mergedIncome["Under $25,000"] += v;
-    else if (k === "Less than $35,000" || k === "Less than $45,000" || k === "$25,000 - $49,999") mergedIncome["$25,000 - $49,999"] += v;
-    else if (k === "Less than $65,000") mergedIncome["$50,000 - $74,999"] += v;
-    else if (k === "Less than $80,000") mergedIncome["$75,000 - $99,999"] += v;
-    else if (k === "Greater than $80,001") mergedIncome["$100,000 - $149,999"] += v;
-  });
-  const incomeData = incomeOrder
-    .map((name) => ({ name, count: mergedIncome[name] }))
-    .filter((d) => d.count > 0);
+  // The form's six choices, word for word, in the form's order. Anything else on
+  // record (an old import) is shown as written, after them — never regrouped.
+  const incomeData = [
+    ...FORM_INCOMES.map((name) => ({ name, count: incomeCounts[name] ?? 0 })),
+    ...Object.entries(incomeCounts)
+      .filter(([k]) => !(FORM_INCOMES as readonly string[]).includes(k))
+      .map(([name, count]) => ({ name, count })),
+  ].filter((d) => d.count > 0);
   const incomeTotal = incomeData.reduce((s, d) => s + d.count, 0);
+  // The line a grant quotes: "x% of households report income below $35,000".
+  const incomeBelow = incomeBelowShares(incomeCounts);
 
   /* ───── TOP DISTRICT (for headline row) ───── */
   const topDistricts = districtData.slice(0, 3).map((d) => ({
@@ -636,6 +623,19 @@ const AdminRegistrationAnalytics = () => {
                       );
                     })}
                   </div>
+                  {incomeTotal > 0 && (
+                    <div className="mt-5 pt-4 border-t border-white/10">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50 mb-2">Households below each line</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                        {incomeBelow.map((b) => (
+                          <div key={b.line} className="rounded-md bg-white/5 px-2 py-1.5 text-center">
+                            <p className="text-sm font-bold text-white tabular-nums">{b.pct}%</p>
+                            <p className="text-[10px] text-white/50">below {b.line}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 

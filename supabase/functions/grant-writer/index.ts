@@ -107,9 +107,16 @@ async function createBest(anthropic: Anthropic, params: Record<string, any>) {
   throw lastError ?? new Error("No model answered.");
 }
 type Req = {
-  mode: "item" | "narrative" | "chat" | "read_screens" | "classify" | "strategy" | "story" | "review" | "funder_brief";
+  mode: "item" | "narrative" | "chat" | "read_screens" | "classify" | "strategy" | "story" | "review" | "funder_brief" | "snapshot" | "reporting_plan" | "report" | "fit" | "budget";
   /** The public website's words, as published — Grant Coach's first source (scripts/make-site-text.mjs). */
   siteText?: string | null;
+  /** The approved Program Year Snapshot (Josh, 2026-10-24): source 2, its words used as written. */
+  snapshot?: { year: string; sections: { title: string; body: string }[] } | null;
+  /** snapshot mode: the section being redrafted for a new year. */
+  year?: string;
+  title?: string;
+  current?: string;
+  previous?: string | null;
   folder: Folder;
   item?: Item;
   narrativeItems?: Item[];
@@ -148,7 +155,37 @@ type Req = {
   waiting?: { label: string; help: string | null; kind: string; limit_kind?: string | null; limit_value?: number | null }[];
   /** classify: questions NLA has answered and approved before (id + the question as asked). */
   memory?: { id: string; question: string; funder: string | null }[];
+  /** report: the report being written, and its period. */
+  report?: { title: string; kind: string; detail: string | null; period_start: string | null; period_end: string | null };
+  /** report: what the application promised — its approved answers, in portal order. */
+  promised?: { label: string; answer: string }[];
 };
+
+/** Funder or award documents as model content: PDFs and images from storage, text read in the browser. */
+// deno-lint-ignore no-explicit-any
+async function docContent(docs: { title: string; path?: string; text?: string }[]): Promise<any[]> {
+  const service = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  // deno-lint-ignore no-explicit-any
+  const content: any[] = [];
+  for (const d of docs.slice(0, 20)) {
+    content.push({ type: "text", text: `=== DOCUMENT: ${d.title} ===` });
+    if (d.text) { content.push({ type: "text", text: d.text.slice(0, 120000) }); continue; }
+    if (!d.path) continue;
+    const { data, error } = await service.storage.from("grant-documents").download(d.path);
+    if (error || !data) { content.push({ type: "text", text: `(could not be opened: ${error?.message ?? "no file"})` }); continue; }
+    const buf = new Uint8Array(await data.arrayBuffer());
+    let b64 = "";
+    for (let i = 0; i < buf.length; i += 0x8000) b64 += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+    const p = d.path.toLowerCase();
+    if (p.endsWith(".pdf")) content.push({ type: "document", source: { type: "base64", media_type: "application/pdf", data: btoa(b64) } });
+    else if (/\.(png|jpe?g|webp)$/.test(p)) content.push({ type: "image", source: { type: "base64", media_type: p.endsWith(".png") ? "image/png" : p.endsWith(".webp") ? "image/webp" : "image/jpeg", data: btoa(b64) } });
+    else content.push({ type: "text", text: "(a file type that can't be read here)" });
+  }
+  return content;
+}
+
+const isYmd = (v: unknown) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
+const strList = (v: unknown, n = 12) => (Array.isArray(v) ? v.filter((x) => typeof x === "string" && x.trim()).map((x: string) => x.trim()).slice(0, n) : []);
 
 const NARRATIVE_WORD_LIMIT = 1350;
 
@@ -156,12 +193,13 @@ const SYSTEM = `You are Grant Coach, the grant writer for No Limits Academy (NLA
 
 SOURCES, IN THIS ORDER (Josh, 2026-10-23)
 1. THE WEBSITE — what NLA is, what it offers, how the day runs, the mission's words. The substance and the voice come from here first. If the website describes a program, a schedule or a value, use its description.
-2. THE LIVE NUMBERS — every figure, no exceptions. The website says "500+"; the live numbers say exactly how many, and for which year.
-3. THE ABOUT NLA LIBRARY (the Grant Vault) — the facts the website does not carry: EIN, board, budget, the 990, past grants, partner letters, and any correction Josh typed over the website's words.
-4. THE HOUSE EXAMPLE — Josh's own proposals: how the answer should read.
-5. THE FUNDER — their rules and rubric: what to emphasize, in what order, inside what limits.
-6. ALREADY WRITTEN IN THIS FOLDER — consistency across answers: the same program name, amounts, counts and dates.
-When they disagree: the live numbers beat the website on any figure; the library beats the website on any fact Josh corrected; the funder beats everything on format, order and length.
+2. THE SNAPSHOT — the Program Year Snapshot Josh approved word for word (who NLA served, what NLA does, the organization, capacity and partners). Where the Snapshot states a figure or a sentence, use it AS WRITTEN: same number, same wording, same order, adapted only to the funder's length. Its figures were approved by Josh and may be cited even where a live number below is a partial-year log (e.g. "Daily attendance at NLA is 40–120 youth per night", "more than 1,200 hot meals are served each month"). Never contradict it.
+3. THE LIVE NUMBERS — every other figure. The website says "500+"; the live numbers say exactly how many, and for which year.
+4. THE ABOUT NLA LIBRARY (the Grant Vault) — the facts the website does not carry: EIN, board, budget, the 990, past grants, partner letters, and any correction Josh typed over the website's words.
+5. THE HOUSE EXAMPLE — Josh's own proposals: how the answer should read.
+6. THE FUNDER — their rules and rubric: what to emphasize, in what order, inside what limits.
+7. ALREADY WRITTEN IN THIS FOLDER — consistency across answers: the same program name, amounts, counts and dates.
+When they disagree: the Snapshot beats everything but the funder's format; the live numbers beat the website on any figure the Snapshot does not state; the library beats the website on any fact Josh corrected; the funder beats everything on format, order and length.
 
 HARD RULES
 1. Every number you write must come from the LIVE NUMBERS or the ABOUT NLA LIBRARY you are given. Never invent, round up, or extrapolate a figure. If a figure the question needs is not provided, write a short bracketed note in its place like [NEED: number of Meal Train volunteers] and move on.
@@ -257,6 +295,10 @@ const describeFolder = (f: Folder) =>
 
 /** The public website, as published — read first for what NLA is and offers. */
 const siteBlock = (body: Req) => body.siteText?.trim() ? block("THE WEBSITE — nolimitsboxingacademy.org as published (source 1: the substance and the voice; figures still come from LIVE NUMBERS)", body.siteText) : "";
+/** The approved Snapshot — source 2: its figures and sentences are used as written. */
+const snapshotBlock = (body: Req) => (body.snapshot?.sections ?? []).length
+  ? block(`THE SNAPSHOT — program year ${body.snapshot!.year}, approved by Josh word for word (source 2: use its figures and sentences as written; never contradict it)`, body.snapshot!.sections.map((x) => x.body.trim()).join("\n\n\n"))
+  : "";
 /** Josh's proposals, as THE HOUSE EXAMPLE — the voice every answer matches. */
 const houseExample = (lib: Entry[] | undefined) => {
   const ex = (lib ?? []).find((e) => e.key === "writing_examples");
@@ -390,7 +432,143 @@ Deno.serve(async (req) => {
       return json({ draft: parsed });
     }
 
+    // ── The Snapshot: one section redrafted for a new program year ──
+    if (body.mode === "snapshot") {
+      const current = String(body.current ?? body.previous ?? "").trim();
+      if (!body.title) return json({ error: "Which section?" }, 400);
+      const response = await createBest(anthropic, {
+        max_tokens: 9000,
+        system: `You update No Limits Academy's Program Year Snapshot: one fixed, funder-neutral section Josh approved word for word. Josh's wording is final. Keep every sentence, its order and its claims exactly as he wrote them; change ONLY (a) the program year wherever it is named and (b) any figure about NLA's youth that the LIVE NUMBERS now state differently for the new year. Never add a claim, a program, an adjective or a sentence; never remove one unless the live numbers show it is no longer true, and then say so in "changed". Figures Josh set himself and the live numbers do not measure (a range like "40–120 youth per night", "more than 1,200 hot meals each month", "more than $3 million since 2020", "95% … non-contact boxing") stay exactly as written. Never write that NLA owns its operations platform: it is "a custom-built operations platform". American English, NLA's voice.`,
+        messages: [{ role: "user", content:
+          `SECTION: ${body.title}\nNEW PROGRAM YEAR: ${body.year ?? ""}\n\nTHE APPROVED SECTION, JOSH'S WORDING:\n${current || "(empty — write it from the website and the live numbers, short declarative sentences, in the house style)"}` +
+          (body.instruction ? `\n\nJOSH'S INSTRUCTION: ${body.instruction}` : "") +
+          siteBlock(body) +
+          block("LIVE NUMBERS (as of today, from the back end)", describeFacts(body.facts ?? [])) +
+          block("ABOUT NLA LIBRARY", describeLibrary(body.library ?? [])) +
+          `\n\nReturn ONLY JSON: {"answer":"<the full section, ready to approve>","changed":["<each change, one line: what it said → what it says now, and why>"]}` }],
+        ...thinking("high"),
+      });
+      const parsed = extractJson(textOf(response as never));
+      const answer = String(parsed.answer ?? "").trim();
+      if (!answer) throw new Error("The section came back empty. Try again.");
+      const changed = Array.isArray(parsed.changed) ? parsed.changed.filter((x: unknown) => typeof x === "string" && x.trim()).slice(0, 20) : [];
+      return json({ answer, changed });
+    }
+
     if (!body?.folder || !Array.isArray(body.library) || !Array.isArray(body.facts)) return json({ error: "Send the folder, the library and the facts." }, 400);
+
+    // ── Awarded: the reporting checklist, from the RFP's rules or the award letter ──
+    if (body.mode === "reporting_plan") {
+      const fb = body.funderBrief;
+      const fromBrief = fb ? [
+        fb.data_and_reporting?.length ? "REPORTING RULES (from the funder's documents):\n" + fb.data_and_reporting.map((x) => "• " + x).join("\n") : "",
+        fb.dates?.length ? "DATES (from the funder's documents):\n" + fb.dates.map((x) => "• " + x).join("\n") : "",
+      ].filter(Boolean).join("\n\n") : "";
+      const award = Array.isArray(body.docs) && body.docs.length ? await docContent(body.docs) : [];
+      if (!fromBrief && !award.length) return json({ error: "Grant Coach needs the funder's reporting rules: read the RFP into the funder brief, or upload the award letter." }, 400);
+      const response = await createBest(anthropic, {
+        max_tokens: 8000,
+        system: "You turn a funder's reporting requirements into a reporting checklist for a small nonprofit. Only what the documents require: never add a report, a date or a requirement they do not state. Use the funder's own words for what each report must contain.",
+        messages: [{ role: "user", content: [
+          ...award,
+          { type: "text", text:
+            `THE GRANT: ${body.folder.name} from ${body.folder.funder}. Grant period: ${body.folder.period_start ?? "?"} to ${body.folder.period_end ?? "?"}.\n\n` +
+            (award.length ? "The documents above are the AWARD LETTER / AGREEMENT. They replace the RFP's reporting rules wherever they differ.\n\n" : "") +
+            (fromBrief ? fromBrief + "\n\n" : "") +
+            `Build the reporting checklist: one row per report the funder requires. Expand a repeating report into one row per occurrence inside the grant period ("monthly by the 15th" over a January–December period = twelve rows, each with its own period and due date). Dates as YYYY-MM-DD; if a due date cannot be worked out from the documents, leave it null and say why in "notes". kind is one of narrative, financial, data, reimbursement, other.\n\nReturn ONLY JSON: {"reports":[{"title":"<e.g. Monthly reimbursement package — January 2027>","kind":"reimbursement","detail":"<what it must contain, in the funder's words>","period_start":"YYYY-MM-DD","period_end":"YYYY-MM-DD","due_on":"YYYY-MM-DD"}],"notes":["<anything unclear, for Josh to ask the funder>"]}` },
+        ] }],
+        ...thinking("medium"),
+      });
+      const parsed = extractJson(textOf(response as never));
+      const kinds = new Set(["narrative", "financial", "data", "reimbursement", "other"]);
+      // deno-lint-ignore no-explicit-any
+      const reports = (Array.isArray(parsed.reports) ? parsed.reports : []).slice(0, 60).map((r: any) => ({
+        title: String(r?.title ?? "").trim().slice(0, 200),
+        kind: kinds.has(r?.kind) ? r.kind : "other",
+        detail: typeof r?.detail === "string" ? r.detail.trim().slice(0, 2000) : null,
+        period_start: isYmd(r?.period_start) ? r.period_start : null,
+        period_end: isYmd(r?.period_end) ? r.period_end : null,
+        due_on: isYmd(r?.due_on) ? r.due_on : null,
+      // deno-lint-ignore no-explicit-any
+      })).filter((r: any) => r.title);
+      return json({ reports, notes: strList(parsed.notes) });
+    }
+
+    // ── A report, drafted from the period's numbers and what the application promised ──
+    if (body.mode === "report") {
+      const r = body.report;
+      if (!r) return json({ error: "Which report?" }, 400);
+      const promised = (body.promised ?? []).map((p) => `• ${p.label}:\n${p.answer}`).join("\n\n");
+      const response = await createBest(anthropic, {
+        max_tokens: 9000,
+        system: systemFor(body.folder, body.funderBrief) +
+          "\n\nYOU ARE WRITING A REPORT TO A FUNDER THAT ALREADY AWARDED NLA. Report what happened in the period, honestly: every figure from the LIVE NUMBERS for that period (or the Snapshot), never a projection and never a number the facts do not give. Hold it against what the application PROMISED: name each promise and what was delivered. Where a promised measure has no number in the facts, write [NEED: …] and list it in \"gaps\". Lead with results, plain and confident.",
+        messages: [{ role: "user", content:
+          `Write this report.\n\nREPORT: ${r.title} (${r.kind})\nPERIOD: ${r.period_start ?? "?"} to ${r.period_end ?? "?"}` +
+          (r.detail ? `\nWHAT THE FUNDER REQUIRES IN IT:\n${r.detail}` : "") +
+          (body.instruction ? `\n\nJosh's instruction: ${body.instruction}` : "") +
+          block("THE GRANT", describeFolder(body.folder)) +
+          block("WHAT THE APPLICATION PROMISED (approved answers)", promised || "(no approved answers on file)") +
+          siteBlock(body) + snapshotBlock(body) +
+          block("ABOUT NLA LIBRARY", describeLibrary(body.library)) +
+          block("LIVE NUMBERS FOR THE REPORT PERIOD (from the back end)", describeFacts(body.facts)) +
+          `\n\nReturn ONLY JSON: {"answer":"<the report, ready to submit, with a heading per part the funder requires>","gaps":["<a promised measure or required item with no number yet — what's needed>"]}` }],
+        ...thinking("medium"),
+      });
+      const parsed = extractJson(textOf(response as never));
+      const answer = String(parsed.answer ?? "").trim();
+      if (!answer) throw new Error("The report came back empty. Try again.");
+      return json({ answer, gaps: strList(parsed.gaps, 20) });
+    }
+
+    // ── The fit check: go or no-go before the work starts ──
+    if (body.mode === "fit") {
+      const response = await createBest(anthropic, {
+        max_tokens: 6000,
+        system: "You are a seasoned grant strategist advising a small youth nonprofit whether an opportunity is worth the hours. Be direct and honest: a clear no saves days. Judge only from the funder's documents and what you are told about NLA; never assume the funder funds something its documents don't say. Solutions and partnerships, never blame.",
+        messages: [{ role: "user", content:
+          `Should NLA apply to this grant?` +
+          block("THE GRANT", describeFolder(body.folder)) +
+          (body.funderBrief ? block("WHAT THE FUNDER'S DOCUMENTS SAY", JSON.stringify(body.funderBrief)) : "\n\n(No funder documents read yet — say so, and judge from the grant's name and notes only, with low confidence.)") +
+          siteBlock(body) + snapshotBlock(body) +
+          block("ABOUT NLA LIBRARY", describeLibrary(body.library)) +
+          block("LIVE NUMBERS", describeFacts(body.facts)) +
+          `\n\nWeigh eligibility first (a hard no on eligibility is a no-go), then fit with what the funder funds, NLA's strength against their rubric, the effort against the amount, and any requirement NLA would struggle to meet (match, audit, reimbursement cash flow, data it doesn't collect).\n\nReturn ONLY JSON: {"verdict":"go"|"maybe"|"no_go","score":<0-100 fit>,"summary":"<two sentences>","strengths":["<why NLA scores>"],"risks":["<what could sink it>"],"must_haves":["<requirement NLA must meet or prepare>"],"questions":["<what to ask the funder before deciding>"]}` }],
+        ...thinking("medium"),
+      });
+      const parsed = extractJson(textOf(response as never));
+      const verdict = ["go", "maybe", "no_go"].includes(parsed.verdict) ? parsed.verdict : "maybe";
+      const score = Math.max(0, Math.min(100, Math.round(Number(parsed.score) || 0)));
+      return json({ fit: { verdict, score, summary: String(parsed.summary ?? "").trim(), strengths: strList(parsed.strengths), risks: strList(parsed.risks), must_haves: strList(parsed.must_haves), questions: strList(parsed.questions) } });
+    }
+
+    // ── Budget help: lines inside the funder's categories, a justification for each ──
+    if (body.mode === "budget") {
+      const fb = body.funderBrief;
+      const response = await createBest(anthropic, {
+        max_tokens: 8000,
+        system: "You draft a grant budget for a small youth nonprofit. Use ONLY the funder's allowable categories and rules. Every amount must be grounded in a figure from NLA's library (staffing, budget, revenue, costs) or derived from one with the arithmetic shown in the justification; where no figure exists, put 0, mark the line [NEED: …] in its justification and list it in the needs list. Never invent a salary, a rate or a vendor quote. The total never exceeds the amount requested.",
+        messages: [{ role: "user", content:
+          `Draft the budget for this application. Amount requested: ${body.folder.amount_requested ?? "not set"}.` +
+          (body.instruction ? `\n\nJosh's instruction: ${body.instruction}` : "") +
+          block("THE GRANT", describeFolder(body.folder)) +
+          (fb ? block("THE FUNDER'S BUDGET RULES", [...(fb.budget_rules ?? []).map((x) => "• " + x), "", "Allowable categories:", ...(fb.budget_categories ?? []).map((x) => "• " + x), "", "Does not fund:", ...(fb.does_not_fund ?? []).map((x) => "• " + x)].join("\n")) : "\n\n(No funder budget rules read yet — use standard categories: personnel, fringe, program supplies, food, transportation, other, and say so in notes.)") +
+          block("ABOUT NLA LIBRARY", describeLibrary(body.library)) +
+          block("LIVE NUMBERS", describeFacts(body.facts)) +
+          `\n\nReturn ONLY JSON: {"lines":[{"category":"<the funder's category>","item":"<what it buys>","amount":<number>,"justification":"<how the amount is built, one or two sentences>"}],"total":<number>,"notes":["<assumptions>"],"needs":["<a figure Josh must supply>"]}` }],
+        ...thinking("medium"),
+      });
+      const parsed = extractJson(textOf(response as never));
+      // deno-lint-ignore no-explicit-any
+      const lines = (Array.isArray(parsed.lines) ? parsed.lines : []).slice(0, 40).map((l: any) => ({
+        category: String(l?.category ?? "Other").trim(), item: String(l?.item ?? "").trim(),
+        amount: Math.max(0, Math.round(Number(l?.amount) || 0)), justification: String(l?.justification ?? "").trim(),
+      // deno-lint-ignore no-explicit-any
+      })).filter((l: any) => l.item);
+      // deno-lint-ignore no-explicit-any
+      const total = lines.reduce((n: number, l: any) => n + l.amount, 0);
+      return json({ budget: { lines, total, notes: strList(parsed.notes), needs: strList(parsed.needs) } });
+    }
 
     // ── The funder's documents, read once into the brief ──
     if (body.mode === "funder_brief") {
@@ -481,7 +659,7 @@ Check: every criterion the funder scores; whether each answer answers exactly wh
         block("THE GRANT", describeFolder(body.folder)) +
         block("THE STORY QUESTIONS WAITING FOR THE CASE (the case must let every one be answered well)", waiting.map((w) => `• ${w.label}${w.help ? " — " + w.help : ""}${w.limit_value ? ` (limit ${w.limit_value} ${w.limit_kind})` : ""}`).join("\n")) +
         (body.caseBrief ? block("THE CASE AS IT STANDS (revise it if the conversation changes it)", describeCase(body.caseBrief)) : "") +
-        siteBlock(body) + houseExample(body.library) + block("ABOUT NLA LIBRARY", describeLibrary(body.library)) +
+        siteBlock(body) + snapshotBlock(body) + houseExample(body.library) + block("ABOUT NLA LIBRARY", describeLibrary(body.library)) +
         block("THE STORY BANK", describeStories(body.stories ?? [])) +
         block("LIVE NUMBERS (as of today, from the back end)", describeFacts(body.facts)) +
         block("ALREADY WRITTEN IN THIS FOLDER", describeAnswered(body.answered ?? []));
@@ -523,7 +701,7 @@ Check: every criterion the funder scores; whether each answer answers exactly wh
         block("THE GRANT", describeFolder(body.folder)) +
         (sibs.length ? block("THE OTHER QUESTIONS ON THIS SCREEN (fill one ONLY when asked, by its number)", sibs.map((q) => `[${q.i}] ${q.label}${q.help ? " — " + q.help : ""}${q.limit_value ? ` (limit ${q.limit_value} ${q.limit_kind})` : ""}\n    now: ${q.answer?.trim() ? q.answer.trim() : "(empty)"}`).join("\n")) : "") +
         (body.caseBrief ? block("THE CASE NLA SETTLED ON", describeCase(body.caseBrief)) : "") +
-        siteBlock(body) + houseExample(body.library) + block("ABOUT NLA LIBRARY", describeLibrary(body.library)) +
+        siteBlock(body) + snapshotBlock(body) + houseExample(body.library) + block("ABOUT NLA LIBRARY", describeLibrary(body.library)) +
         ((body.stories ?? []).length ? block("THE STORY BANK", describeStories(body.stories ?? [], body.usedStoryIds ?? [])) : "") +
         block("LIVE NUMBERS (as of today, from the back end)", describeFacts(body.facts)) +
         block("ALREADY WRITTEN IN THIS FOLDER", describeAnswered(body.answered ?? []));
@@ -566,7 +744,7 @@ Check: every criterion the funder scores; whether each answer answers exactly wh
     const context =
       block("THE GRANT", describeFolder(body.folder)) +
       (body.caseBrief ? block("THE LOCKED CASE — write this answer FROM it: same program, same numbers, same story; consistent with every other answer", describeCase(body.caseBrief)) : "") +
-      siteBlock(body) + houseExample(body.library) + block("ABOUT NLA LIBRARY", describeLibrary(body.library)) +
+      siteBlock(body) + snapshotBlock(body) + houseExample(body.library) + block("ABOUT NLA LIBRARY", describeLibrary(body.library)) +
       ((body.stories ?? []).length ? block("THE STORY BANK", describeStories(body.stories ?? [], body.usedStoryIds ?? [])) : "") +
       block("LIVE NUMBERS (as of today, from the back end)", describeFacts(body.facts)) +
       block("ALREADY WRITTEN IN THIS FOLDER", describeAnswered(body.answered ?? []));

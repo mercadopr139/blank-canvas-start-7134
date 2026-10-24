@@ -1,3 +1,4 @@
+import { FORM_INCOMES } from "@/lib/demographics";
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -1017,7 +1018,7 @@ const EditRegistrationForm = ({
           label="Household Income"
           value={form.household_income_range}
           onChange={(v) => set("household_income_range", v)}
-          options={["Under $25,000", "$25,000 - $49,999", "$50,000 - $74,999", "$75,000 - $99,999", "$100,000 - $149,999", "$150,000 or more", "Less than $25,000", "Less than $35,000", "Less than $45,000", "Less than $65,000", "Less than $80,000", "Greater than $80,001"]}
+          options={[...FORM_INCOMES]}
         />
         <SelectField
           label="Free/Reduced Lunch"

@@ -83,6 +83,8 @@ export const isSingleParent = (r: { family_structure: string | null }) =>
 export const districtGroup = (d: string | null | undefined) => {
   const k = (d ?? "").trim();
   if (k === "Lower Cape May Regional" || k === "Lower Township") return "Lower Township";
+  // Dennis Township youth go on to Middle Township High School; counted with Middle (Josh, 2026-10-24).
+  if (k === "Dennis Township") return "Middle Township";
   if (k === "Cape May City" || k === "West Cape May") return "Cape May / West Cape May";
   return k || "Not given";
 };
@@ -297,9 +299,10 @@ async function fetchAll<T>(build: (from: number, to: number) => PromiseLike<{ da
 type Served = { nla_youth: number; hawk_youth: number; bam_youth: number; in_both: number; combined: number };
 
 /** Every live fact the writer may cite. Each query that fails becomes a note, not a crash. */
-export async function gatherLiveFacts(today = new Date()): Promise<Fact[]> {
+export async function gatherLiveFacts(today = new Date(), period?: { from: string; to: string; label: string }): Promise<Fact[]> {
   const facts: Fact[] = [];
-  const periods = factPeriods(today);
+  // A report speaks about its own period (Josh, 2026-10-24); everything else, the last complete year.
+  const periods = period ? [{ ...factPeriods(today)[0], label: period.label, from: period.from, to: period.to }] : factPeriods(today);
   const rpc = (n: string, a: Record<string, unknown>) =>
     (supabase.rpc as unknown as (name: never, args: never) => PromiseLike<{ data: unknown; error: { message: string } | null }>).call(supabase, n as never, a as never);
   const from = (t: string) => supabase.from(t as never);
@@ -439,7 +442,7 @@ export async function gatherLiveFacts(today = new Date()): Promise<Fact[]> {
     if (s.ageMedian != null) facts.push({ key: "ages.current", label: "Ages", value: `median ${s.ageMedian}; ${s.ageInRange} of ${s.agesKnown} (${pct(s.ageInRange, s.agesKnown)}%) between 7 and 19`, period, source: `dates of birth, as of the end of the year` });
     facts.push({ key: "sex.current", label: "Sex", value: shareList(s.sex, s.youth), period, source: "registration forms" });
     facts.push({ key: "race.current", label: "Race / ethnicity", value: shareList(s.race, s.youth, 6), period, source: "registration forms" });
-    facts.push({ key: "districts.current", label: "School districts", value: shareList(s.districts, s.youth, 8), period, source: "registration forms; Lower Cape May Regional and Lower Township counted as one, as are the Cape May districts" });
+    facts.push({ key: "districts.current", label: "School districts", value: shareList(s.districts, s.youth, 8), period, source: "registration forms; Lower Cape May Regional and Lower Township counted as one, as are the Cape May districts; Dennis Township counted with Middle Township" });
   } catch (e) {
     facts.push({ key: "registered.current", label: "Registrations", value: `unavailable (${(e as Error).message})`, period: "the last complete program year", source: "youth_registrations" });
   }

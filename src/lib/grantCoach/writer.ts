@@ -5,6 +5,7 @@
 // exactly what it was told.
 import { supabase } from "@/integrations/supabase/client";
 import { SITE_TEXT } from "@/lib/grantCoach/siteText";
+import { approvedSnapshotForWriter, type WriterSnapshot } from "@/lib/grantCoach/snapshot";
 import { ORG_FIELDS, orgFieldValue, formatEin } from "@/lib/grantCoach/orgProfile";
 import type { Fact } from "@/lib/grantCoach/liveFacts";
 import type { StoryDraft } from "@/lib/grantCoach/stories";
@@ -82,6 +83,8 @@ export interface DraftRequest {
   currentDraft?: string | null;
   /** The public website's words — added to every call by draftWithGrantCoach. */
   siteText?: string;
+  /** The approved Program Year Snapshot — source 2, added to every call by draftWithGrantCoach. */
+  snapshot?: WriterSnapshot | null;
   /** chat: the other questions on the same screen, numbered from 1, which Grant Coach fills only when asked. */
   siblings?: { i: number; label: string; help: string | null; kind: string; answer: string | null; limit_kind?: string | null; limit_value?: number | null }[];
 }
@@ -160,7 +163,9 @@ export const measure = (text: string | null | undefined, kind: "words" | "charac
 /** Call the writer. Throws with the function's own reason when it refuses or fails. */
 export async function draftWithGrantCoach(req: DraftRequest): Promise<DraftResult> {
   // The website goes with every call: Grant Coach's first source (Josh, 2026-10-23).
-  const { data, error } = await supabase.functions.invoke("grant-writer", { body: { ...req, siteText: SITE_TEXT } });
+  // The approved Snapshot goes with it: source 2, its words used as written (2026-10-24).
+  const snapshot = await approvedSnapshotForWriter();
+  const { data, error } = await supabase.functions.invoke("grant-writer", { body: { ...req, siteText: SITE_TEXT, snapshot } });
   if (error) {
     let reason = error.message;
     try {
@@ -235,3 +240,58 @@ export async function readFunderBrief(folder: DraftFolder, docs: { title: string
   if (data?.error) throw new Error(data.error);
   return data.brief as FunderBrief;
 }
+
+/* ── The Snapshot: next year's section, redrafted from this year's ── */
+
+/** Redraft one Snapshot section: Josh's approved wording kept sentence for sentence; only figures the live numbers now state differently change. */
+export async function redraftSnapshotSection(input: {
+  year: string;
+  title: string;
+  current: string;
+  previous?: string | null;
+  instruction?: string;
+  library: LibraryEntry[];
+  facts: Fact[];
+}): Promise<{ answer: string; changed: string[] }> {
+  const { data, error } = await supabase.functions.invoke("grant-writer", { body: { mode: "snapshot", ...input, siteText: SITE_TEXT } });
+  if (error) {
+    let reason = error.message;
+    try {
+      const res = (error as { context?: Response }).context;
+      const said = res ? await res.clone().json() : null;
+      if (said?.error) reason = said.error;
+    } catch { /* keep the generic message */ }
+    throw new Error(reason);
+  }
+  if (data?.error) throw new Error(data.error);
+  return { answer: String(data?.answer ?? ""), changed: Array.isArray(data?.changed) ? data.changed : [] };
+}
+
+/* ── After the application: reporting, the fit check, the budget ── */
+
+const call = async <T,>(body: Record<string, unknown>): Promise<T> => {
+  const snapshot = await approvedSnapshotForWriter();
+  const { data, error } = await supabase.functions.invoke("grant-writer", { body: { answered: [], ...body, siteText: SITE_TEXT, snapshot } });
+  if (error) throw await fail(error);
+  if (data?.error) throw new Error(data.error);
+  return data as T;
+};
+
+export interface PlannedReport { title: string; kind: "narrative" | "financial" | "data" | "reimbursement" | "other"; detail: string | null; period_start: string | null; period_end: string | null; due_on: string | null }
+
+/** Awarded: the reporting checklist, from the funder brief's rules — or from the award letter when the requirements changed. */
+export const planReporting = (folder: DraftFolder, funderBrief: FunderBrief | null, awardDocs: { title: string; path?: string; text?: string }[] = []) =>
+  call<{ reports: PlannedReport[]; notes: string[] }>({ mode: "reporting_plan", folder, funderBrief, docs: awardDocs, library: [], facts: [] });
+
+/** One report, from the period's live numbers and what the application promised. */
+export const draftReport = (input: { folder: DraftFolder; funderBrief: FunderBrief | null; report: { title: string; kind: string; detail: string | null; period_start: string | null; period_end: string | null }; promised: { label: string; answer: string }[]; library: LibraryEntry[]; facts: Fact[]; instruction?: string }) =>
+  call<{ answer: string; gaps: string[] }>({ mode: "report", ...input });
+
+export interface FitCheck { verdict: "go" | "maybe" | "no_go"; score: number; summary: string; strengths: string[]; risks: string[]; must_haves: string[]; questions: string[] }
+export const runFitCheck = (input: { folder: DraftFolder; funderBrief: FunderBrief | null; library: LibraryEntry[]; facts: Fact[] }) =>
+  call<{ fit: FitCheck }>({ mode: "fit", ...input }).then((r) => r.fit);
+
+export interface BudgetLine { category: string; item: string; amount: number; justification: string }
+export interface BudgetDraft { lines: BudgetLine[]; total: number; notes: string[]; needs: string[] }
+export const draftBudget = (input: { folder: DraftFolder; funderBrief: FunderBrief | null; library: LibraryEntry[]; facts: Fact[]; instruction?: string }) =>
+  call<{ budget: BudgetDraft }>({ mode: "budget", ...input }).then((r) => r.budget);
