@@ -875,7 +875,12 @@ const AdminRegistrations = () => {
                     .delete()
                     .eq("id", id);
                   if (error) {
-                    toast.error("Failed to delete registration");
+                    // The database keeps history it would otherwise lose (Daily Duties counts in funder reports).
+                    if ((error as { code?: string }).code === "23503") {
+                      toast.error("This youth has history (like Daily Duties) that funder reports count, so the registration can't be deleted. If it's a duplicate, use Duplicates → Merge, which keeps everything.", { duration: 10000 });
+                    } else {
+                      toast.error("Failed to delete registration");
+                    }
                   } else {
                     toast.success("Registration permanently deleted");
                     queryClient.invalidateQueries({ queryKey: ["youth-registrations"] });

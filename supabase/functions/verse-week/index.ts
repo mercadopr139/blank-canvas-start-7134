@@ -216,6 +216,17 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json();
+
+    // ESV text for a list of references, verbatim from Crossway — used to keep
+    // the Workbench's daily verse calendar in the ESV too (Josh, 2026-10-26:
+    // "they should always be ESV"). No AI involved.
+    if (Array.isArray(body?.lookup)) {
+      const refs = body.lookup.map((r: unknown) => String(r ?? "").trim()).filter(Boolean).slice(0, 60);
+      const texts: Record<string, string | null> = {};
+      await Promise.all(refs.map(async (r: string) => { texts[r] = await fetchEsv(r, ESV_API_KEY); }));
+      return json({ texts });
+    }
+
     const theme = String(body?.theme ?? "").trim();
     // References to avoid — used when regenerating so a new week (or day)
     // doesn't repeat passages the coach has already seen.

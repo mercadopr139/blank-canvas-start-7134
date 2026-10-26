@@ -19,6 +19,7 @@ import {
   BarChart3, ClipboardList, Loader2, FileDown,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAsk } from "@/components/admin/AskDialog";
 import { mondayOf, addDays } from "@/lib/practicePlan";
 import { generateDutyReportPdf } from "@/lib/generateDutyReportPdf";
 import {
@@ -51,6 +52,7 @@ const DailyDutiesAdmin = () => {
 // ─────────────────────────────────────────────────────────────────────
 const JobListEditor = () => {
   const qc = useQueryClient();
+  const { ask, dialog } = useAsk();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState("");
   const [adding, setAdding] = useState(false);
@@ -84,13 +86,27 @@ const JobListEditor = () => {
     onError: () => toast.error("Could not save — try again"),
   });
 
+  // Delete only a job nobody has ever done. One with history is hidden instead:
+  // its nights stay in the report (the database refuses the delete anyway).
   const removeJob = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("duty_jobs" as never).delete().eq("id", id);
+    mutationFn: async (job: DutyJob) => {
+      const { count, error: cErr } = await supabase.from("duty_assignments" as never).select("id", { count: "exact", head: true }).eq("job_id", job.id);
+      if (cErr) throw cErr;
+      if ((count ?? 0) > 0) {
+        const { error } = await supabase.from("duty_jobs" as never).update({ is_active: false } as never).eq("id", job.id);
+        if (error) throw error;
+        return { hidden: count ?? 0 };
+      }
+      const { error } = await supabase.from("duty_jobs" as never).delete().eq("id", job.id);
       if (error) throw error;
+      return { hidden: 0 };
     },
-    onSuccess: () => { refresh(); toast.success("Job removed"); },
-    onError: () => toast.error("Could not remove — it may have history; hide it instead"),
+    onSuccess: ({ hidden }) => {
+      refresh();
+      if (hidden) toast.success(`Hidden instead of deleted — it has ${hidden} duty record${hidden === 1 ? "" : "s"} in the report, and those are kept.`);
+      else toast.success("Job deleted");
+    },
+    onError: () => toast.error("Could not remove it. Try hiding it instead."),
   });
 
   const addJob = useMutation({
@@ -121,6 +137,7 @@ const JobListEditor = () => {
 
   return (
     <div className="space-y-3">
+      {dialog}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <p className="text-xs text-neutral-500">
           The master clean-up list. The board shows every <span className="text-white/80 font-medium">active</span> job, grouped by zone.
@@ -227,7 +244,15 @@ const JobListEditor = () => {
                       className="text-neutral-500 hover:text-white" title={job.is_active ? "Hide from board" : "Show on board"}
                     >{job.is_active ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}</button>
                     <button
-                      onClick={() => { if (confirm(`Delete "${job.label}"? Its past history is kept.`)) removeJob.mutate(job.id); }}
+                      onClick={() => void (async () => {
+                        const ok = await ask.confirm({
+                          title: `Remove "${job.label}"?`,
+                          body: "If anyone has ever done this job, it is hidden from the board instead, and every night it was logged stays in the report. A job nobody has done is deleted.",
+                          confirmLabel: "Remove",
+                          danger: true,
+                        });
+                        if (ok) removeJob.mutate(job);
+                      })()}
                       className="text-neutral-500 hover:text-rose-400" title="Delete"
                     ><Trash2 className="w-3.5 h-3.5" /></button>
                   </div>
@@ -290,7 +315,7 @@ const DutyReport = () => {
   // Aggregate per youth.
   const perYouth = useMemo(() => {
     const map = new Map<string, {
-      name: string; photo: string | null; total: number;
+      id: string; name: string; photo: string | null; total: number;
       byCategory: Record<string, number>; byJob: Record<string, number>;
     }>();
     for (const r of rows) {
@@ -299,6 +324,7 @@ const DutyReport = () => {
       const key = r.registration_id;
       if (!map.has(key)) {
         map.set(key, {
+          id: key,
           name: `${y.child_first_name} ${y.child_last_name}`,
           photo: y.child_headshot_url, total: 0, byCategory: {}, byJob: {},
         });
@@ -396,7 +422,7 @@ const DutyReport = () => {
       ) : (
         <div className="space-y-2">
           {perYouth.map((y) => (
-            <YouthReportRow key={y.name} y={y} />
+            <YouthReportRow key={y.id} y={y} />
           ))}
         </div>
       )}

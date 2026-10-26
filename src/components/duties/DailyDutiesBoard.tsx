@@ -8,6 +8,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import DutyMessageBanner from "@/components/duties/DutyMessageBanner";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +17,12 @@ import { X, Search, Plus, UserPlus, Sparkles, Check, Loader2 } from "lucide-reac
 import {
   DutyJob, DutyAssignee, CheckedInYouth, groupJobsByZone, zoneStyle, headshotUrl, SPECIAL_ZONE, TRASH_ZONE,
 } from "@/lib/dailyDuties";
+
+/** What went wrong, in words a kid at the wall can act on. */
+const failMessage = (error: unknown, fallback: string) => {
+  const m = (error as { message?: string } | null)?.message ?? "";
+  return /checked in tonight|no longer on the board/i.test(m) ? m : `${fallback} Check the Wi-Fi and tap again.`;
+};
 
 const rpc = (name: string, args?: Record<string, unknown>) =>
   (supabase.rpc as unknown as (n: string, a?: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>)(name, args);
@@ -41,16 +49,18 @@ const DailyDutiesBoard = ({ open, onClose }: { open: boolean; onClose: () => voi
   // for writes anyway, so this is about not showing a button that would fail.
   const { isAdmin } = useAuth();
   const [newProject, setNewProject] = useState("");
+  // The coach is typing the bottom message: Esc cancels that, not the board.
+  const [editingMessage, setEditingMessage] = useState(false);
 
   // Close on Escape (unless the search panel is up — that handles its own).
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !assigningJob) onClose();
+      if (e.key === "Escape" && !assigningJob && !editingMessage) onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, assigningJob, onClose]);
+  }, [open, assigningJob, editingMessage, onClose]);
 
   // The master job list (active only).
   const { data: jobs = [] } = useQuery({
@@ -107,6 +117,7 @@ const DailyDutiesBoard = ({ open, onClose }: { open: boolean; onClose: () => voi
       if (error) throw error as Error;
     },
     onSuccess: () => { setNewProject(""); qc.invalidateQueries({ queryKey: ["duty-jobs"] }); },
+    onError: (e) => toast.error(failMessage(e, "Couldn't add that project.")),
   });
 
   // Done = retired, not deleted: last night's assignments stay in history.
@@ -118,6 +129,7 @@ const DailyDutiesBoard = ({ open, onClose }: { open: boolean; onClose: () => voi
       if (error) throw error as Error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["duty-jobs"] }),
+    onError: (e) => toast.error(failMessage(e, "Couldn't finish that project.")),
   });
   const totalAssigned = assignees.length;
 
@@ -127,6 +139,7 @@ const DailyDutiesBoard = ({ open, onClose }: { open: boolean; onClose: () => voi
       if (error) throw error as Error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["duty-assignments-today"] }),
+    onError: (e) => toast.error(failMessage(e, "Couldn't take that name off the job.")),
   });
 
   if (!open) return null;
@@ -365,6 +378,9 @@ const DailyDutiesBoard = ({ open, onClose }: { open: boolean; onClose: () => voi
         )}
       </div>
 
+      {/* The scrolling reminder along the bottom — always there while it has words. */}
+      <DutyMessageBanner editing={editingMessage} setEditing={setEditingMessage} />
+
       {assigningJob && (
         <AssignPanel
           job={assigningJob}
@@ -417,7 +433,9 @@ const AssignPanel = ({
     const fn = already ? "unassign_duty" : "assign_duty";
     const { error } = await rpc(fn, { _job_id: job.id, _registration_id: y.id });
     setBusyId(null);
-    if (!error) onChanged();
+    // A tap that didn't save must say so: otherwise the kid thinks they're on the job and it's never logged.
+    if (error) { toast.error(failMessage(error, already ? `Couldn't take ${y.child_first_name} off.` : `Couldn't put ${y.child_first_name} on the job.`)); return; }
+    onChanged();
   };
 
   const zs = zoneStyle(job.zone);
@@ -455,9 +473,9 @@ const AssignPanel = ({
           <div className="space-y-2 max-h-[45vh] overflow-y-auto">
             {loading && <p className="text-center text-white/40 py-6">Searching…</p>}
             {!loading && search.trim().length >= 2 && results.length === 0 && (
-              <div className="text-center py-6 px-4">
-                <p className="text-white/50">No match among tonight's check-ins.</p>
-                <p className="text-white/35 text-sm mt-1">They may need to check in at the kiosk first.</p>
+              <div className="text-center py-6 px-4 rounded-xl border-2 border-red-500/60 bg-red-600/15">
+                <p className="text-2xl md:text-3xl font-black uppercase tracking-tight text-red-300">Youth Not Found — GO SIGN IN!</p>
+                <p className="text-white/70 text-base mt-2">Only youth who checked in tonight show up here. Sign in at the kiosk, then come back and add your name.</p>
               </div>
             )}
             {!loading && search.trim().length < 2 && (

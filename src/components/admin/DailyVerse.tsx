@@ -135,19 +135,21 @@ export default function DailyVerse() {
   async function seedVerseLibrary() {
     setSeeding(true);
 
+    // ESV text, verbatim from Crossway's ESV API (Josh, 2026-10-26: "they should always be ESV").
+    // Poetry line breaks joined into one line. Never retype these from another translation.
     const starter = [
-      { reference: "Colossians 3:23", text: "Whatever you do, work at it with all your heart, as working for the Lord.", theme: "Hard Work & Faith" },
-      { reference: "Galatians 6:9", text: "Let us not become weary in doing good, for at the proper time we will reap a harvest if we do not give up.", theme: "Perseverance" },
-      { reference: "Proverbs 16:3", text: "Commit to the Lord whatever you do, and he will establish your plans.", theme: "Discipline" },
-      { reference: "1 Corinthians 15:58", text: "Always give yourselves fully to the work of the Lord, because you know that your labor in the Lord is not in vain.", theme: "Purpose" },
-      { reference: "James 1:12", text: "Blessed is the one who perseveres under trial because… that person will receive the crown of life.", theme: "Endurance" },
-      { reference: "Proverbs 21:5", text: "The plans of the diligent lead surely to abundance.", theme: "Diligence" },
-      { reference: "Ecclesiastes 9:10", text: "Whatever your hand finds to do, do it with all your might.", theme: "Work Ethic" },
-      { reference: "Joshua 1:9", text: "Be strong and courageous… for the Lord your God will be with you wherever you go.", theme: "Courage" },
-      { reference: "Isaiah 40:31", text: "Those who hope in the Lord will renew their strength.", theme: "Strength" },
-      { reference: "2 Timothy 4:7", text: "I have fought the good fight… I have kept the faith.", theme: "Faith" },
-      { reference: "Romans 12:11", text: "Never be lacking in zeal, but keep your spiritual fervor, serving the Lord.", theme: "Intensity" },
-      { reference: "Hebrews 12:1", text: "Let us run with perseverance the race marked out for us.", theme: "Perseverance" },
+      { reference: "Colossians 3:23", text: "Whatever you do, work heartily, as for the Lord and not for men,", theme: "Hard Work & Faith" },
+      { reference: "Galatians 6:9", text: "And let us not grow weary of doing good, for in due season we will reap, if we do not give up.", theme: "Perseverance" },
+      { reference: "Proverbs 16:3", text: "Commit your work to the LORD, and your plans will be established.", theme: "Discipline" },
+      { reference: "1 Corinthians 15:58", text: "Therefore, my beloved brothers, be steadfast, immovable, always abounding in the work of the Lord, knowing that in the Lord your labor is not in vain.", theme: "Purpose" },
+      { reference: "James 1:12", text: "Blessed is the man who remains steadfast under trial, for when he has stood the test he will receive the crown of life, which God has promised to those who love him.", theme: "Endurance" },
+      { reference: "Proverbs 21:5", text: "The plans of the diligent lead surely to abundance, but everyone who is hasty comes only to poverty.", theme: "Diligence" },
+      { reference: "Ecclesiastes 9:10", text: "Whatever your hand finds to do, do it with your might, for there is no work or thought or knowledge or wisdom in Sheol, to which you are going.", theme: "Work Ethic" },
+      { reference: "Joshua 1:9", text: "Have I not commanded you? Be strong and courageous. Do not be frightened, and do not be dismayed, for the LORD your God is with you wherever you go.", theme: "Courage" },
+      { reference: "Isaiah 40:31", text: "but they who wait for the LORD shall renew their strength; they shall mount up with wings like eagles; they shall run and not be weary; they shall walk and not faint.", theme: "Strength" },
+      { reference: "2 Timothy 4:7", text: "I have fought the good fight, I have finished the race, I have kept the faith.", theme: "Faith" },
+      { reference: "Romans 12:11", text: "Do not be slothful in zeal, be fervent in spirit, serve the Lord.", theme: "Intensity" },
+      { reference: "Hebrews 12:1", text: "Therefore, since we are surrounded by so great a cloud of witnesses, let us also lay aside every weight, and sin which clings so closely, and let us run with endurance the race that is set before us,", theme: "Perseverance" },
     ];
 
     const rows = Array.from({ length: 365 }).map((_, i) => {
@@ -183,7 +185,7 @@ export default function DailyVerse() {
         "{displayText}"
       </p>
       <p className="text-sm text-white/30 mt-2">
-        — {displayRef}
+        — {displayRef}{verse ? " (ESV)" : ""}
         {verse?.theme ? ` • ${verse.theme}` : ""}
       </p>
 
