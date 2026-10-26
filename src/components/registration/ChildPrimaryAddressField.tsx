@@ -131,13 +131,13 @@ export default function ChildPrimaryAddressField({
         placeholder="Start typing your address, then pick it from the list"
         aria-invalid={!!problem}
         className={cn(
-          "flex h-10 w-full rounded-md border bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+          "flex h-10 w-full rounded-md border bg-background text-foreground px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
           problem ? "border-destructive" : confirmed ? "border-emerald-500" : "border-input",
           className
         )}
       />
       {showDropdown && (
-        <ul className="absolute z-50 mt-1 w-full rounded-md border border-input bg-background shadow-lg max-h-60 overflow-auto">
+        <ul className="absolute z-50 mt-1 w-full rounded-md border border-input bg-background text-foreground shadow-lg max-h-60 overflow-auto">
           {suggestions.map((s, i) => (
             <li
               key={s.place_id}

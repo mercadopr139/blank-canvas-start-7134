@@ -2,10 +2,13 @@ import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
-import { MapPin, Loader2, LocateFixed } from "lucide-react";
+import { MapPin, Loader2, LocateFixed, Pencil, Check, X } from "lucide-react";
+import ChildPrimaryAddressField, { type AddressPin } from "@/components/registration/ChildPrimaryAddressField";
+import { addressProblem } from "@/lib/address";
 import { toast } from "sonner";
 import { capeMayGeo } from "@/data/capeMayGeo";
 import YouthStreetMap, { type StreetPoint } from "@/components/admin/YouthStreetMap";
+import { DISTRICT_MAP, GROUP_COLOR, type GroupKey } from "@/lib/districtGroups";
 
 /*
   Youth Per School District — a real map of Cape May County with one dot per
@@ -17,20 +20,18 @@ import YouthStreetMap, { type StreetPoint } from "@/components/admin/YouthStreet
 */
 
 /* ── District groups: color + display label ── */
-type GroupKey =
-  | "lowercape" | "ocean" | "middle" | "wildwood"
-  | "woodbine" | "avalon" | "tech" | "catholic" | "home";
 
 const GROUPS: Record<GroupKey, { name: string; sub: string; color: string; school?: boolean; offMap?: boolean }> = {
-  middle:    { name: "Middle Township",       sub: "incl. Dennis Twp",                     color: "#f59340" },
-  wildwood:  { name: "Wildwood",              sub: "incl. Crest & N. Wildwood",            color: "#9c2c3b" },
-  lowercape: { name: "Lower Cape May",        sub: "Cape May, W. Cape May, Lower Twp",     color: "#57b0ea" },
-  woodbine:  { name: "Woodbine",              sub: "",                                     color: "#9aa4af" },
-  ocean:     { name: "Ocean City",            sub: "incl. Upper Twp",                      color: "#ef4444" },
-  tech:      { name: "Cape May Tech",         sub: "county vocational school",             color: "#33c281", school: true },
-  catholic:  { name: "Wildwood Catholic",     sub: "private academy",                      color: "#3160b4", school: true },
-  avalon:    { name: "Avalon & Stone Harbor", sub: "",                                     color: "#f2c94c" },
-  home:      { name: "Homeschool / Other",    sub: "no fixed district",                    color: "#a7d96b", offMap: true },
+  // Colours come from src/lib/districtGroups.ts — the same ones the By School District circle uses.
+  middle:    { name: "Middle Township",       sub: "incl. Dennis Twp",                     color: GROUP_COLOR.middle },
+  wildwood:  { name: "Wildwood",              sub: "incl. Crest & N. Wildwood",            color: GROUP_COLOR.wildwood },
+  lowercape: { name: "Lower Cape May",        sub: "Cape May, W. Cape May, Lower Twp",     color: GROUP_COLOR.lowercape },
+  woodbine:  { name: "Woodbine",              sub: "",                                     color: GROUP_COLOR.woodbine },
+  ocean:     { name: "Ocean City",            sub: "incl. Upper Twp",                      color: GROUP_COLOR.ocean },
+  tech:      { name: "Cape May Tech",         sub: "county vocational school",             color: GROUP_COLOR.tech, school: true },
+  catholic:  { name: "Wildwood Catholic",     sub: "private academy",                      color: GROUP_COLOR.catholic, school: true },
+  avalon:    { name: "Avalon & Stone Harbor", sub: "",                                     color: GROUP_COLOR.avalon },
+  home:      { name: "Homeschool / Other",    sub: "no fixed district",                    color: GROUP_COLOR.home, offMap: true },
 };
 
 /* Order groups appear in the legend */
@@ -38,27 +39,7 @@ const GROUP_ORDER: GroupKey[] = ["middle", "wildwood", "lowercape", "woodbine", 
 
 /* ── Every school_district dropdown value → its group + the municipality
       polygon to scatter its dots into. mun:null => off-map tally. ── */
-const DISTRICT_MAP: Record<string, { g: GroupKey; mun: string | null }> = {
-  "Cape May City":                                        { g: "lowercape", mun: "Cape May" },
-  "Cape May/West Cape May":                               { g: "lowercape", mun: "Cape May" },
-  "West Cape May":                                        { g: "lowercape", mun: "West Cape May Borough" },
-  "Lower Township":                                       { g: "lowercape", mun: "Lower Township" },
-  "Lower Cape May Regional":                              { g: "lowercape", mun: "Lower Township" },
-  "Middle Township":                                      { g: "middle",    mun: "Middle Township" },
-  "Dennis Township":                                      { g: "middle",    mun: "Dennis Township" },
-  "Ocean City":                                           { g: "ocean",     mun: "Ocean City" },
-  "Upper Township":                                       { g: "ocean",     mun: "Upper Township" },
-  "Wildwood":                                             { g: "wildwood",  mun: "Wildwood" },
-  "Wildwood/Wildwood Crest/North Wildwood":               { g: "wildwood",  mun: "Wildwood" },
-  "Wildwood Crest":                                       { g: "wildwood",  mun: "Wildwood Crest Borough" },
-  "North Wildwood":                                       { g: "wildwood",  mun: "North Wildwood" },
-  "Woodbine":                                             { g: "woodbine",  mun: "Woodbine Borough" },
-  "Avalon/Stone Harbor":                                  { g: "avalon",    mun: "Avalon Borough" },
-  "Cape May Tech":                                        { g: "tech",      mun: "Middle Township" },
-  "Wildwood Catholic Academy":                            { g: "catholic",  mun: "North Wildwood" },
-  "Homeschool, Hybrid, or Alternative Form of Schooling": { g: "home",      mun: null },
-  "Other":                                                { g: "home",      mun: null },
-};
+// The table lives in src/lib/districtGroups.ts, shared with the By School District chart.
 
 /* Municipality → the geographic region color it should be tinted with */
 const MUN_TINT: Record<string, string> = {
@@ -251,14 +232,27 @@ export function YouthDistrictMap({ youth: youthProp }: { youth?: YouthPoint[] } 
       else offMapCount++;
     });
 
-    const labels: { x: number; y: number; text: string }[] = [];
+    // A label normally sits at its towns' centre. The barrier-island groups are too
+    // thin for a long name — "Avalon & Stone Harbor" spilled across Middle Township
+    // and read as part of it — so theirs goes out in the ocean just east of the
+    // island, on two lines, with a short line pointing back to it.
+    const labels: { x: number; y: number; text: string; lines?: string[]; anchor?: "middle" | "start"; from?: { x: number; y: number } }[] = [];
+    const OFFSHORE: Partial<Record<GroupKey, string[]>> = { avalon: ["Avalon &", "Stone Harbor"] };
     (Object.keys(GEO_GROUP_MUNS) as GroupKey[]).forEach((gk) => {
       if (!groupCounts[gk]) return;
       const members = (GEO_GROUP_MUNS[gk] || []).map((n) => munIndex[n]).filter(Boolean) as { ring: Pt[]; area: number; c: Pt }[];
       if (!members.length) return;
       let cx = 0, cy = 0, wa = 0;
       members.forEach((m) => { cx += m.c.x * m.area; cy += m.c.y * m.area; wa += m.area; });
-      labels.push({ x: Math.round(cx / wa), y: Math.round(cy / wa), text: GROUPS[gk].name });
+      const at = { x: Math.round(cx / wa), y: Math.round(cy / wa) };
+      const lines = OFFSHORE[gk];
+      if (lines) {
+        // East edge of the island at the label's height, plus a gap.
+        const east = Math.max(...members.flatMap((m) => m.ring.map((p) => p.x)));
+        labels.push({ x: Math.round(east + 14), y: at.y, text: GROUPS[gk].name, lines, anchor: "start", from: { x: Math.round(east - 4), y: at.y } });
+      } else {
+        labels.push({ ...at, text: GROUPS[gk].name });
+      }
     });
 
     const served = GROUP_ORDER.filter((g) => g !== "home" && groupCounts[g] > 0).length;
@@ -340,24 +334,18 @@ export function YouthDistrictMap({ youth: youthProp }: { youth?: YouthPoint[] } 
         {/* The addresses no geocoder can read. Not a failure of the map — a
             registration to correct. Names, because that is how you find it. */}
         {unlocated.length > 0 && (
-          <details className="mb-4 rounded-xl border border-amber-400/20 bg-amber-500/[0.06]">
-            <summary className="cursor-pointer select-none px-4 py-2.5 text-xs font-semibold text-amber-200/90">
-              {unlocated.length} {unlocated.length === 1 ? "address" : "addresses"} couldn't be located — fix these on the registration
+          // Open from the start (Josh, 2026-10-26: "where are the addresses?") — the list is the point, not a footnote.
+          <details open className="mb-4 rounded-xl border-2 border-amber-400/40 bg-amber-500/[0.08]">
+            <summary className="cursor-pointer select-none px-4 py-3 text-sm font-bold text-amber-200">
+              {unlocated.length} {unlocated.length === 1 ? "address needs" : "addresses need"} fixing — tap Fix on each one below
             </summary>
-            <ul className="px-4 pb-3 space-y-1.5">
-              {unlocated.map((u) => (
-                <li key={u.id} className="text-xs flex items-baseline gap-2 flex-wrap">
-                  <span className="font-semibold text-white/85 whitespace-nowrap">
-                    {[u.child_first_name, u.child_last_name].filter(Boolean).join(" ") || "Unnamed"}
-                  </span>
-                  <span className="text-white/45 break-all">{u.child_primary_address}</span>
-                </li>
-              ))}
-            </ul>
-            <p className="px-4 pb-3 text-[11px] text-white/35">
-              Usually a PO box, an email typed in the address field, or a street with no town. Once the
-              address is corrected, press "Locate addresses" again.
+            <p className="px-4 pb-2 text-[11px] text-white/45">
+              Usually a PO box, a street with no town or ZIP, or a trailer lot. Press Fix, start typing the home address and pick it from
+              the list — that places them on the map at once. Not in the list? Type the full address with the town and ZIP, and Save.
             </p>
+            <ul className="px-4 pb-3 divide-y divide-white/[0.06]">
+              {unlocated.map((u) => <UnlocatedRow key={u.id} youth={u} />)}
+            </ul>
           </details>
         )}
 
@@ -388,10 +376,13 @@ export function YouthDistrictMap({ youth: youthProp }: { youth?: YouthPoint[] } 
                   stroke="rgba(0,0,0,.4)" strokeWidth={0.8} />
               ))}
               {labels.map((l, i) => (
-                <text key={i} x={l.x} y={l.y} textAnchor="middle"
-                  style={{ fill: "#eceef2", fontSize: 13, fontWeight: 700, paintOrder: "stroke", stroke: "#0c141d", strokeWidth: 3.2 }}>
-                  {l.text}
-                </text>
+                <g key={i}>
+                  {l.from && <line x1={l.from.x} y1={l.from.y} x2={l.x - 4} y2={l.y - 4} stroke="#eceef2" strokeOpacity={0.45} strokeWidth={1} />}
+                  <text x={l.x} y={l.y} textAnchor={l.anchor ?? "middle"}
+                    style={{ fill: "#eceef2", fontSize: 13, fontWeight: 700, paintOrder: "stroke", stroke: "#0c141d", strokeWidth: 3.2 }}>
+                    {l.lines ? l.lines.map((t, k) => <tspan key={k} x={l.x} dy={k === 0 ? 0 : 15}>{t}</tspan>) : l.text}
+                  </text>
+                </g>
               ))}
               <text x={18} y={430} transform="rotate(-90 18 430)" textAnchor="middle"
                 style={{ fill: "#6b7480", fontSize: 12, letterSpacing: "0.22em", opacity: 0.5, textTransform: "uppercase", fontWeight: 600 }}>
@@ -443,3 +434,78 @@ export function YouthDistrictMap({ youth: youthProp }: { youth?: YouthPoint[] } 
 }
 
 export default YouthDistrictMap;
+
+/* One address the map couldn't place, fixed in place (Josh, 2026-10-26: so
+   Chrissy can correct it without opening the registration). Picking a
+   suggestion saves the exact pin; a typed address is located right away. */
+function UnlocatedRow({ youth: u }: { youth: YouthPoint }) {
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(u.child_primary_address ?? "");
+  const [pin, setPin] = useState<AddressPin | null>(null);
+  const [saving, setSaving] = useState(false);
+  const name = [u.child_first_name, u.child_last_name].filter(Boolean).join(" ") || "Unnamed";
+
+  const save = async () => {
+    const address = text.trim();
+    if (!address || !u.id) return;
+    const problem = addressProblem(address);
+    if (problem) { toast.error(problem); return; }
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("youth_registrations")
+        .update({
+          child_primary_address: address,
+          latitude: pin?.lat ?? null,
+          longitude: pin?.lng ?? null,
+          geocoded_at: pin ? new Date().toISOString() : null,
+        } as never)
+        .eq("id", u.id);
+      if (error) throw error;
+      let placed = !!pin;
+      if (!pin) {
+        // Typed by hand: try to place just this one now.
+        const { data } = await supabase.functions.invoke("geocode-youth", { body: { ids: [u.id] } });
+        placed = (data?.matched ?? 0) > 0;
+      }
+      await queryClient.invalidateQueries({ queryKey: ["youth-registrations-analytics"] });
+      await queryClient.invalidateQueries({ queryKey: ["youth-district-map"] });
+      if (placed) toast.success(`${name} is on the map.`);
+      else toast.warning(`Saved, but the map still can't find it. Add the town and ZIP, or pick the address from the suggestions.`, { duration: 9000 });
+      setEditing(false);
+    } catch (e) {
+      toast.error((e as Error).message || "Couldn't save the address.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <li className="py-2 text-xs">
+      <div className="flex items-baseline gap-2 flex-wrap">
+        <span className="font-semibold text-white/85 whitespace-nowrap">{name}</span>
+        {!editing && <span className="text-white/45 break-all flex-1 min-w-0">{u.child_primary_address}</span>}
+        {!editing && (
+          <button type="button" onClick={() => { setText(u.child_primary_address ?? ""); setPin(null); setEditing(true); }} className="ml-auto inline-flex items-center gap-1 rounded-md border border-white/15 px-2 py-0.5 text-[11px] font-semibold text-white/80 hover:bg-white/10">
+            <Pencil className="w-3 h-3" /> Fix
+          </button>
+        )}
+      </div>
+      {editing && (
+        <div className="mt-2 space-y-2">
+          <ChildPrimaryAddressField value={text} onChange={(v) => { setText(v); }} onLocate={setPin} className="bg-neutral-900 text-white border-white/20 placeholder:text-white/35" />
+          <div className="flex items-center gap-2">
+            <button type="button" disabled={saving || !text.trim()} onClick={() => void save()} className="inline-flex items-center gap-1 rounded-md bg-white text-black px-3 py-1 text-[12px] font-bold hover:bg-white/90 disabled:opacity-40">
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} Save
+            </button>
+            <button type="button" disabled={saving} onClick={() => setEditing(false)} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[12px] text-white/60 hover:text-white hover:bg-white/10">
+              <X className="w-3.5 h-3.5" /> Cancel
+            </button>
+            {pin && <span className="text-emerald-300 text-[11px]">Picked from the list — it goes straight on the map.</span>}
+          </div>
+        </div>
+      )}
+    </li>
+  );
+}

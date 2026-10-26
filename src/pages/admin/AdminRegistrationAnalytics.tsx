@@ -12,8 +12,9 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell, LabelList } from "recharts";
 import { YouthDistrictMap } from "@/components/admin/YouthDistrictMap";
+import DistrictDonut from "@/components/admin/DistrictDonut";
 import { summarizeMinority, isBelowPoverty, FORM_INCOMES, incomeBelowShares } from "@/lib/demographics";
 
 const COLORS = [
@@ -528,14 +529,33 @@ const AdminRegistrationAnalytics = () => {
                   <CardTitle className="text-base text-white">By Program</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ChartContainer config={chartConfig} className="h-[300px]">
-                    <BarChart data={programData} layout="vertical">
-                      <XAxis type="number" tick={{ fill: "rgba(255,255,255,0.5)" }} />
-                      <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 11, fill: "rgba(255,255,255,0.7)" }} />
-                      <ChartTooltip content={<CountAndPctTooltip total={programTotal} />} />
-                      <Bar dataKey="count" fill="#bf0f3e" radius={4} />
-                    </BarChart>
-                  </ChartContainer>
+                  {/* Two programs read best as two rows, the numbers always showing
+                      (Josh, 2026-10-26): share first and big, then the name and count,
+                      then the bar. Same reading order as By School District. */}
+                  <ul className="space-y-5 pt-2">
+                    {[...programData].sort((a, b) => Number(b.count) - Number(a.count)).map((p) => {
+                      const n = Number(p.count);
+                      const share = Number(programTotal) ? Math.round((n / Number(programTotal)) * 100) : 0;
+                      const [title, ages] = p.fullName.split(/\s*\((.*)\)\s*$/);
+                      return (
+                        <li key={p.fullName}>
+                          <div className="flex items-baseline gap-3">
+                            <span className="w-14 shrink-0 text-right text-2xl font-black text-white tabular-nums leading-none">{share}%</span>
+                            <p className="text-sm font-semibold text-white">
+                              {title}
+                              {ages && <span className="ml-1.5 font-normal text-white/50">{ages.replace(/^Ages/i, "ages")}</span>}
+                              <span className="ml-2 text-[12px] font-normal text-white/50 tabular-nums">{n} youth</span>
+                            </p>
+                          </div>
+                          <div className="mt-2 ml-[4.25rem] h-3 rounded-full bg-white/[0.06] overflow-hidden">
+                            {/* Juniors wear the Littles light blue from the Gym Board (docs/COLOURS.md); seniors NLA red. */}
+                            <div className="h-full rounded-full" style={{ width: `${share}%`, backgroundColor: /junior/i.test(p.fullName) ? "#3da5e8" : "#bf0f3e" }} />
+                          </div>
+                        </li>
+                      );
+                    })}
+                    {!programData.length && <li className="text-sm text-white/40">No registrations yet.</li>}
+                  </ul>
                 </CardContent>
               </Card>
 
@@ -544,12 +564,28 @@ const AdminRegistrationAnalytics = () => {
                   <CardTitle className="text-base text-white">Age Distribution</CardTitle>
                 </CardHeader>
                 <CardContent>
+                  {/* Every bar wears its count and share (Josh, 2026-10-26) — no hovering to read it.
+                      The labels replace the side scale, so it's gone. */}
                   <ChartContainer config={chartConfig} className="h-[300px]">
-                    <BarChart data={ageData}>
-                      <XAxis dataKey="age" tick={{ fill: "rgba(255,255,255,0.7)" }} />
-                      <YAxis tick={{ fill: "rgba(255,255,255,0.5)" }} />
-                      <ChartTooltip content={<CountAndPctTooltip total={ageTotal} />} />
-                      <Bar dataKey="count" fill="#bf0f3e" radius={4} />
+                    <BarChart data={ageData} margin={{ top: 44, right: 8, left: 8, bottom: 0 }}>
+                      <XAxis dataKey="age" tickLine={false} axisLine={{ stroke: "rgba(255,255,255,0.15)" }} tick={{ fill: "rgba(255,255,255,0.75)", fontSize: 12 }} />
+                      <ChartTooltip cursor={{ fill: "rgba(255,255,255,0.04)" }} content={<CountAndPctTooltip total={ageTotal} />} />
+                      <Bar dataKey="count" fill="#bf0f3e" radius={[4, 4, 0, 0]}>
+                        <LabelList
+                          dataKey="count"
+                          content={(props) => {
+                            const { x, y, width, value } = props as { x: number; y: number; width: number; value: number };
+                            const share = Number(ageTotal) ? Math.round((Number(value) / Number(ageTotal)) * 100) : 0;
+                            const cx = Number(x) + Number(width) / 2;
+                            return (
+                              <g>
+                                <text x={cx} y={Number(y) - 22} textAnchor="middle" fill="#ffffff" fontSize={18} fontWeight={800}>{share}%</text>
+                                <text x={cx} y={Number(y) - 7} textAnchor="middle" fill="rgba(255,255,255,0.55)" fontSize={11}>{value} youth</text>
+                              </g>
+                            );
+                          }}
+                        />
+                      </Bar>
                     </BarChart>
                   </ChartContainer>
                 </CardContent>
@@ -578,23 +614,8 @@ const AdminRegistrationAnalytics = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ChartContainer config={chartConfig} style={{ height: `${Math.max(300, districtData.length * 36)}px` }}>
-                  <BarChart data={districtData} layout="vertical" margin={{ left: 8, right: 40 }}>
-                    <XAxis type="number" tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }} />
-                    <YAxis
-                      dataKey="name"
-                      type="category"
-                      width={200}
-                      tick={{ fill: "rgba(255,255,255,0.7)", fontSize: 11 }}
-                    />
-                    <ChartTooltip content={<CountAndPctTooltip total={districtTotal} />} />
-                    <Bar dataKey="count" fill="#bf0f3e" radius={4}>
-                      {districtData.map((_, index) => (
-                        <Cell key={`district-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ChartContainer>
+                {/* A circle with every name in the list beside it — never squeezed onto the slices. */}
+                <DistrictDonut districts={(registrations ?? []).map((r) => r.child_school_district as string | null)} />
               </CardContent>
             </Card>
 
@@ -677,22 +698,47 @@ const AdminRegistrationAnalytics = () => {
                   <CardTitle className="text-base text-white">Boy / Girl Ratio</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center gap-3">
-                    <div className="text-center flex-1">
-                      <p className="text-3xl font-bold text-blue-400">{sexCounts["Male"] || 0}</p>
-                      <p className="text-[10px] text-white/60 mt-0.5">Boys</p>
-                      <p className="text-[10px] text-white/30">{sexTotal > 0 ? Math.round(((sexCounts["Male"] || 0) / sexTotal) * 100) : 0}%</p>
-                    </div>
-                    <div className="w-px h-12 bg-white/10" />
-                    <div className="text-center flex-1">
-                      <p className="text-3xl font-bold text-pink-400">{sexCounts["Female"] || 0}</p>
-                      <p className="text-[10px] text-white/60 mt-0.5">Girls</p>
-                      <p className="text-[10px] text-white/30">{sexTotal > 0 ? Math.round(((sexCounts["Female"] || 0) / sexTotal) * 100) : 0}%</p>
-                    </div>
-                  </div>
-                  <div className="border-t border-white/10 mt-3 pt-1.5 text-center">
-                    <p className="text-[10px] text-white/40">{sexTotal} total youth</p>
-                  </div>
+                  {/* A circle in the same blue and pink, the total in the middle, and the
+                      share as the big number beside it (Josh, 2026-10-26) — the same
+                      reading order as By School District and By Program. */}
+                  {(() => {
+                    const boys = Number(sexCounts["Male"] || 0);
+                    const girls = Number(sexCounts["Female"] || 0);
+                    const total = Number(sexTotal) || 0;
+                    const share = (n: number) => (total ? Math.round((n / total) * 100) : 0);
+                    const slices = [
+                      { name: "Boys", count: boys, color: "#60a5fa" },  // blue-400, as before
+                      { name: "Girls", count: girls, color: "#f472b6" }, // pink-400, as before
+                    ];
+                    if (!total) return <p className="text-sm text-white/40 py-6 text-center">No registrations yet.</p>;
+                    return (
+                      <div className="flex items-center gap-6 flex-wrap justify-center sm:justify-start">
+                        <div className="relative w-[170px] h-[170px] shrink-0">
+                          <PieChart width={170} height={170}>
+                            <Pie data={slices} dataKey="count" nameKey="name" innerRadius={52} outerRadius={82} startAngle={90} endAngle={-270} stroke="#141414" strokeWidth={2} isAnimationActive={false}>
+                              {slices.map((s) => <Cell key={s.name} fill={s.color} />)}
+                            </Pie>
+                          </PieChart>
+                          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                            <p className="text-2xl font-black text-white tabular-nums leading-none">{total}</p>
+                            <p className="text-[11px] uppercase tracking-wide text-white/50 mt-1">youth</p>
+                          </div>
+                        </div>
+                        <ul className="space-y-4">
+                          {slices.map((s) => (
+                            <li key={s.name} className="flex items-center gap-3">
+                              <span className="w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: s.color }} />
+                              <span className="w-16 text-right text-3xl font-black text-white tabular-nums leading-none">{share(s.count)}%</span>
+                              <p className="text-sm font-semibold text-white">
+                                {s.name}
+                                <span className="ml-2 text-[12px] font-normal text-white/50 tabular-nums">{s.count} youth</span>
+                              </p>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    );
+                  })()}
                 </CardContent>
               </Card>
 

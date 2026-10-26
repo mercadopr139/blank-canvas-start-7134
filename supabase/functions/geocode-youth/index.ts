@@ -145,14 +145,20 @@ Deno.serve(async (req) => {
     // Never-tried first, from any year. Then earlier failures, THIS program
     // year before older ones -- the map on the dashboard shows this year, and a
     // click should improve what the coach is looking at before it tidies history.
-    const { data: fresh } = await service
-      .from("youth_registrations")
-      .select("id, child_primary_address")
-      .is("latitude", null).is("geocoded_at", null)
-      .not("child_primary_address", "is", null)
-      .limit(BATCH);
+    // Just these registrations (Josh, 2026-10-26): Chrissy fixed one address in
+    // the "couldn't be located" list and wants it placed now, not after every
+    // other failure is retried.
+    const onlyIds: string[] = Array.isArray(body?.ids) ? body.ids.filter((x: unknown) => typeof x === "string").slice(0, 20) : [];
+    const { data: fresh } = onlyIds.length
+      ? await service.from("youth_registrations").select("id, child_primary_address").in("id", onlyIds).is("latitude", null).not("child_primary_address", "is", null)
+      : await service
+        .from("youth_registrations")
+        .select("id, child_primary_address")
+        .is("latitude", null).is("geocoded_at", null)
+        .not("child_primary_address", "is", null)
+        .limit(BATCH);
     let rows = fresh ?? [];
-    if (rows.length < BATCH) {
+    if (!onlyIds.length && rows.length < BATCH) {
       const { data: retry } = await service
         .from("youth_registrations")
         .select("id, child_primary_address")

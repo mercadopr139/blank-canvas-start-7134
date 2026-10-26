@@ -376,10 +376,12 @@ const DailyDutiesBoard = ({ open, onClose }: { open: boolean; onClose: () => voi
           )}
         </section>
         )}
-      </div>
 
-      {/* The scrolling reminder along the bottom — always there while it has words. */}
-      <DutyMessageBanner editing={editingMessage} setEditing={setEditingMessage} />
+        {/* The scrolling reminder, right under Special Projects (Josh, 2026-10-26) — always there while it has words. */}
+        <div className="mt-4">
+          <DutyMessageBanner editing={editingMessage} setEditing={setEditingMessage} />
+        </div>
+      </div>
 
       {assigningJob && (
         <AssignPanel

@@ -1,4 +1,4 @@
-// The scrolling message along the bottom of Daily Duties (Josh, 2026-10-26):
+// The scrolling message under Special Projects on Daily Duties (Josh, 2026-10-26):
 // "Don't forget to RESTOCK toilet paper". Bright amber, bold black, moving —
 // it has to pop on the wall so the kids read it mid-clean-up. A coach changes
 // it any time: Change → type → Save, on a phone or at the board (the TV asks
@@ -57,7 +57,7 @@ export default function DutyMessageBanner({ editing, setEditing }: { editing: bo
 
   if (editing) {
     return (
-      <div className="flex-shrink-0 border-t-4 border-amber-400 bg-neutral-950 px-4 md:px-6 py-3">
+      <div className="rounded-2xl border-2 border-amber-400 bg-neutral-950 px-4 md:px-5 py-3">
         <form
           className="flex flex-wrap items-center gap-2"
           onSubmit={(e) => { e.preventDefault(); if (draft.trim() && !save.isPending) save.mutate(draft); }}
@@ -91,7 +91,7 @@ export default function DutyMessageBanner({ editing, setEditing }: { editing: bo
   if (!message) {
     // No message: a quiet line a coach can tap. The kids barely notice it.
     return (
-      <div className="flex-shrink-0 border-t border-white/10 px-4 md:px-6 py-2 flex justify-end">
+      <div className="px-1 py-1 flex justify-end">
         <button type="button" onClick={change} className="text-[13px] text-white/35 hover:text-amber-300 inline-flex items-center gap-1.5">
           <Plus className="w-4 h-4" /> Add a message for the crew
         </button>
@@ -110,7 +110,7 @@ export default function DutyMessageBanner({ editing, setEditing }: { editing: bo
     </span>
   );
   return (
-    <div className="flex-shrink-0 relative bg-amber-400 text-black border-t-4 border-black/40 overflow-hidden" role="status" aria-label={`Message: ${message}`}>
+    <div className="relative rounded-2xl bg-amber-400 text-black overflow-hidden shadow-[0_0_30px_rgba(251,191,36,0.25)]" role="status" aria-label={`Message: ${message}`}>
       <style>{`
         @keyframes nla-duty-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
       `}</style>
