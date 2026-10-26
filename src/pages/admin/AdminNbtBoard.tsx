@@ -95,7 +95,7 @@ export const NbtWeekBuilder = ({
   const thisWeekStart = mondayOf(toDateString(new Date()));
   const [focus, setFocus] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
-  // Rev gets the day at 7 AM on his own; this is the resend, or the late change.
+  // Rev gets the day on his own (Monday at noon, Tuesday and Thursday at 7 AM; a late lock sends at once); this is the resend, or the late change.
   const emailRev = async (w: NbtWeek, dayKey: DayKey) => {
     const date = dateOfDay(w.week_start, dayKey);
     setBusy(`mail-${w.id}-${dayKey}`);
@@ -318,6 +318,13 @@ export const NbtWeekBuilder = ({
     else {
       refresh();
       toast.success(lock ? `Week ${w.week_in_block} is live on the Gym Board.` : `Week ${w.week_in_block} is off the Gym Board — edit away.`);
+      // Locked after Rev's send time (e.g. Monday after the Lap): his workout goes now,
+      // once, until 4 PM. Before the send time the scheduled email takes it.
+      if (lock) {
+        supabase.functions.invoke("nbt-morning", { body: { catchup: true } }).then(({ data }) => {
+          if (data?.catchup && Array.isArray(data?.sent) && data.sent.length) toast.success("Rev just got today's Non-Battle Team workout by email.");
+        }).catch(() => { /* the email is a bonus to the lock; never blocks it */ });
+      }
     }
   };
 

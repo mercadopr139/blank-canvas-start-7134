@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft, LogOut, Plus, Pencil, GripVertical, Lock,
   Circle, CheckCircle2, ArrowRight, Trophy, MessageSquare, Archive,
-  Target, ChevronDown, X, Save, Forward, Flag,
+  Target, ChevronDown, X, Save, Forward, Flag, Trash2,
 } from "lucide-react";
 import { icons } from "lucide-react";
 import { toast } from "sonner";
@@ -356,6 +356,7 @@ const SignalDetailsModal = ({
   onMoveToArea,
   onUpdate,
   isSaving,
+  onDelete,
 }: {
   signal: CoreSignal | null;
   accentColor: string;
@@ -369,6 +370,8 @@ const SignalDetailsModal = ({
   onMoveToArea: (id: string, area: FocusArea) => void;
   onUpdate: (id: string, patch: { title: string; description: string | null }) => void;
   isSaving: boolean;
+  /** Move this task to Trash, straight from the Workbench (Josh, 2026-10-26). */
+  onDelete: (id: string) => void;
 }) => {
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
@@ -505,6 +508,19 @@ const SignalDetailsModal = ({
             <p className="text-[10px] text-white/25">
               To change the pillar, click <span className="text-white/40">Open →</span> on the focus area tile.
             </p>
+          </div>
+
+          {/* Delete, right here — no drilling into the tile. It goes to Trash (restorable),
+              the same as deleting inside the tile, with Undo for a few seconds. */}
+          <div className="pt-3 border-t border-white/5">
+            <button
+              type="button"
+              onClick={() => onDelete(signal.id)}
+              disabled={isMoving}
+              className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-md border border-red-400/30 text-xs font-semibold text-red-300 hover:bg-red-500/10 hover:border-red-400/60 transition-colors disabled:opacity-40"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Delete task
+            </button>
           </div>
         </div>
       </DialogContent>
@@ -1176,6 +1192,27 @@ const AdminWorkbench = () => {
       toast.success("Saved");
     },
     onError: (e: any) => toast.error(e?.message || "Couldn't save"),
+  });
+
+  // Delete from the Workbench: to Trash (restorable), the same write the tile's
+  // delete makes, with Undo on the message in case of a mis-tap.
+  const trashSignalMutation = useMutation({
+    mutationFn: async ({ id, undo }: { id: string; undo?: boolean }) => {
+      const { error } = await supabase
+        .from("signals")
+        .update((undo
+          ? { is_trashed: false, trashed_at: null, trashed_by: null }
+          : { is_trashed: true, trashed_at: new Date().toISOString(), trashed_by: user?.id || null }) as any)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, { id, undo }) => {
+      queryClient.invalidateQueries({ queryKey: ["task-manager-home-core"] });
+      queryClient.invalidateQueries({ queryKey: ["signals"] });
+      if (undo) { toast.success("Restored"); return; }
+      toast.success("Moved to Trash", { action: { label: "Undo", onClick: () => trashSignalMutation.mutate({ id, undo: true }) }, duration: 8000 });
+    },
+    onError: (e: any) => toast.error(e?.message || "Couldn't delete it. Try again."),
   });
 
   // Bulk-archive completed signals from a single focus area tile. Same
@@ -1882,6 +1919,10 @@ const AdminWorkbench = () => {
         onUpdate={(id, patch) => {
           updateSignalMutation.mutate({ id, ...patch });
           setDetailsSignal((prev) => (prev ? { ...prev, title: patch.title, description: patch.description } : prev));
+        }}
+        onDelete={(id) => {
+          trashSignalMutation.mutate({ id });
+          setDetailsSignal(null);
         }}
       />
     </div>

@@ -5,8 +5,14 @@
 // kit, the circuit — plus the night's Non-Battle Team column from the Practice
 // Plan, and one link into the plan to edit it (Josh, 2026-10-20).
 //
-// The week's lock is the review: whatever is locked at 7 AM is what he gets.
+// The week's lock is the review: whatever is locked at send time is what he gets.
 // If the week is not locked, Rev gets nothing and Josh gets one line saying so.
+//
+// MONDAY AT NOON (Josh, 2026-10-26): Monday's workout is written after the Lap
+// with Chrissy, so Monday sends at 12 PM Eastern; Tuesday and Thursday at 7 AM.
+// CATCH-UP: locking the week after the send time sends that day's workout at
+// once (the planner calls this with {"catchup": true}), until 4 PM. Every send
+// is logged in nbt_morning_sends, so Rev never gets the same day twice.
 //
 // Callers: pg_cron with X-Cron-Secret (hour- and day-guarded), or an admin JWT
 // (sends now, any day — for testing). Cron body {"sample_to": "<academy
@@ -31,8 +37,10 @@ const ALPHA = "#a78bfa";
 export const RECIPIENTS = ["pastorbill@revolvechurchnj.com"];
 /** Who hears when there is nothing locked to send. */
 export const FALLBACK = ["joshmercado@nolimitsboxingacademy.org"];
-/** 7 AM Eastern. */
-const SEND_HOUR = 7;
+/** When each NBT day's email goes, Eastern: Monday at noon (after the Lap), Tuesday and Thursday at 7 AM. */
+export const SEND_HOUR: Record<number, number> = { 1: 12, 2: 7, 4: 7 };
+/** A late lock still reaches Rev before practice; after this hour it waits for the next NBT day. */
+const CATCHUP_UNTIL = 16;
 
 /** The Non-Battle Team's days: weekday (0 = Sunday) → the day key in nbt_weeks.days. */
 export const NBT_DAYS: Record<number, { key: string; label: string; title: string }> = {
@@ -203,6 +211,10 @@ Deno.serve(async (req) => {
     const todayET = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
     let sampleTo = "";
     let date = todayET;
+    // Logged sends (the catch-up and the cron run never send the same day twice).
+    let logIt = false;
+    let catchup = false;
+    const easternHour = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", hour12: false }).format(new Date()));
 
     if (isCron) {
       const body = await req.json().catch(() => ({} as Record<string, unknown>));
@@ -213,9 +225,9 @@ Deno.serve(async (req) => {
         const asked = typeof body?.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.date) ? body.date : "";
         date = asked && NBT_DAYS[weekdayOf(asked)] ? asked : nextNbtDay(todayET);
       } else {
-        const easternHour = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", hour12: false }).format(new Date()));
-        if (easternHour !== SEND_HOUR) return json({ sent: [], reason: `wrong hour: ${easternHour}` });
         if (!NBT_DAYS[weekdayOf(todayET)]) return json({ sent: [], reason: `not a Non-Battle Team day` });
+        if (easternHour !== SEND_HOUR[weekdayOf(todayET)]) return json({ sent: [], reason: `wrong hour: ${easternHour}` });
+        logIt = true;
       }
     } else {
       const authHeader = req.headers.get("Authorization");
@@ -226,9 +238,22 @@ Deno.serve(async (req) => {
       const { data: role } = await userClient.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
       if (!role && !(await holdsBox(req, ["app_practice_plan"]))) return json({ error: "This needs The Planner box." }, 403);
       const body = await req.json().catch(() => ({} as Record<string, unknown>));
-      // "Send to Rev now": today, or a date the plan names.
-      date = typeof body?.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.date) ? body.date : nextNbtDay(todayET);
-      if (!NBT_DAYS[weekdayOf(date)]) return json({ error: "That is not a Non-Battle Team day." }, 400);
+      if (body?.catchup === true) {
+        // The week was just locked. Send today's workout now only if its send time
+        // has passed, practice is still ahead, and it hasn't gone out already.
+        const wd = weekdayOf(todayET);
+        if (!NBT_DAYS[wd]) return json({ sent: [], reason: "not a Non-Battle Team day" });
+        if (easternHour < SEND_HOUR[wd]) return json({ sent: [], reason: "before the send time — the scheduled email will take it" });
+        if (easternHour >= CATCHUP_UNTIL) return json({ sent: [], reason: "too late in the day" });
+        date = todayET;
+        catchup = true;
+        logIt = true;
+      } else {
+        // "Send to Rev now": today, or a date the plan names.
+        date = typeof body?.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.date) ? body.date : nextNbtDay(todayET);
+        if (!NBT_DAYS[weekdayOf(date)]) return json({ error: "That is not a Non-Battle Team day." }, 400);
+        logIt = date === todayET;
+      }
     }
 
     const service = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -238,11 +263,20 @@ Deno.serve(async (req) => {
     const day = (week?.days as Record<string, NbtDay> | undefined)?.[meta.key];
     const locked = week?.status === "locked" && !!day?.lift;
 
+    // Already sent today's workout? Then nothing more goes to Rev.
+    if (logIt && !sampleTo) {
+      const { data: done } = await service.from("nbt_morning_sends").select("send_date").eq("send_date", date).eq("kind", "workout").maybeSingle();
+      if (done) return json({ sent: [], reason: "already sent today", date });
+    }
+
     if (!locked) {
+      // A catch-up only ever sends the workout; it never sends the "nothing locked" note.
+      if (catchup) return json({ sent: [], reason: "the week isn't locked", date });
       const mail = renderNothingLocked(date);
       const to = sampleTo ? [sampleTo] : FALLBACK;
       const { error } = await resend.emails.send({ from: FROM, to, subject: `${sampleTo ? "[SAMPLE] " : ""}${mail.subject}`, html: mail.html, text: mail.text });
       if (error) throw new Error(`Resend failed: ${error.message}`);
+      if (logIt && !sampleTo) await service.from("nbt_morning_sends").upsert({ send_date: date, kind: "held", sent_to: to }, { onConflict: "send_date,kind" });
       return json({ sent: to, held: true, date });
     }
 
@@ -251,7 +285,8 @@ Deno.serve(async (req) => {
     const to = sampleTo ? [sampleTo] : RECIPIENTS;
     const { error } = await resend.emails.send({ from: FROM, to, subject: `${sampleTo ? "[SAMPLE] " : ""}${mail.subject}`, html: mail.html, text: mail.text });
     if (error) throw new Error(`Resend failed: ${error.message}`);
-    return json({ sent: to, date, sample: !!sampleTo });
+    if (logIt && !sampleTo) await service.from("nbt_morning_sends").upsert({ send_date: date, kind: "workout", sent_to: to }, { onConflict: "send_date,kind" });
+    return json({ sent: to, date, sample: !!sampleTo, catchup });
   } catch (e) {
     console.error("nbt-morning error:", e);
     return json({ error: e instanceof Error ? e.message : "Unknown error" }, 500);
