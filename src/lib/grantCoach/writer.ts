@@ -25,7 +25,7 @@ export interface LibraryEntry {
 
 /** Library fields whose youth statistics must never be cited: the live numbers replace them. */
 /** Library entries whose figures Josh approved as citable as written (writer rule 9) — the opposite of story-only. */
-export const APPROVED_FIGURE_KEYS = new Set(["program_description", "boxing_teams_short", "values_rules"]);
+export const APPROVED_FIGURE_KEYS = new Set(["program_description", "boxing_teams_short", "battle_team_case", "values_rules"]);
 export const STORY_ONLY_KEYS = new Set(["need", "service_area", "target_population", "story", "facility", "mission", "writing_examples"]);
 
 /** The library as the writer sees it: every field with text, saved value over website seed. */
