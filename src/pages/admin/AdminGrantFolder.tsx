@@ -26,7 +26,6 @@ import { useAsk } from "@/components/admin/AskDialog";
 import GrantLifecycle from "@/components/admin/grantCoach/GrantLifecycle";
 import GrantReporting from "@/components/admin/grantCoach/GrantReporting";
 import { FitCheckCard, BudgetCard } from "@/components/admin/grantCoach/FitAndBudget";
-import NarrativeCard from "@/components/admin/grantCoach/ProgramNarrative";
 import { loadReports } from "@/lib/grantCoach/lifecycle";
 import type { FitCheck, BudgetDraft } from "@/lib/grantCoach/writer";
 
@@ -326,19 +325,6 @@ const AdminGrantFolder = () => {
         />
       )}
       {folder.status === "applying" && (
-        <NarrativeCard
-          folderId={id!}
-          folder={draftFolder()}
-          items={items}
-          library={library}
-          getFacts={async () => (facts.length ? facts : (await refetchFacts()).data ?? [])}
-          funderBrief={folder.funder_brief ?? null}
-          caseBrief={folder.case_brief ?? null}
-          prompt={(a) => ask.prompt(a)}
-          onChanged={refreshFolder}
-        />
-      )}
-      {folder.status === "applying" && (
         <div className="grid gap-4 lg:grid-cols-2 items-start">
           <FitCheckCard folderId={id!} draftFolder={draftFolder} funderBrief={folder.funder_brief ?? null} library={library} getFacts={async () => (facts.length ? facts : (await refetchFacts()).data ?? [])} saved={folder.fit_check ?? null} savedAt={folder.fit_checked_at ?? null} onChanged={refreshFolder} />
           <BudgetCard folderId={id!} draftFolder={draftFolder} funderBrief={folder.funder_brief ?? null} library={library} getFacts={async () => (facts.length ? facts : (await refetchFacts()).data ?? [])} saved={folder.budget ?? null} savedAt={folder.budget_at ?? null} prompt={(a) => ask.prompt(a)} onChanged={refreshFolder} />
@@ -415,6 +401,7 @@ const AdminGrantFolder = () => {
             onPrint={() => void printAnswers()}
             printing={printing}
             confirm={(o) => ask.confirm(o)}
+            prompt={(a) => ask.prompt(a)}
             caseBrief={folder.case_brief ?? null}
             caseLockedAt={folder.case_locked_at ?? null}
             review={folder.review ?? null}

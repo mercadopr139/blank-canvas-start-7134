@@ -6,7 +6,7 @@
 // rest from the Vault and the back end's live numbers. The person only says
 // Approve or Reject. Rejecting opens the answer to edit, or to tell Grant
 // Coach what to change. Anything it can't stand behind says "Needs you".
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,7 +21,9 @@ import {
 } from "lucide-react";
 import { GRANT_DOCUMENTS_BUCKET } from "@/lib/grantCoach/orgDocuments";
 import { ORG_FIELDS } from "@/lib/grantCoach/orgProfile";
-import { readApplication, matchToVault, draftWithGrantCoach, measure, questionKey, type LibraryEntry, type DraftFolder, type CaseBrief, type FunderBrief } from "@/lib/grantCoach/writer";
+import { readApplication, matchToVault, draftWithGrantCoach, measure, questionKey, NARRATIVE_SECTION, type LibraryEntry, type DraftFolder, type CaseBrief, type FunderBrief } from "@/lib/grantCoach/writer";
+import NarrativeCard from "@/components/admin/grantCoach/ProgramNarrative";
+import type { PromptAsk } from "@/components/admin/AskDialog";
 import QuestionChat from "@/components/admin/grantCoach/QuestionChat";
 import NeedMarks from "@/components/admin/grantCoach/NeedMarks";
 import type { ReactNode } from "react";
@@ -59,6 +61,7 @@ interface Props {
   onPrint: () => void;
   printing: boolean;
   confirm: (o: { title: string; body: string; confirmLabel: string; danger?: boolean }) => Promise<boolean>;
+  prompt: (a: PromptAsk) => Promise<Record<string, string> | null>;
   /** The case Josh locked in the strategy session; story questions wait for it. */
   caseBrief: CaseBrief | null;
   caseLockedAt: string | null;
@@ -80,7 +83,7 @@ async function pool<T>(list: T[], n: number, job: (t: T) => Promise<void>) {
 const cleanName = (s: string) => s.replace(/[^\w.-]+/g, "_").slice(0, 60);
 const sectionTitle = (s: string) => s.replace(/^Portal · /, "");
 
-export default function GrantApplication({ folderId, folder, items, library, getFacts, userId, onPrint, printing, confirm, caseBrief, caseLockedAt, review, reviewedAt, funderBrief }: Props) {
+export default function GrantApplication({ folderId, folder, items, library, getFacts, userId, onPrint, printing, confirm, prompt, caseBrief, caseLockedAt, review, reviewedAt, funderBrief }: Props) {
   const caseLocked = !!caseBrief && !!caseLockedAt;
   const qc = useQueryClient();
   const refresh = useCallback(() => qc.invalidateQueries({ queryKey: ["grant-items", folderId] }), [qc, folderId]);
@@ -623,9 +626,15 @@ export default function GrantApplication({ folderId, folder, items, library, get
             const rows = s.rows.filter((r) => r.status !== "na");
             const done = rows.filter((r) => r.status === "done").length;
             const all = rows.length > 0 && done === rows.length;
+            // The three-page narrative sits where it falls in the portal's order (Josh,
+            // 2026-10-28): its card heads its own seven questions, not the top of the folder.
+            const narrative = s.name === NARRATIVE_SECTION && (
+              <NarrativeCard folderId={folderId} folder={folder} items={items} library={library} getFacts={getFacts} funderBrief={funderBrief} caseBrief={caseBrief} prompt={prompt} onChanged={refresh} />
+            );
             return (
+            <Fragment key={s.name}>
+            {narrative}
             <GcCard
-              key={s.name}
               icon={<FileQuestion className="w-4 h-4" />}
               title={sectionTitle(s.name)}
               blurb={`${rows.length} question${rows.length === 1 ? "" : "s"} · ${done} approved`}
@@ -719,6 +728,7 @@ export default function GrantApplication({ folderId, folder, items, library, get
                 ))}
               </div>
             </GcCard>
+            </Fragment>
             );
           })}
 
