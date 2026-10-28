@@ -4,7 +4,9 @@ import { useState } from "react";
  * Shared "Powered by QUIKTECH" footer for the admin area.
  *
  * The logo is loaded from /public/quiktech-logo.png (drop the file there and it
- * appears automatically — no rebuild needed). Until that file exists the image
+ * appears automatically — no rebuild needed). Its tagline reads "Data Management
+ * Software" (Josh, 2026-10-28; it was "Gym Management Software" — the words are
+ * pixels in the PNG, repainted in Bahnschrift to match). Until that file exists the image
  * 404s and we fall back to a clean "QUIKTECH" wordmark, so the footer always
  * renders something sensible.
  *
@@ -27,7 +29,7 @@ const PoweredByQuiktech = ({ size = "sm" }: PoweredByQuiktechProps) => {
         {imgOk ? (
           <img
             src="/quiktech-logo.png"
-            alt="QUIKTECH"
+            alt="QUIKTECH · Data Management Software"
             className={`${logoHeight} w-auto opacity-90`}
             onError={() => setImgOk(false)}
           />
