@@ -430,12 +430,18 @@ export default function GrantApplication({ folderId, folder, items, library, get
     refresh();
   };
 
-  /* Sections in portal order. */
+  /* Sections in portal order. The portal's "Program Narrative" screen is one upload slot;
+     Grant Coach writes it as seven items (NARRATIVE_SECTION) and builds the file — so that
+     screen and the seven items are ONE card, and the slot itself is not a question (Josh,
+     2026-10-28: "there's an 8 on the card and only 7 questions"). */
   const sections = useMemo(() => {
     const out: { name: string; rows: AppItem[] }[] = [];
+    const isNarrative = (s: string) => s === NARRATIVE_SECTION || /program narrative/i.test(sectionTitle(s));
     for (const it of items) {
+      if (isNarrative(it.section) && it.kind === "upload") continue;
+      const name = isNarrative(it.section) ? NARRATIVE_SECTION : it.section;
       const last = out[out.length - 1];
-      if (last && last.name === it.section) last.rows.push(it); else out.push({ name: it.section, rows: [it] });
+      if (last && last.name === name) last.rows.push(it); else out.push({ name, rows: [it] });
     }
     return out;
   }, [items]);
@@ -633,7 +639,7 @@ export default function GrantApplication({ folderId, folder, items, library, get
             <GcCard
               key={s.name}
               icon={<FileQuestion className="w-4 h-4" />}
-              title={narrative ? "8 · Program Narrative · three pages" : sectionTitle(s.name)}
+              title={narrative ? "Program Narrative · three pages" : sectionTitle(s.name)}
               blurb={narrative ? <NarrativeBlurb items={items} /> : `${rows.length} question${rows.length === 1 ? "" : "s"} · ${done} approved`}
               right={
                 <>
