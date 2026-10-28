@@ -26,6 +26,7 @@ import { useAsk } from "@/components/admin/AskDialog";
 import GrantLifecycle from "@/components/admin/grantCoach/GrantLifecycle";
 import GrantReporting from "@/components/admin/grantCoach/GrantReporting";
 import { FitCheckCard, BudgetCard } from "@/components/admin/grantCoach/FitAndBudget";
+import NarrativeCard from "@/components/admin/grantCoach/ProgramNarrative";
 import { loadReports } from "@/lib/grantCoach/lifecycle";
 import type { FitCheck, BudgetDraft } from "@/lib/grantCoach/writer";
 
@@ -322,6 +323,19 @@ const AdminGrantFolder = () => {
           library={library}
           userId={user?.id ?? null}
           ask={ask}
+        />
+      )}
+      {folder.status === "applying" && (
+        <NarrativeCard
+          folderId={id!}
+          folder={draftFolder()}
+          items={items}
+          library={library}
+          getFacts={async () => (facts.length ? facts : (await refetchFacts()).data ?? [])}
+          funderBrief={folder.funder_brief ?? null}
+          caseBrief={folder.case_brief ?? null}
+          prompt={(a) => ask.prompt(a)}
+          onChanged={refreshFolder}
         />
       )}
       {folder.status === "applying" && (
