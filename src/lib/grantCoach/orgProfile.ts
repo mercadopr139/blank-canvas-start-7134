@@ -102,8 +102,44 @@ Why NLA Is Best Suited to Deliver These Services: NLA is the only program in Cap
  * The five things NLA offers, in the order the website sells them (reviewed
  * 2026-10-23). Every brief program summary is built on these, in this order.
  */
+/**
+ * The program as it actually runs — one program, three groups. Josh's words,
+ * approved 2026-10-28 after his talk with an experienced grant writer:
+ * "represent what NLA actually is." Every application quotes this.
+ */
+const PROGRAM_DESCRIPTION = `NLA Boxing & Youth Development Program
+
+No Limits Academy (NLA) operates one comprehensive Boxing & Youth Development Program organized into three training groups. All groups share the same facility, coaches, transportation, daily structure, and family-style dinner. This model provides a consistent environment where young people develop physically, personally, and socially, with opportunities to participate from age seven through high school graduation.
+
+Junior Boxing serves as the entry point. Each Tuesday, children ages 7–10 participate in an hour of introductory boxing, followed by the opportunity to attend Juniors Aftercare, which includes NLA's Smile Lab and Life Lab, and a family-style dinner. Through these activities, coaches build relationships, recognize individual needs, and identify children who would benefit from more frequent participation. These children may then be invited to join the Littles for additional training throughout the week.
+
+The Littles (ages 7–13) provide the next level of participation. Youth follow an age-appropriate training plan emphasizing boxing fundamentals, movement, coordination, discipline, and teamwork without weightlifting. Older NLA athletes assist with coaching, reinforcing the organization's core value of Service while serving as positive role models for younger participants.
+
+The Non-Battle Team (ages 11–19) provides structured, non-contact boxing and physical development. Monday through Thursday, participants engage in strength and conditioning, boxing instruction, and recreation. Weekly training plans include two strength-development tracks, Bravo for building and Alpha for progressing, designed to accommodate different abilities. Thursday programming incorporates Bible study, while Fun Friday provides opportunities for recreation, relationship-building, and team bonding.
+
+The Battle Team (ages 11–19) provides advanced training for youth who demonstrate commitment to NLA's House Rules and core values. Athletes are selected by coaches and follow structured strength and boxing programs designed to prepare them for competition. The Battle Team is NLA's only contact group; sparring is supervised and fully equipped, and 95% of NLA youth train non-contact. However, competition is always a personal choice. For many participants, the Battle Team represents an opportunity to challenge themselves, develop discipline, and pursue personal growth. The team's guiding mentality, "We are fighting," extends beyond the boxing ring to the fight for one's future, teammates, and personal potential.
+
+Daily attendance ranges from 40 to 120 youth, depending on the day and season, with January and February typically experiencing the highest participation. Among youth who train nightly, approximately 45% participate in the Battle Team, 30% in the Non-Battle Team, and 25% in the Littles.
+
+One program. One daily structure. One shared commitment to youth development. Each day follows a consistent schedule that includes open gym and after-school support, team roll call and reflection, structured training, daily responsibilities, and a shared sit-down dinner. NLA operates Monday through Friday, 2:30–8:30 PM, during the school year and four days per week during summer. All programming is provided free of charge.`;
+
+/** The seven core values (the website shows them as a banner image) and the ten House Rules (nolimitsboxingacademy.org/house-rules). */
+const VALUES_AND_RULES = `NLA's seven core values: Respect, Commitment, Accountability, Faith, Leadership, Trust, Service.
+
+NLA's House Rules — every boxer learns them in Rookie Orientation and passes the House Rules test:
+1. Respect.
+2. Be on time. Being on time means 15 minutes early. No call, no show is unacceptable. 100% attendance is not required; 100% communication is required.
+3. Be prepared. Show up at the right time with the right attitude, the right equipment and the right attire.
+4. Support your team. The gym is a community far bigger than you. Always contribute to the team; to whom much is given, much will be required.
+5. Respect your team. Never fight a fellow NLA boxer. Love and correct them. If there is an issue, squash it immediately.
+6. Be credible. Tell the entire truth, never lie, and remain accountable for your actions. We will not steal. We will not do drugs.
+7. No social media. We are internally driven; NLA's social media director ensures our values are never misrepresented.
+8. Be a leader. Leaders outwork everyone in the room. In the absence of direction, NLA boxers lead and take action.
+9. Keep your house orderly. Clean the gym daily, never neglect it or take it for granted; make improvements when needed and keep it secure.
+10. We are not victims. Life is unfair, unforgiving and exhausting. Our past is our past. Resiliency is developed through challenging circumstances.`;
+
 const OFFER_TOP5 = [
-  "1. Free, year-round boxing and youth development five days a week — ages 7–19, Monday to Friday, 2:30–8:30 PM; Senior Boxing daily, Junior Boxing on Tuesdays; boxing, fitness and strength training with mentorship and structure, at no cost to any youth or family",
+  "1. Free, year-round boxing and youth development five days a week — ages 7–19, Monday to Friday, 2:30–8:30 PM; one program in three groups (the Battle Team, the Non-Battle Team and the Littles), with Junior Boxing on Tuesdays as the door; boxing, fitness and strength training with mentorship and structure, at no cost to any youth or family",
   "2. A hot, family-style dinner every program night — the Meal Train, five nights a week after programming, cooked and served by donor families, businesses and community groups",
   "3. The Launch Pad — the after-high-school pipeline for 8th through 12th graders: four Pads (Military & Law Enforcement, College, Trade School, Workforce), a Pathway Coach and an Accountability Coach, placement only with employers who develop young leaders",
   "4. A structured daily rhythm with adults who show up — roll call, daily reflection, the training block, daily duties, dinner together; a steady, reliable presence five days a week through the most chaotic years of a young person's life",
@@ -111,8 +147,8 @@ const OFFER_TOP5 = [
 ].join("\n");
 
 const PROGRAMS = [
-  "Senior Boxing Program — ages 11–19, Monday–Friday: boxing and fitness training with mentorship, accountability, leadership development and life skills",
-  "Junior Boxing Program — ages 7–10, Tuesdays: an introduction to boxing, fitness and discipline focused on confidence, listening and teamwork",
+  "NLA Boxing & Youth Development Program — one program, three groups, Monday–Friday 2:30–8:30 PM (see \"The program · three groups\"): the Battle Team (ages 11–19, contact, trains to compete, earned through the House Rules and core values), the Non-Battle Team (ages 11–19, non-contact boxing, strength and conditioning in two tracks) and the Littles (ages 7–13, boxing basics without weights, chosen from Junior Boxing)",
+  "Junior Boxing — ages 7–10, Tuesdays: an hour of introductory boxing, then optional Juniors Aftercare and dinner; the entry point to the program and where the coaches find the Littles",
   "Juniors Aftercare — Tuesdays 6:00–7:00 PM for Junior Boxers: Smile Lab (oral health and hygiene, with Delta Dental) and Life Lab (character and values)",
   "Meal Train — a hot dinner five nights a week during the school year, cooked and served by donor families, businesses and community groups",
   "Transportation — free rides to and from practice for youth in designated areas",
@@ -311,6 +347,8 @@ export const ORG_SECTIONS: OrgSection[] = [
       { key: "facility", label: "The facility and the CPF project", kind: "long", seed: FACILITY, help: "The building, the hours, and what the $300,000 award is building. Update as the project is completed." },
       { key: "demographics", label: "Who NLA serves — demographics", kind: "long", seed: DEMOGRAPHICS, help: "A snapshot from the CPF proposal. Drafts pull the live breakdown from Registration Analytics for the period a funder asks about." },
       { key: "schedule", label: "How the program runs through the year", kind: "long", required: true, seed: SCHEDULE, help: "Never \"a 10-month after-school program\": NLA is year-round." },
+      { key: "program_description", label: "The program · three groups (approved 2026-10-28)", kind: "long", required: true, seed: PROGRAM_DESCRIPTION, help: "One program, three groups: the Battle Team, the Non-Battle Team and the Littles, with Junior Boxing on Tuesdays as the door. Josh's words, approved word for word. The 40–120 a night and the 45/30/25 split are his figures until the January–February counts replace them." },
+      { key: "values_rules", label: "Core values and House Rules", kind: "long", required: true, seed: VALUES_AND_RULES, help: "The seven values and the ten rules, word for word from the website. The path to the Battle Team runs through these." },
       { key: "offer_top5", label: "What NLA offers · the five, in order", kind: "list", required: true, seed: OFFER_TOP5, help: "The spine of every brief program summary — a funding purpose, an overview, \"describe your program\". Grant Coach writes them in this order with the strongest live number behind each. Reorder or reword here and every draft follows." },
       { key: "programs", label: "Programs", kind: "list", required: true, seed: PROGRAMS },
       { key: "outcomes", label: "Outcomes and evaluation language", kind: "long", required: true, seed: OUTCOMES, help: "What is measured and how. Drafts cite this when a funder asks for outcome measures and data tools." },

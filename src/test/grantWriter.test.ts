@@ -3,7 +3,7 @@
 // order and word count, and the Word file.
 import { describe, it, expect } from "vitest";
 import { factPeriods, factYearLabel, summarizeRegistrations, summarizeAttendance, pct, isSingleParent, districtGroup, coverage, fullMonthRates, describeRates } from "@/lib/grantCoach/liveFacts";
-import { narrativeItems, narrativeWordCount, wordCount, NARRATIVE_SECTION, NARRATIVE_WORD_LIMIT, STORY_ONLY_KEYS } from "@/lib/grantCoach/writer";
+import { narrativeItems, narrativeWordCount, wordCount, NARRATIVE_SECTION, NARRATIVE_WORD_LIMIT, STORY_ONLY_KEYS, APPROVED_FIGURE_KEYS } from "@/lib/grantCoach/writer";
 import { ORG_FIELDS } from "@/lib/grantCoach/orgProfile";
 import { buildNarrativeDocument, headingFromLabel } from "@/lib/grantCoach/narrativeDocx";
 import { OCEAN_2027 } from "@/lib/grantCoach/oceanChecklist";
@@ -142,7 +142,7 @@ describe("where the numbers come from", () => {
   it("marks every library field that carries youth statistics as story-only", () => {
     // The seeds that quote youth counts or shares from the website or the CPF proposal.
     const carriesYouthStats = ORG_FIELDS.filter((f) => /\b\d+(\.\d+)?%|\b\d{2,4}\+? (youth|students)|single-parent/i.test(f.seed ?? "")).map((f) => f.key);
-    carriesYouthStats.forEach((key) => expect(STORY_ONLY_KEYS.has(key), key).toBe(true));
+    carriesYouthStats.forEach((key) => expect(STORY_ONLY_KEYS.has(key) || APPROVED_FIGURE_KEYS.has(key), key).toBe(true));
     expect(carriesYouthStats.length).toBeGreaterThan(3);
   });
 });

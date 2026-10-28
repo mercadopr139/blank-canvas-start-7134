@@ -36,6 +36,7 @@ const PAGES = [
   ["Impact Story", ["src/pages/ImpactStory.tsx"]],
   ["Gym Buddies", ["src/pages/GymBuddies.tsx"]],
   ["Supporters", ["src/pages/Supporters.tsx"]],
+  ["House Rules", ["src/pages/HouseRules.tsx"]],
 ];
 
 const ENTITIES = { "&amp;": "&", "&rsquo;": "’", "&lsquo;": "‘", "&ldquo;": "“", "&rdquo;": "”", "&nbsp;": " ", "&mdash;": "—", "&ndash;": "–", "&hellip;": "…", "&apos;": "'", "&quot;": '"' };
