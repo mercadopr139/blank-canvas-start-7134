@@ -1,20 +1,21 @@
-// The Program Year Snapshot tab on Grant Coach home (Josh, 2026-10-24).
-// Four sections, each approved word for word and locked until Josh unlocks
-// it. Copy one, or copy all, into any application. Grant Coach reads the
-// approved sections as source 2 in every draft. Next year: Redraft with
-// Grant Coach keeps the approved wording and updates only the figures.
+// One approved paragraph of the program year, as a card (Josh, 2026-10-24),
+// and the hook that loads the year. Since 2026-10-28 the Snapshot is no
+// longer its own tab: each of its four sections opens the Grant Vault
+// section it answers (GrantVault.tsx), so there is one place for grants.
+// A section is approved word for word and locked until Josh unlocks it;
+// Grant Coach reads only approved sections, as source 2 in every draft.
+// Next year: Redraft with Grant Coach keeps the wording and updates the figures.
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Copy, Lock, LockOpen, Check, Sparkles, Loader2, CalendarRange } from "lucide-react";
+import { Copy, Lock, LockOpen, Check, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import GcCard, { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
-import { useAsk } from "@/components/admin/AskDialog";
-import { useAuth } from "@/contexts/AuthContext";
+import type { useAsk } from "@/components/admin/AskDialog";
 import {
-  loadSnapshot, snapshotYears, snapshotYear, shortYear, saveSection, approveSection, unlockSection, snapshotText,
-  type SnapshotSection,
+  loadSnapshot, snapshotYears, snapshotYear, shortYear, saveSection, approveSection, unlockSection,
+  type SnapshotSection as SnapshotRow,
 } from "@/lib/grantCoach/snapshot";
 import { loadLibrary, redraftSnapshotSection } from "@/lib/grantCoach/writer";
 import { gatherLiveFacts } from "@/lib/grantCoach/liveFacts";
@@ -22,7 +23,7 @@ import { gatherLiveFacts } from "@/lib/grantCoach/liveFacts";
 const fmtDate = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", year: "numeric" }) : "";
 
-const copy = async (text: string, what: string) => {
+export const copyText = async (text: string, what: string) => {
   try {
     await navigator.clipboard.writeText(text);
     toast.success(`${what} copied`);
@@ -31,87 +32,46 @@ const copy = async (text: string, what: string) => {
   }
 };
 
-const outline = "bg-transparent border-white/20 text-white/85 hover:bg-white/10 hover:text-white";
+export const outline = "bg-transparent border-white/20 text-white/85 hover:bg-white/10 hover:text-white";
 
-export default function YearSnapshot() {
-  const { user } = useAuth();
+/** The Snapshot for one year: its sections, the year before (to redraft from), and the year chips. */
+export function useSnapshot() {
   const qc = useQueryClient();
-  const { ask, dialog } = useAsk();
   const target = snapshotYear();
-
   const { data: years = [] } = useQuery({ queryKey: ["grant-snapshot-years"], queryFn: snapshotYears });
   const [year, setYear] = useState<string | null>(null);
   // Open on the newest year on file; the last complete year when nothing is.
   useEffect(() => { if (!year && years) setYear(years[0] ?? target); }, [years, year, target]);
   const shown = year ?? target;
   const allYears = [...new Set([target, ...years])].sort().reverse();
-  // The year before, so a new year's section can be redrafted from the approved one.
   const prevYear = `${Number(shown.slice(0, 4)) - 1}-${shown.slice(0, 4)}`;
-
   const { data: sections = [], isLoading, isError, error } = useQuery({ queryKey: ["grant-snapshot", shown], queryFn: () => loadSnapshot(shown) });
   const { data: previous = [] } = useQuery({ queryKey: ["grant-snapshot", prevYear], queryFn: () => loadSnapshot(prevYear) });
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ["grant-snapshot"] });
     qc.invalidateQueries({ queryKey: ["grant-snapshot-years"] });
   };
-
   const approved = sections.filter((s) => s.status === "approved");
-  const allApproved = approved.length === sections.length && sections.length > 0;
-
-  return (
-    <div className="space-y-4">
-      {dialog}
-      <GcCard
-        icon={<CalendarRange className="w-4 h-4" />}
-        title={`Program Year Snapshot · ${shortYear(shown)}`}
-        blurb="Four sections, approved word for word and locked. Copy them into any application. Grant Coach uses them as written in every draft, right after the website."
-        right={
-          <Button size="sm" variant="outline" className={outline} disabled={!approved.length} onClick={() => copy(snapshotText(approved), "The Snapshot")}>
-            <Copy className="w-3.5 h-3.5 mr-1.5" /> Copy all
-          </Button>
-        }
-      >
-        <div className="px-4 py-3 flex flex-wrap items-center gap-2 text-xs">
-          {allYears.map((y) => (
-            <button
-              key={y}
-              type="button"
-              onClick={() => setYear(y)}
-              className={`rounded-full border px-3 py-1 font-semibold ${y === shown ? "text-black" : "border-white/15 text-white/70 hover:bg-white/10"}`}
-              style={y === shown ? { backgroundColor: GC_BLUE, borderColor: GC_BLUE } : undefined}
-            >
-              {shortYear(y)}
-            </button>
-          ))}
-          <span className="text-white/45 ml-1">
-            {allApproved ? "All four sections approved." : `${approved.length} of ${sections.length} sections approved. Only approved sections are copied or used by Grant Coach.`}
-          </span>
-        </div>
-      </GcCard>
-
-      {isError && <p className="text-sm text-red-400">Couldn't load the Snapshot: {(error as Error).message}</p>}
-      {isLoading && <p className="text-sm text-white/50 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Loading…</p>}
-
-      {sections.map((s) => (
-        <SectionCard
-          key={`${s.program_year}-${s.section_key}`}
-          section={s}
-          previous={previous.find((p) => p.section_key === s.section_key && p.status === "approved")?.body ?? null}
-          userId={user?.id ?? null}
-          ask={ask}
-          onChanged={refresh}
-        />
-      ))}
-    </div>
-  );
+  return { shown, allYears, setYear, sections, previous, approved, isLoading, isError, error: error as Error | null, refresh };
 }
 
-function SectionCard({ section, previous, userId, ask, onChanged }: {
-  section: SnapshotSection;
+/** The first sentence or so of a section, for its folded card; the ALL-CAPS heading line is skipped. */
+const gistOf = (body: string, max = 170) => {
+  const lines = body.replace(/\r\n/g, "\n").split("\n").map((l) => l.trim()).filter(Boolean);
+  const first = lines.find((l) => !/^[A-Z0-9 ·&–—'-]+$/.test(l)) ?? "";
+  const t = first.replace(/\s+/g, " ");
+  return t.length > max ? t.slice(0, max).replace(/\s+\S*$/, "") + "…" : t;
+};
+
+export default function SnapshotSectionCard({ section, previous, userId, ask, onChanged, open, onToggle }: {
+  section: SnapshotRow;
   previous: string | null;
   userId: string | null;
   ask: ReturnType<typeof useAsk>["ask"];
   onChanged: () => void;
+  /** Folded to its title and first line until opened (the Vault is a library index). */
+  open: boolean;
+  onToggle: () => void;
 }) {
   const locked = section.status === "approved";
   const [text, setText] = useState(section.body);
@@ -160,16 +120,21 @@ function SectionCard({ section, previous, userId, ask, onChanged }: {
 
   return (
     <GcCard
-      title={section.title}
-      blurb={locked
-        ? <span className="inline-flex items-center gap-1"><Lock className="w-3 h-3" /> Approved and locked{section.approved_at ? ` · ${fmtDate(section.approved_at)}` : ""}</span>
-        : section.body ? "Draft. Grant Coach does not use it until you approve it." : "Not written yet."}
+      icon={locked ? <Lock className="w-3.5 h-3.5" /> : <LockOpen className="w-3.5 h-3.5" />}
+      title={`${section.title} · ${shortYear(section.program_year)}`}
+      open={open}
+      onToggle={onToggle}
+      blurb={!open
+        ? (section.body ? gistOf(section.body) : "Not written yet.")
+        : locked
+          ? <span className="inline-flex items-center gap-1">Approved word for word and locked{section.approved_at ? ` · ${fmtDate(section.approved_at)}` : ""}. Grant Coach uses it as written.</span>
+          : section.body ? "Draft. Grant Coach does not use it until you approve it." : "Not written yet."}
       right={
         <>
-          <Button size="sm" variant="outline" className={outline} disabled={!text.trim()} onClick={() => copy(text, section.title)}>
+          <Button size="sm" variant="outline" className={outline} disabled={!text.trim()} onClick={() => copyText(text, section.title)}>
             <Copy className="w-3.5 h-3.5 mr-1.5" /> Copy
           </Button>
-          {locked && (
+          {locked && open && (
             <Button size="sm" variant="outline" className={outline} disabled={busy != null} onClick={unlock}>
               {busy === "unlock" ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <LockOpen className="w-3.5 h-3.5 mr-1.5" />} Unlock
             </Button>
@@ -189,7 +154,7 @@ function SectionCard({ section, previous, userId, ask, onChanged }: {
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={Math.min(28, Math.max(10, text.split("\n").length + 2))}
-              className="bg-black/30 border-white/15 text-sm leading-relaxed"
+              className="bg-black/30 border-white/15 text-sm leading-relaxed text-white"
               placeholder="Write the section, or redraft it with Grant Coach."
             />
             {changed.length > 0 && (

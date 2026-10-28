@@ -45,14 +45,19 @@ export default function GcCard({ title, blurb, right, icon, open, onToggle, chil
   return (
     <section className={`rounded-2xl border border-white/15 bg-[#141416] overflow-hidden shadow-[0_0.3em_1.2em_rgba(0,0,0,0.45)] ${className}`}>
       {collapsible ? (
-        <button
-          type="button"
+        // A div, not a <button>: the controls on the right are buttons too, and
+        // a button inside a button is invalid HTML (the Vault folds every card).
+        <div
+          role="button"
+          tabIndex={0}
+          aria-expanded={!!open}
           onClick={onToggle}
-          className={`w-full px-4 py-2.5 flex items-start gap-3 hover:brightness-125 transition ${showBody ? "border-b" : ""}`}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); } }}
+          className={`w-full px-4 py-2.5 flex items-start gap-3 cursor-pointer select-none hover:brightness-125 transition ${showBody ? "border-b" : ""}`}
           style={{ background: GC_SHADE, borderColor: `${GC_BLUE}55` }}
         >
           {head}
-        </button>
+        </div>
       ) : (
         <div className="px-4 py-2.5 flex items-start gap-3 border-b" style={{ background: GC_SHADE, borderColor: `${GC_BLUE}55` }}>{head}</div>
       )}

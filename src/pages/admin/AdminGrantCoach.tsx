@@ -1,12 +1,12 @@
-// Grant Coach — step 1: the About NLA library and the organization documents.
+// Grant Coach home: the grants, the Grant Vault and the documents.
 //
 // Everything a funder asks about the organization, kept in one place and
-// filled once (docs/grant-coach/README.md). The library's fields come from
-// src/lib/grantCoach/orgProfile.ts, seeded from the public website; what a
-// person saves goes to grant_org_fields. The documents every application
+// filled once (docs/grant-coach/README.md). The Grant Vault (GrantVault.tsx)
+// is the one source of truth since 2026-10-28: each section opens with the
+// approved paragraph of the program year and carries the facts under it;
+// the old Snapshot tab is folded into it. The documents every application
 // attaches (990, determination letter, approved budget, audit…) are kept in
 // the private grant-documents bucket, or as a link, one per catalog entry.
-// Steps 2–4 (grant folders, the writer, reporting) build on this page.
 import { useMemo, useRef, useState } from "react";
 import { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
 import { useNavigate } from "react-router-dom";
@@ -14,24 +14,21 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
-  BookOpen, FolderLock, Globe, Check, Loader2, Upload, Link2, ExternalLink, Trash2, RotateCcw, AlertCircle, FolderPlus, CalendarClock, ChevronRight, CalendarRange,
+  BookOpen, FolderLock, Check, Loader2, Upload, Link2, ExternalLink, Trash2, AlertCircle, FolderPlus, CalendarClock, ChevronRight,
 } from "lucide-react";
 import { checklistProgress } from "@/lib/grantCoach/oceanChecklist";
-import { ORG_SECTIONS, orgFieldValue, orgCompleteness, formatEin, type OrgField } from "@/lib/grantCoach/orgProfile";
+import { orgCompleteness } from "@/lib/grantCoach/orgProfile";
 import { useAsk } from "@/components/admin/AskDialog";
 import PastAnswers from "@/components/admin/grantCoach/PastAnswers";
 import StoryBank from "@/components/admin/grantCoach/StoryBank";
-import YearSnapshot from "@/components/admin/grantCoach/YearSnapshot";
+import GrantVault from "@/components/admin/grantCoach/GrantVault";
 import GrantPipeline from "@/components/admin/grantCoach/GrantPipeline";
 import { documentAge, STATUS_LABEL, type FolderStatus } from "@/lib/grantCoach/lifecycle";
 import { ORG_DOCUMENTS, GRANT_DOCUMENTS_BUCKET, orgDocumentPath, type OrgDocument } from "@/lib/grantCoach/orgDocuments";
 
 
-interface FieldRow { key: string; value: string | null; updated_at: string }
 interface DocRow {
   key: string; storage_path: string | null; file_name: string | null; mime_type: string | null;
   size_bytes: number | null; link_url: string | null; note: string | null; updated_at: string;
@@ -41,7 +38,7 @@ const when = (iso: string) =>
   new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/New_York" });
 const kb = (n: number | null) => (n == null ? "" : n > 1_000_000 ? `${(n / 1_000_000).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1000))} KB`);
 
-type Tab = "grants" | "snapshot" | "about" | "documents";
+type Tab = "grants" | "about" | "documents";
 
 const AdminGrantCoach = () => {
   const { user } = useAuth();
@@ -103,47 +100,16 @@ const AdminGrantCoach = () => {
   const whenAt = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" });
   const daysLeft = (iso: string) => Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
 
-  /* ───── The library ───── */
-  const { data: fieldRows = [], isLoading: fieldsLoading } = useQuery({
+  /* ───── The Vault's tab count (the Vault itself is GrantVault.tsx) ───── */
+  const { data: fieldRows = [] } = useQuery({
     queryKey: ["grant-org-fields"],
     queryFn: async () => {
       const { data, error } = await supabase.from("grant_org_fields" as never).select("key, value, updated_at");
       if (error) throw error;
-      return (data ?? []) as unknown as FieldRow[];
+      return (data ?? []) as unknown as { key: string; value: string | null; updated_at: string }[];
     },
   });
-  const saved = useMemo(() => Object.fromEntries(fieldRows.map((r) => [r.key, r.value])) as Record<string, string | null>, [fieldRows]);
-  const savedAt = useMemo(() => Object.fromEntries(fieldRows.map((r) => [r.key, r.updated_at])) as Record<string, string>, [fieldRows]);
-  const completeness = orgCompleteness(saved);
-
-  const [savingKey, setSavingKey] = useState<string | null>(null);
-  // The field that just saved, for a green "Saved" that lingers a moment.
-  const [justSaved, setJustSaved] = useState<string | null>(null);
-  const [lastSave, setLastSave] = useState<{ label: string; at: Date } | null>(null);
-  const saveField = async (field: OrgField, raw: string) => {
-    if (field.key === "ein") raw = formatEin(raw);
-    const value = raw.trim() ? raw : null;
-    const current = saved[field.key];
-    // Nothing typed over a seed, or the same text again: nothing to write.
-    if ((current ?? null) === value) return;
-    if (current === undefined && value === (field.seed ?? null)) return;
-    setSavingKey(field.key);
-    const { error } = await supabase
-      .from("grant_org_fields" as never)
-      .upsert({ key: field.key, value, updated_at: new Date().toISOString(), updated_by: user?.id ?? null } as never, { onConflict: "key" } as never);
-    setSavingKey(null);
-    if (error) { toast.error(`Couldn't save ${field.label}: ${error.message}`); return; }
-    setJustSaved(field.key);
-    setLastSave({ label: field.label, at: new Date() });
-    window.setTimeout(() => setJustSaved((k) => (k === field.key ? null : k)), 2500);
-    qc.invalidateQueries({ queryKey: ["grant-org-fields"] });
-  };
-  /** Back to the website's text: drop the saved row. */
-  const resetField = async (field: OrgField) => {
-    const { error } = await supabase.from("grant_org_fields" as never).delete().eq("key", field.key);
-    if (error) { toast.error(error.message); return; }
-    qc.invalidateQueries({ queryKey: ["grant-org-fields"] });
-  };
+  const completeness = orgCompleteness(useMemo(() => Object.fromEntries(fieldRows.map((r) => [r.key, r.value])) as Record<string, string | null>, [fieldRows]));
 
   /* ───── The documents ───── */
   const { data: docRows = [] } = useQuery({
@@ -252,8 +218,7 @@ const AdminGrantCoach = () => {
         <div className="flex gap-2">
           {([
             { k: "grants" as Tab, label: "Grants", icon: FolderPlus, sub: `${folders.filter((f) => f.status === "applying").length} applying · ${folders.filter((f) => f.status === "active").length} active` },
-            { k: "snapshot" as Tab, label: "Snapshot", icon: CalendarRange, sub: "the year, approved and locked" },
-            { k: "about" as Tab, label: "Grant Vault", icon: BookOpen, sub: `${completeness.done} of ${completeness.total} required` },
+            { k: "about" as Tab, label: "Grant Vault", icon: BookOpen, sub: `${completeness.done} of ${completeness.total} required facts` },
             { k: "documents" as Tab, label: "Documents", icon: FolderLock, sub: `${docsDone} of ${ORG_DOCUMENTS.length} on file` },
           ]).map((t) => (
             <button
@@ -304,115 +269,14 @@ const AdminGrantCoach = () => {
         </div>
       )}
 
+
       {tab === "about" && (
         <div className="space-y-6">
-          {/* Completeness */}
-          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-            <div className="flex items-center justify-between text-sm gap-3 flex-wrap">
-              <p className="font-semibold">Required facts filled</p>
-              <p className="text-white/60">{completeness.done} of {completeness.total}</p>
-            </div>
-            {/* Every entry saves the moment you click out of its box. This line
-                says so, and names the last one, so nobody wonders. */}
-            <p className="mt-2 text-[12px] inline-flex items-center gap-1.5 text-emerald-300/90">
-              <Check className="w-3.5 h-3.5" />
-              {fieldRows.length} {fieldRows.length === 1 ? "entry" : "entries"} saved
-              {lastSave
-                ? ` · last: ${lastSave.label}, ${lastSave.at.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`
-                : " · each box saves when you click out of it"}
-            </p>
-            <div className="mt-2 h-2 rounded-full bg-white/10 overflow-hidden">
-              <div className="h-full rounded-full transition-all" style={{ width: `${completeness.total ? Math.round((completeness.done / completeness.total) * 100) : 0}%`, backgroundColor: GC_BLUE }} />
-            </div>
-            <p className="mt-2 text-[12px] text-white/45 flex items-center gap-1.5">
-              <Globe className="w-3.5 h-3.5" /> Text marked <span className="rounded px-1 bg-sky-500/15 text-sky-200">from the website</span> was seeded from the public site. Edit it here and every draft uses your edit; Reset brings the website text back.
-            </p>
-          </div>
-
-          {fieldsLoading ? (
-            <p className="text-white/50 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Loading the library…</p>
-          ) : (
-            ORG_SECTIONS.map((section) => (
-              <section key={section.key} className="rounded-2xl border border-white/10 bg-neutral-900/60">
-                <div className="px-5 py-4 border-b border-white/10">
-                  <h2 className="font-bold">{section.title}</h2>
-                  <p className="text-sm text-white/50">{section.blurb}</p>
-                </div>
-                <div className="p-5 grid gap-5 md:grid-cols-2">
-                  {section.fields.map((field) => {
-                    const value = orgFieldValue(field, saved);
-                    const fromSite = saved[field.key] === undefined && !!field.seed;
-                    const empty = !value.trim();
-                    const wide = field.kind === "long" || field.kind === "list";
-                    return (
-                      <div key={field.key} className={wide ? "md:col-span-2" : ""}>
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <label htmlFor={`f-${field.key}`} className="text-sm font-semibold">{field.label}</label>
-                          {field.required && empty && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-amber-300"><AlertCircle className="w-3 h-3" /> Needed</span>
-                          )}
-                          {fromSite && <span className="text-[10px] font-bold uppercase tracking-wide rounded px-1.5 py-0.5 bg-sky-500/15 text-sky-200">From the website</span>}
-                          {savingKey === field.key && <span className="text-[10px] text-white/50 inline-flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Saving…</span>}
-                          {justSaved === field.key && savingKey !== field.key && (
-                            <span className="text-[10px] font-bold uppercase tracking-wide rounded px-1.5 py-0.5 bg-emerald-500/20 text-emerald-200 inline-flex items-center gap-1"><Check className="w-3 h-3" /> Saved</span>
-                          )}
-                          {saved[field.key] !== undefined && savingKey !== field.key && justSaved !== field.key && (
-                            <span className="text-[10px] text-white/35 inline-flex items-center gap-1"><Check className="w-3 h-3" /> saved {when(savedAt[field.key])}</span>
-                          )}
-                        </div>
-                        {field.kind === "yesno" ? (
-                          <select
-                            id={`f-${field.key}`}
-                            key={`${field.key}-${value}`}
-                            defaultValue={value}
-                            onChange={(e) => void saveField(field, e.target.value)}
-                            className="w-full rounded-md bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm text-white"
-                          >
-                            <option value="">—</option>
-                            <option value="Yes">Yes</option>
-                            <option value="No">No</option>
-                          </select>
-                        ) : wide ? (
-                          <Textarea
-                            id={`f-${field.key}`}
-                            key={`${field.key}-${saved[field.key] ?? "seed"}`}
-                            defaultValue={value}
-                            rows={field.kind === "list" ? Math.min(12, Math.max(3, value.split("\n").length + 1)) : 5}
-                            onBlur={(e) => void saveField(field, e.target.value)}
-                            placeholder={field.kind === "list" ? "One per line" : undefined}
-                            className="bg-neutral-950 border-neutral-800 text-white text-sm"
-                          />
-                        ) : (
-                          <Input
-                            id={`f-${field.key}`}
-                            key={`${field.key}-${saved[field.key] ?? "seed"}`}
-                            type={field.kind === "date" ? "date" : field.kind === "number" ? "number" : "text"}
-                            defaultValue={value}
-                            onBlur={(e) => void saveField(field, e.target.value)}
-                            className="bg-neutral-950 border-neutral-800 text-white text-sm"
-                          />
-                        )}
-                        <div className="flex items-center justify-between gap-3 mt-1">
-                          {field.help ? <p className="text-[11px] text-white/40">{field.help}</p> : <span />}
-                          {field.seed && saved[field.key] !== undefined && (
-                            <button type="button" onClick={() => void resetField(field)} className="text-[11px] text-white/40 hover:text-white inline-flex items-center gap-1 shrink-0">
-                              <RotateCcw className="w-3 h-3" /> Reset to website text
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
-            ))
-          )}
+          <GrantVault />
           <StoryBank />
           <PastAnswers />
         </div>
       )}
-
-      {tab === "snapshot" && <YearSnapshot />}
 
       {tab === "documents" && (
         <div className="space-y-4">

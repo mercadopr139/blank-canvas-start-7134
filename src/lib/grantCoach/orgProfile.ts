@@ -1,4 +1,5 @@
-// The About NLA library: every fact a funder asks for, in one place.
+// The Grant Vault: every fact a funder asks for, in one place — the one
+// source of truth for grants (Josh, 2026-10-28).
 //
 // This is the field catalog — sections, labels, help, and the text seeded
 // from the public website (docs/grant-coach/README.md: "fill once, update
@@ -6,6 +7,15 @@
 // `key`; a field with no saved value shows its seed, marked "from the
 // website", until someone writes over it. Seeds are a mirror of the site as
 // of 2026-10-16; when the site changes, change the seed here too.
+//
+// The sections run in the order funders ask, and each of the first four
+// OPENS with the approved paragraph of the program year that answers it
+// (`snapshot`, a Snapshot section: src/lib/grantCoach/snapshot.ts). The
+// rule since 2026-10-28: every fact lives in ONE place. A number, name, date
+// or address is a field here; a paragraph about the year is a Snapshot
+// section written from those fields and the live numbers. The old prose
+// fields that repeated the Snapshot (demographics, impact numbers) are gone.
+import type { SnapshotKey } from "@/lib/grantCoach/snapshot";
 
 export type FieldKind = "short" | "long" | "list" | "number" | "date" | "yesno";
 
@@ -17,6 +27,8 @@ export interface OrgField {
   required?: boolean;
   /** One line under the box: what this is for, or where to find it. */
   help?: string;
+  /** One line shown while the card is folded: what is inside, so the Vault reads as a library index. */
+  gist?: string;
   /** Text from the public website, shown until a saved value exists. */
   seed?: string;
 }
@@ -25,6 +37,8 @@ export interface OrgSection {
   key: string;
   title: string;
   blurb: string;
+  /** The approved paragraph of the program year that opens this section. */
+  snapshot?: SnapshotKey;
   fields: OrgField[];
 }
 
@@ -47,12 +61,13 @@ const STORY =
   "opportunity, where young people are challenged, supported and believed in, and learn that their circumstances " +
   "do not define their future and that no one succeeds alone.";
 
+// The hours by season — a fact, not a second description of the program
+// (that is "The program · three groups" and the Snapshot).
 const SCHEDULE =
-  "NLA operates year-round, with after-school programming five days a week during the school year and an " +
-  "excursions-driven schedule four days a week through the summer.\n\n" +
-  "School year (September–June): Monday–Friday. Senior Boxing 5:15–7:15 PM within extended hours of 2:30–8:30 PM; " +
+  "NLA operates year-round: five days a week during the school year, four in summer.\n\n" +
+  "School year (September–June): Monday–Friday, 2:30–8:30 PM; the training block 5:15–7:15 PM; " +
   "Junior Boxing on Tuesdays with Juniors Aftercare 6:00–7:00 PM; dinner through the Meal Train five nights a week.\n\n" +
-  "Summer (July–August): Monday–Thursday. Senior Boxing 6:15–8:15 PM, with full-day excursions to partner venues " +
+  "Summer (July–August): Monday–Thursday, 6:15–8:15 PM, with full-day excursions to partner venues " +
   "across South Jersey, Philadelphia and the shore. Junior Boxing pauses for the summer and resumes the last " +
   "Tuesday of September. Every youth re-registers each September 1.";
 
@@ -123,6 +138,9 @@ Daily attendance ranges from 40 to 120 youth, depending on the day and season, w
 
 One program. One daily structure. One shared commitment to youth development. Each day follows a consistent schedule that includes open gym and after-school support, team roll call and reflection, structured training, daily responsibilities, and a shared sit-down dinner. NLA operates Monday through Friday, 2:30–8:30 PM, during the school year and four days per week during summer. All programming is provided free of charge.`;
 
+/** Josh's short description of the two teams (2026-10-28): the boxing program for ages 11–19 in four sentences. The Littles are the third group; "The program · three groups" is the whole. */
+const BOXING_TEAMS_SHORT = `NLA's boxing program consists of two groups: the Battle Team and the Non-Battle Team. The Battle Team focuses on competitive boxing, advanced skill development, and athletic performance through structured training and sanctioned competitions. The Non-Battle Team emphasizes non-contact boxing, physical fitness, and skill development. Both groups promote discipline, confidence, resilience, and personal growth.`;
+
 /** The seven core values (the website shows them as a banner image) and the ten House Rules (nolimitsboxingacademy.org/house-rules). */
 const VALUES_AND_RULES = `NLA's seven core values: Respect, Commitment, Accountability, Faith, Leadership, Trust, Service.
 
@@ -175,18 +193,6 @@ const PROGRAMS = [
   "Coaching Boys into Men — the evidence-based violence-prevention programme, in partnership with Cape Assist",
   "Hawk Squad — after-school boxing and mentorship for Cape May County Technical High School students (Tuesdays and Thursdays)",
   "BAM (Body and Mind) — a Friday behavior-incentive programme with Cape May County Special Services, grades 5–12",
-].join("\n");
-
-const IMPACT = [
-  "500+ youth served annually",
-  "70% economically disadvantaged",
-  "Free transportation for youth in designated areas",
-  "Meals served five nights a week",
-  "95% of youth participate in non-contact boxing",
-  "$3M+ raised since 2020",
-  "140+ youth from Wildwood and Woodbine, two of New Jersey's most economically distressed communities",
-  "14,000-square-foot youth development facility",
-  "Youth engaged from 2:30 PM to about 8:30 PM, the hours when they are most vulnerable",
 ].join("\n");
 
 const AWARDS = [
@@ -281,11 +287,6 @@ const FACILITY =
   "information board ($25,000), exterior beautification ($15,000), and Upper Cuts, a mentorship-based workforce-development " +
   "barbershop teaching entrepreneurship, customer service and financial responsibility ($30,000).";
 
-const DEMOGRAPHICS =
-  "Race / ethnicity (CPF proposal, 2026): Caucasian 36.8%, Hispanic/Latino 30.0%, African American 20.0%, Multiracial 10.4%, " +
-  "Asian 1.0%, Native Hawaiian/Pacific Islander 0.9%, American Indian/Alaska Native 0.9%. 70% economically disadvantaged; " +
-  "143 youth in single-parent households headed by mothers.";
-
 const OUTCOMES =
   "NLA keeps attendance for every program through kiosk check-ins, so youth served are counted unduplicated and " +
   "retention is measured night by night. The back end also records meals served, rides provided, Juniors Aftercare " +
@@ -294,9 +295,38 @@ const OUTCOMES =
 
 export const ORG_SECTIONS: OrgSection[] = [
   {
-    key: "identity",
-    title: "Identity",
-    blurb: "The organization on paper. Screen 1 of almost every application.",
+    key: "served",
+    title: "Who we serve",
+    blurb: "The need and the youth: the statement of need, the service area, the target population. The year's approved paragraph carries the counts and shares.",
+    snapshot: "who_we_served",
+    fields: [
+      { key: "counties", label: "Counties Served", kind: "short", required: true, seed: "Cape May County" },
+      { key: "service_area", label: "Cities, Towns and Communities Served", kind: "long", required: true, seed: "Youth from across Cape May County, including more than 140 from Wildwood and Woodbine, two of the most economically distressed communities in New Jersey. By school district (CPF proposal, 2026): Middle Township 31.5%, Lower Township 18.7%, Wildwood 15.1%, Woodbine 13.1%, Cape May County Technical 6.9%, Avalon / Stone Harbor 1.3%, Ocean City 1.0%, Upper Township 0.7%, Cape May / West Cape May 0.7%, other districts and alternative settings 6.6%.", help: "From the CPF proposal. The youth map under Attendance shows the current spread; refresh the percentages when they change." },
+      { key: "target_population", label: "Target Population", kind: "short", required: true, seed: "Youth and young adults ages 7–19 across Cape May County; 70% economically disadvantaged" },
+      { key: "need", label: "Statement of Need", gist: "The county's hardship, where it concentrates (Wildwood, Woodbine), what the districts report, and why the after-school hours matter.", kind: "long", required: true, seed: NEED, help: "The community numbers behind every proposal's first question. From the CPF proposal; refresh the census and district figures yearly." },
+    ],
+  },
+  {
+    key: "program",
+    title: "What we do · the program",
+    blurb: "One program, three groups. The mission, Josh's program description, the values and rules, the services and the hours.",
+    snapshot: "what_we_do",
+    fields: [
+      { key: "mission", label: "Mission Statement", gist: "Free, year-round, ages 7–19, Cape May County: boxing, mentorship and structure.", kind: "long", required: true, seed: MISSION },
+      { key: "program_description", label: "Boxing Groups Explained", gist: "One program, three groups — the Littles, the Non-Battle Team and the Battle Team — with Junior Boxing on Tuesdays as the door. Josh's words, approved 2026-10-28.", kind: "long", required: true, seed: PROGRAM_DESCRIPTION, help: "One program, three groups: the Battle Team, the Non-Battle Team and the Littles, with Junior Boxing on Tuesdays as the door. Josh's words, approved word for word. The 40–120 a night and the 45/30/25 split are his figures until the January–February counts replace them." },
+      { key: "boxing_teams_short", label: "Battle Team and Non-Battle Team · in four sentences", gist: "The two teams for ages 11–19, in a few lines, for a funder who wants the boxing program short.", kind: "long", required: true, seed: BOXING_TEAMS_SHORT, help: "Josh's words. The short way to say what the Battle Team and the Non-Battle Team are (ages 11–19) when a funder wants the boxing program in a few lines; the Littles are the third group and the full picture is \"The program · three groups\"." },
+      { key: "values_rules", label: "Core Values and House Rules", gist: "The seven values and the ten rules, word for word. The path onto the Battle Team runs through them.", kind: "long", required: true, seed: VALUES_AND_RULES, help: "The seven values and the ten rules, word for word from the website. The path to the Battle Team runs through these." },
+      { key: "programs", label: "Programs and Services · the list", gist: "Every program and service NLA runs, one per line.", kind: "list", required: true, seed: PROGRAMS },
+      { key: "offer_top5", label: "The Five Things NLA Offers", gist: "The spine of every brief program summary, in the website's order.", kind: "list", required: true, seed: OFFER_TOP5, help: "The spine of every brief program summary — a funding purpose, an overview, \"describe your program\". Grant Coach writes them in this order with the strongest live number behind each. Reorder or reword here and every draft follows." },
+      { key: "schedule", label: "Hours and Calendar", gist: "The hours by season; year-round, never a 10-month program.", kind: "long", required: true, seed: SCHEDULE, help: "The hours by season. Never \"a 10-month after-school program\": NLA is year-round." },
+      { key: "outcomes", label: "Outcomes and How We Measure", gist: "What the back end records and how youth served, retention and the disadvantaged share are counted.", kind: "long", required: true, seed: OUTCOMES, help: "What is measured and how. Drafts cite this when a funder asks for outcome measures and data tools." },
+    ],
+  },
+  {
+    key: "organization",
+    title: "The organization",
+    blurb: "NLA on paper — screen 1 of almost every application — and its story and facility.",
+    snapshot: "organization",
     fields: [
       { key: "legal_name", label: "Legal name of organization", kind: "short", required: true, seed: "No Limits Academy Inc." },
       { key: "dba", label: "Doing business as (DBA / AKA)", kind: "short", required: true, seed: "No Limits Academy", help: "The site and the domain say No Limits Boxing Academy too; use what is registered." },
@@ -308,15 +338,15 @@ export const ORG_SECTIONS: OrgSection[] = [
       { key: "phone", label: "Main phone", kind: "short" },
       { key: "address_physical", label: "Program address (the gym)", kind: "long", required: true, seed: "1086 Route 47 South, Rio Grande, NJ 08242", help: "From Our Story; confirm the ZIP." },
       { key: "address_mailing", label: "Mailing address of record", kind: "long", required: true, help: "Funders use this on the award. Repeat the gym address if they are the same." },
-      { key: "counties", label: "Counties served", kind: "short", required: true, seed: "Cape May County" },
-      { key: "service_area", label: "Cities, towns and communities served", kind: "long", required: true, seed: "Youth from across Cape May County, including more than 140 from Wildwood and Woodbine, two of the most economically distressed communities in New Jersey. By school district (CPF proposal, 2026): Middle Township 31.5%, Lower Township 18.7%, Wildwood 15.1%, Woodbine 13.1%, Cape May County Technical 6.9%, Avalon / Stone Harbor 1.3%, Ocean City 1.0%, Upper Township 0.7%, Cape May / West Cape May 0.7%, other districts and alternative settings 6.6%.", help: "From the CPF proposal. The youth map under Attendance shows the current spread; refresh the percentages when they change." },
-      { key: "target_population", label: "Target population", kind: "short", required: true, seed: "Youth and young adults ages 7–19 across Cape May County; 70% economically disadvantaged" },
+      { key: "story", label: "Our Story", gist: "Josh and Dave, 2020, the building on Route 47, and what NLA became.", kind: "long", required: true, seed: STORY },
+      { key: "facility", label: "The Facility and the CPF Project", gist: "The 14,000-square-foot building and what the $300,000 CPF award is building.", kind: "long", seed: FACILITY, help: "The building, the hours, and what the $300,000 award is building. Update as the project is completed." },
     ],
   },
   {
-    key: "people",
-    title: "Leadership and contacts",
-    blurb: "Who leads, who the funder calls, and who signs.",
+    key: "capacity",
+    title: "Capacity and partners",
+    blurb: "Who leads, who the funder calls, who signs; the board, the staff, the partners, the letters and the recognition.",
+    snapshot: "capacity",
     fields: [
       { key: "ed_name", label: "Executive leadership — name and title", kind: "short", required: true, seed: "Josh Mercado, Program Director", help: "O.C.E.A.N. asks for the Executive Director / CEO; use the title on file with the state." },
       { key: "ed_email", label: "Executive leadership — email", kind: "short", required: true, seed: "joshmercado@nolimitsboxingacademy.org" },
@@ -331,33 +361,13 @@ export const ORG_SECTIONS: OrgSection[] = [
       { key: "finance_contact_email", label: "Finance contact — email", kind: "short" },
       { key: "finance_contact_phone", label: "Finance contact — phone", kind: "short" },
       { key: "signer_name", label: "Authorized signer — name and title", kind: "short", required: true, seed: "Josh Mercado, Program Director", help: "Who signs applications and agreements." },
-      { key: "board", label: "Board of directors", kind: "list", required: true, help: "One per line: name, role on the board, affiliation." },
-      { key: "staffing", label: "Staffing", kind: "long", required: true, seed: "No Limits Academy runs on two full-time employees — Josh Mercado, Program Director, and Chrissy Casiello, Program Coordinator — supported by part-time coaches, mentors and a volunteer network, on nearly $1 million in annual revenue. Josh leads programming and partnerships; Chrissy runs participant records, reporting, invoicing and day-to-day coordination. Every dollar funds youth, not overhead.", help: "Funders ask for staff roles, qualifications and supervision (O.C.E.A.N. narrative item 4). Two full-time staff on this revenue reads as efficiency — say it plainly. Add the coaches and volunteers by role." },
-      { key: "staff_bios", label: "Staff bios", kind: "long", help: "A short paragraph each for Josh, Chrissy and the coaches funders will see named." },
-    ],
-  },
-  {
-    key: "story",
-    title: "Mission, story and programs",
-    blurb: "The words. Seeded from the website; edit here and every draft uses the edit.",
-    fields: [
-      { key: "mission", label: "Mission statement", kind: "long", required: true, seed: MISSION },
-      { key: "story", label: "Our story, short", kind: "long", required: true, seed: STORY },
-      { key: "need", label: "Statement of need", kind: "long", required: true, seed: NEED, help: "The community numbers behind every proposal's first question. From the CPF proposal; refresh the census and district figures yearly." },
-      { key: "facility", label: "The facility and the CPF project", kind: "long", seed: FACILITY, help: "The building, the hours, and what the $300,000 award is building. Update as the project is completed." },
-      { key: "demographics", label: "Who NLA serves — demographics", kind: "long", seed: DEMOGRAPHICS, help: "A snapshot from the CPF proposal. Drafts pull the live breakdown from Registration Analytics for the period a funder asks about." },
-      { key: "schedule", label: "How the program runs through the year", kind: "long", required: true, seed: SCHEDULE, help: "Never \"a 10-month after-school program\": NLA is year-round." },
-      { key: "program_description", label: "The program · three groups (approved 2026-10-28)", kind: "long", required: true, seed: PROGRAM_DESCRIPTION, help: "One program, three groups: the Battle Team, the Non-Battle Team and the Littles, with Junior Boxing on Tuesdays as the door. Josh's words, approved word for word. The 40–120 a night and the 45/30/25 split are his figures until the January–February counts replace them." },
-      { key: "values_rules", label: "Core values and House Rules", kind: "long", required: true, seed: VALUES_AND_RULES, help: "The seven values and the ten rules, word for word from the website. The path to the Battle Team runs through these." },
-      { key: "offer_top5", label: "What NLA offers · the five, in order", kind: "list", required: true, seed: OFFER_TOP5, help: "The spine of every brief program summary — a funding purpose, an overview, \"describe your program\". Grant Coach writes them in this order with the strongest live number behind each. Reorder or reword here and every draft follows." },
-      { key: "programs", label: "Programs", kind: "list", required: true, seed: PROGRAMS },
-      { key: "outcomes", label: "Outcomes and evaluation language", kind: "long", required: true, seed: OUTCOMES, help: "What is measured and how. Drafts cite this when a funder asks for outcome measures and data tools." },
-      { key: "impact", label: "Impact numbers, from the website", kind: "list", seed: IMPACT, help: "Headline figures. Drafts pull live counts from the back end for the period a funder asks about." },
-      { key: "awards", label: "Awards and recognition", kind: "list", seed: AWARDS },
-      { key: "partners", label: "Partners", kind: "list", required: true, seed: PARTNERS, help: "Funders ask about coordination and duplicated services; name who NLA works with and on what." },
-      { key: "corrections", label: "Josh's corrections — rules Grant Coach learned from your edits", kind: "list", help: "Each time you change a Grant Coach answer and approve it, Grant Coach writes the lesson here, one per line, and every draft after follows it. Edit or delete any line; add your own." },
-      { key: "writing_examples", label: "Writing examples — how NLA's proposals read", kind: "long", seed: WRITING_EXAMPLES, help: "Grant Coach writes to match this. Paste in any proposal you are proud of; the more the better. Its figures are from their moment — drafts take counts from the live numbers." },
-      { key: "partner_quotes", label: "What partners say", kind: "list", seed: QUOTES, help: "Attributed lines from the letters of support. The writer quotes these where a funder asks about coordination, experience or effectiveness." },
+      { key: "board", label: "Board of Directors", kind: "list", required: true, help: "One per line: name, role on the board, affiliation." },
+      { key: "staffing", label: "Staffing", gist: "Two full-time staff, the part-time coaches, drivers, partners and CPA — said as efficiency.", kind: "long", required: true, seed: "No Limits Academy runs on two full-time employees — Josh Mercado, Program Director, and Chrissy Casiello, Program Coordinator — supported by part-time coaches, mentors and a volunteer network, on nearly $1 million in annual revenue. Josh leads programming and partnerships; Chrissy runs participant records, reporting, invoicing and day-to-day coordination. Every dollar funds youth, not overhead.", help: "Funders ask for staff roles, qualifications and supervision (O.C.E.A.N. narrative item 4). Two full-time staff on this revenue reads as efficiency — say it plainly. Add the coaches and volunteers by role." },
+      { key: "staff_bios", label: "Staff Bios", gist: "A short paragraph each for the people funders will see named.", kind: "long", help: "A short paragraph each for Josh, Chrissy and the coaches funders will see named." },
+      { key: "partners", label: "Partners · who and what", gist: "Every partner and what each does with NLA, one per line.", kind: "list", required: true, seed: PARTNERS, help: "Funders ask about coordination and duplicated services; name who NLA works with and on what." },
+      { key: "partner_quotes", label: "What Partners Say", gist: "Attributed lines from the letters of support, ready to quote.", kind: "list", seed: QUOTES, help: "Attributed lines from the letters of support. The writer quotes these where a funder asks about coordination, experience or effectiveness." },
+      { key: "letters_support", label: "Letters of Support and MOUs", gist: "The eleven March 2026 letters, by organization and signer.", kind: "list", seed: LETTERS, help: "Who has written one (the March 2026 CPF packet is under Documents) and the agreements on file. Each can be asked for again for a new application." },
+      { key: "awards", label: "Awards and Recognition", gist: "The honors, alphabetical, as the website lists them.", kind: "list", seed: AWARDS },
     ],
   },
   {
@@ -367,10 +377,10 @@ export const ORG_SECTIONS: OrgSection[] = [
     fields: [
       { key: "annual_budget", label: "Most recent approved annual operating budget ($)", kind: "number", required: true, help: "The board-approved figure. The brief says NLA runs on about $1M a year." },
       { key: "prior_revenue", label: "Prior fiscal year — total revenue ($)", kind: "number", seed: "932498", help: "2025 revenue, from the CPF proposal. Confirm against the 990." },
-      { key: "revenue_history", label: "Annual revenue history", kind: "list", seed: "2021 — $149,180\n2022 — $374,295\n2023 — $518,905\n2024 — $596,862\n2025 — $932,498", help: "From the CPF proposal. Funders read steady growth as capacity; add each year as it closes." },
+      { key: "revenue_history", label: "Annual Revenue History", kind: "list", seed: "2021 — $149,180\n2022 — $374,295\n2023 — $518,905\n2024 — $596,862\n2025 — $932,498", help: "From the CPF proposal. Funders read steady growth as capacity; add each year as it closes." },
       { key: "prior_expenses", label: "Prior fiscal year — total expenses ($)", kind: "number" },
       { key: "operating_deficit", label: "Operating deficit?", kind: "yesno", required: true },
-      { key: "deficit_explanation", label: "If a deficit: amount and explanation", kind: "long" },
+      { key: "deficit_explanation", label: "If a Deficit: amount and explanation", kind: "long" },
       { key: "audit_status", label: "Audit or financial review", kind: "short", help: "Most recent audited statements or financial review, and the year." },
       { key: "form_990_year", label: "Most recent Form 990 — tax year", kind: "short", required: true },
     ],
@@ -378,15 +388,23 @@ export const ORG_SECTIONS: OrgSection[] = [
   {
     key: "funding",
     title: "Funding history",
-    blurb: "What NLA has received, and from whom — asked by every funder, especially a returning one.",
+    blurb: "What NLA has received, and from whom — asked by every funder, especially a returning one — and what happens when a grant ends.",
     fields: [
       { key: "ocean_prior", label: "Previously received O.C.E.A.N. funding?", kind: "yesno", required: true, seed: "Yes" },
       { key: "ocean_program", label: "O.C.E.A.N. — program name funded", kind: "short", seed: "No Limits Academy's Youth Boxing Program" },
       { key: "ocean_amount", label: "O.C.E.A.N. — previous funding amount ($)", kind: "number", seed: "180000", help: "From the walk-through on 2026-10-15 — confirm." },
-      { key: "past_grants", label: "Past grants received", kind: "list", seed: "U.S. House Community Project Funding, FY2027 (Rep. Jeff Van Drew) — $300,000 — Facility Improvement and Youth Development Expansion Project — awarded 2026\nO.C.E.A.N., Inc. CSBG Partnership Program — $180,000 — youth boxing program (confirm amount and years)", help: "Optional. Foundations often ask for grants received in the last three years; awards logged in Grant Coach will add themselves here. Funding only — honors live under Awards and recognition." },
-      { key: "other_funds", label: "Other committed or pending program funds", kind: "long", help: "Source, status (committed or pending) and amount." },
-      { key: "sustainability", label: "Sustainability and revenue model", kind: "long", seed: "NLA keeps core after-school programming free for families through a diversified funding structure: community support, philanthropic contributions, and fee-for-service partnerships with local school districts (Cape May County Special Services, Cape May County Technical, Middle Township, Lower Cape May Regional, Wildwood and Woodbine) that provide a reliable revenue stream. Annual revenue has grown every year since 2021, from $149,180 to $932,498 in 2025. The CPF award protects the facility itself. Dave Von Savage's business training underpins the financial framework and long-term model.", help: "Every funder asks what happens when their grant ends. From the CPF proposal." },
-      { key: "letters_support", label: "Letters of support and MOUs", kind: "list", seed: LETTERS, help: "Who has written one (the March 2026 CPF packet is under Documents) and the agreements on file. Each can be asked for again for a new application." },
+      { key: "past_grants", label: "Past Grants Received", gist: "Funding received, by funder, amount and year.", kind: "list", seed: "U.S. House Community Project Funding, FY2027 (Rep. Jeff Van Drew) — $300,000 — Facility Improvement and Youth Development Expansion Project — awarded 2026\nO.C.E.A.N., Inc. CSBG Partnership Program — $180,000 — youth boxing program (confirm amount and years)", help: "Optional. Foundations often ask for grants received in the last three years; awards logged in Grant Coach will add themselves here. Funding only — honors live under Awards and recognition." },
+      { key: "other_funds", label: "Other Committed or Pending Program Funds", kind: "long", help: "Source, status (committed or pending) and amount." },
+      { key: "sustainability", label: "Sustainability and Revenue Model", gist: "What keeps the program free when a grant ends: donors, events, fee-for-service districts, grants.", kind: "long", seed: "NLA keeps core after-school programming free for families through a diversified funding structure: community support, philanthropic contributions, and fee-for-service partnerships with local school districts (Cape May County Special Services, Cape May County Technical, Middle Township, Lower Cape May Regional, Wildwood and Woodbine) that provide a reliable revenue stream. Annual revenue has grown every year since 2021, from $149,180 to $932,498 in 2025. The CPF award protects the facility itself. Dave Von Savage's business training underpins the financial framework and long-term model.", help: "Every funder asks what happens when their grant ends. From the CPF proposal." },
+    ],
+  },
+  {
+    key: "voice",
+    title: "How Grant Coach writes",
+    blurb: "Not facts about NLA — instructions to the writer: the proposal it writes like, and the rules it learned from your edits.",
+    fields: [
+      { key: "writing_examples", label: "Writing Example · how NLA's proposals read", gist: "The CSBG narrative Josh is proud of. Grant Coach writes to match it.", kind: "long", seed: WRITING_EXAMPLES, help: "Grant Coach writes to match this. Paste in any proposal you are proud of; the more the better. Its figures are from their moment — drafts take counts from the live numbers." },
+      { key: "corrections", label: "Josh's Corrections · rules Grant Coach learned", gist: "One rule per line, learned each time you changed an answer and approved it.", kind: "list", help: "Each time you change a Grant Coach answer and approve it, Grant Coach writes the lesson here, one per line, and every draft after follows it. Edit or delete any line; add your own." },
     ],
   },
 ];
