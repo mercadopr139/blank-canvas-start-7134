@@ -384,6 +384,7 @@ export const ORG_SECTIONS: OrgSection[] = [
       { key: "deficit_explanation", label: "If a Deficit: amount and explanation", kind: "long" },
       { key: "audit_status", label: "Audit or financial review", kind: "short", help: "Most recent audited statements or financial review, and the year." },
       { key: "form_990_year", label: "Most recent Form 990 — tax year", kind: "short", required: true },
+      { key: "financial_position", label: "Financial Position · from the latest audit and 990", kind: "long", gist: "Revenue, surplus, cash, net assets, debt, the program share of spending and the audit opinion — the capacity answer, in one place.", help: "Refresh each year when the audit and the 990 arrive. Figures are from the audited statements unless the line says the 990." },
     ],
   },
   {
