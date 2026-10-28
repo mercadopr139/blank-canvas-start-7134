@@ -6,7 +6,7 @@
 // rest from the Vault and the back end's live numbers. The person only says
 // Approve or Reject. Rejecting opens the answer to edit, or to tell Grant
 // Coach what to change. Anything it can't stand behind says "Needs you".
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,7 +22,7 @@ import {
 import { GRANT_DOCUMENTS_BUCKET } from "@/lib/grantCoach/orgDocuments";
 import { ORG_FIELDS } from "@/lib/grantCoach/orgProfile";
 import { readApplication, matchToVault, draftWithGrantCoach, measure, questionKey, NARRATIVE_SECTION, type LibraryEntry, type DraftFolder, type CaseBrief, type FunderBrief } from "@/lib/grantCoach/writer";
-import NarrativeCard from "@/components/admin/grantCoach/ProgramNarrative";
+import NarrativeTools, { NarrativeBlurb } from "@/components/admin/grantCoach/ProgramNarrative";
 import type { PromptAsk } from "@/components/admin/AskDialog";
 import QuestionChat from "@/components/admin/grantCoach/QuestionChat";
 import NeedMarks from "@/components/admin/grantCoach/NeedMarks";
@@ -626,20 +626,18 @@ export default function GrantApplication({ folderId, folder, items, library, get
             const rows = s.rows.filter((r) => r.status !== "na");
             const done = rows.filter((r) => r.status === "done").length;
             const all = rows.length > 0 && done === rows.length;
-            // The three-page narrative sits where it falls in the portal's order (Josh,
-            // 2026-10-28): its card heads its own seven questions, not the top of the folder.
-            const narrative = s.name === NARRATIVE_SECTION && (
-              <NarrativeCard folderId={folderId} folder={folder} items={items} library={library} getFacts={getFacts} funderBrief={funderBrief} caseBrief={caseBrief} prompt={prompt} onChanged={refresh} />
-            );
+            // The three-page narrative is one screen like the others, in the portal's order
+            // (Josh, 2026-10-28): its tools and word count live in this card's own header.
+            const narrative = s.name === NARRATIVE_SECTION;
             return (
-            <Fragment key={s.name}>
-            {narrative}
             <GcCard
+              key={s.name}
               icon={<FileQuestion className="w-4 h-4" />}
-              title={sectionTitle(s.name)}
-              blurb={`${rows.length} question${rows.length === 1 ? "" : "s"} · ${done} approved`}
+              title={narrative ? "8 · Program Narrative · three pages" : sectionTitle(s.name)}
+              blurb={narrative ? <NarrativeBlurb items={items} /> : `${rows.length} question${rows.length === 1 ? "" : "s"} · ${done} approved`}
               right={
                 <>
+                  {narrative && <NarrativeTools folder={folder} items={items} library={library} getFacts={getFacts} funderBrief={funderBrief} caseBrief={caseBrief} prompt={prompt} onChanged={refresh} />}
                   {all && <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-emerald-300"><Check className="w-4 h-4" /> All approved</span>}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -728,7 +726,6 @@ export default function GrantApplication({ folderId, folder, items, library, get
                 ))}
               </div>
             </GcCard>
-            </Fragment>
             );
           })}
 
