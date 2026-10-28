@@ -67,17 +67,21 @@ export default function NarrativeTools({ folder, items, library, getFacts, funde
 }) {
   const rows = narrativeItems(items);
   const written = rows.filter((r) => r.answer?.trim()).length;
+  // Approved sections are never rewritten (Josh, 2026-10-28: "this could be bad if I hit it
+  // accidentally"). The draft touches only the open ones; with all seven approved, no button.
+  const open = rows.filter((r) => r.status !== "done");
   const [busy, setBusy] = useState<null | "draft" | "docx" | "pdf">(null);
   const [copied, setCopied] = useState(false);
   if (rows.length !== 7) return null;
 
-  /** All seven in one pass, so the total lands inside three pages. Existing drafts are improved, not thrown away. */
+  /** All seven in one pass, so the total lands inside three pages. Approved sections are kept word for word; open ones are drafted (or improved, if a draft is there). */
   const draftAll = async () => {
+    const kept = rows.length - open.length;
     const got = await prompt({
-      title: "Draft the Program Narrative",
-      body: `Grant Coach writes all seven sections together, in the funder's order, from the Snapshot, the Vault and the answers already approved in this application — at most ${NARRATIVE_WORD_LIMIT.toLocaleString()} words in all. Each section lands as a draft you approve one by one.`,
+      title: kept ? `Draft the ${open.length} open section${open.length === 1 ? "" : "s"}` : "Draft the Program Narrative",
+      body: `Grant Coach writes the narrative in the funder's order, from the Snapshot, the Vault and the answers already approved in this application — at most ${NARRATIVE_WORD_LIMIT.toLocaleString()} words in all.${kept ? ` Your ${kept} approved section${kept === 1 ? " is" : "s are"} kept word for word; only the ${open.length} not yet approved ${open.length === 1 ? "is" : "are"} written.` : " Each section lands as a draft you approve one by one."}`,
       fields: [{ key: "instruction", label: "Anything to steer it? (optional)", placeholder: "e.g. lead with the Battle Team; keep the Launch Pad short" }],
-      confirmLabel: written ? "Redraft all seven" : "Draft all seven",
+      confirmLabel: kept ? `Draft the ${open.length} open` : written ? "Redraft all seven" : "Draft all seven",
     });
     if (!got) return;
     setBusy("draft");
@@ -92,7 +96,7 @@ export default function NarrativeTools({ folder, items, library, getFacts, funde
       const sections = out.sections ?? [];
       if (sections.length !== 7) throw new Error("The draft did not come back with seven sections. Try again.");
       const now = new Date().toISOString();
-      for (const r of rows) {
+      for (const r of open) {
         const n = Number(r.label[0]);
         const s = sections.find((x) => Number(x.n) === n);
         if (!s?.text?.trim()) continue;
@@ -102,7 +106,7 @@ export default function NarrativeTools({ folder, items, library, getFacts, funde
         if (error) throw new Error(error.message);
       }
       onChanged();
-      toast.success(`Drafted: ${out.words?.toLocaleString() ?? "?"} words across seven sections. Read each one and approve it.`);
+      toast.success(kept ? `Drafted the ${open.length} open section${open.length === 1 ? "" : "s"}; your ${kept} approved stayed as written.` : `Drafted: ${out.words?.toLocaleString() ?? "?"} words across seven sections. Read each one and approve it.`);
     } catch (e) { toast.error((e as Error).message); }
     finally { setBusy(null); }
   };
@@ -132,9 +136,11 @@ export default function NarrativeTools({ folder, items, library, getFacts, funde
 
   return (
     <>
-      <Button size="sm" variant="outline" className={outline} disabled={busy != null} onClick={() => void draftAll()}>
-        {busy === "draft" ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1.5" style={{ color: GC_BLUE }} />} {written ? "Redraft all seven" : "Draft all seven"}
-      </Button>
+      {open.length > 0 && (
+        <Button size="sm" variant="outline" className={outline} disabled={busy != null} onClick={() => void draftAll()} title="Approved sections are never touched">
+          {busy === "draft" ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1.5" style={{ color: GC_BLUE }} />} {open.length === 7 ? (written ? "Redraft all seven" : "Draft all seven") : `Draft the ${open.length} open`}
+        </Button>
+      )}
       <Button size="sm" variant="outline" className={outline} disabled={busy != null || written < 7} onClick={copyAll} title={written < 7 ? "Write all seven first" : "Copy all seven sections as text, to paste into the portal"}>
         {copied ? <Check className="w-3.5 h-3.5 mr-1.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5 mr-1.5" />} Copy all
       </Button>
