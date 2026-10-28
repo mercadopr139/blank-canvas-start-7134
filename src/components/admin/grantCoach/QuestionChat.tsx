@@ -16,6 +16,8 @@ import { StoryDraftCard } from "@/components/admin/grantCoach/StoryBank";
 import { draftWithGrantCoach, type DraftFolder, type LibraryEntry, type FunderBrief, type WriterStory } from "@/lib/grantCoach/writer";
 import type { Fact } from "@/lib/grantCoach/liveFacts";
 import type { StoryDraft } from "@/lib/grantCoach/stories";
+import { needsFrom } from "@/lib/grantCoach/answers";
+import NeedMarks from "@/components/admin/grantCoach/NeedMarks";
 
 interface Msg { id: string; role: "user" | "coach"; content: string; payload: { story_draft?: StoryDraft; story_done?: boolean; /** A draft answer Grant Coach wrote; it goes to the box only when Josh clicks. */ draft?: string; draft_story_id?: string | null; draft_words?: number } | null }
 interface Q { id: string; section: string; label: string; detail: string | null; kind: string; answer: string | null; limit_kind?: "words" | "characters" | null; limit_value?: number | null; needs_case?: boolean }
@@ -188,7 +190,7 @@ Left out: ${left.join("; ")}` : "");
                 <p className="max-w-[85%] rounded-xl bg-white/[0.1] px-3 py-1.5 text-sm text-white whitespace-pre-wrap">{m.content}</p>
               ) : (
                 <>
-                  <p className="max-w-[92%] text-sm text-white/90 whitespace-pre-wrap leading-relaxed"><span className="font-bold mr-1.5" style={{ color: GC_BLUE }}>Grant Coach</span>{m.content}</p>
+                  <p className="max-w-[92%] text-sm text-white/90 whitespace-pre-wrap leading-relaxed"><span className="font-bold mr-1.5" style={{ color: GC_BLUE }}>Grant Coach</span><NeedMarks text={m.content} /></p>
                   {m.payload?.draft && (
                     <div className="max-w-[92%] rounded-lg border bg-black/40 overflow-hidden" style={{ borderColor: `${GC_BLUE}66` }}>
                       <div className="px-3 py-1.5 border-b flex items-center justify-between gap-2" style={{ borderColor: `${GC_BLUE}33`, backgroundColor: `${GC_BLUE}14` }}>
@@ -201,6 +203,11 @@ Left out: ${left.join("; ")}` : "");
                           </button>
                         )}
                       </div>
+                      {/* The draft is a text box, which cannot colour its own words — so the
+                          [NEED] notes are called out in red above it (Josh, 2026-10-28). */}
+                      {needsFrom(m.payload.draft) && (
+                        <p className="px-3 py-1.5 text-[12px] font-bold text-red-300 bg-red-500/10 border-b border-red-500/30">{needsFrom(m.payload.draft)}</p>
+                      )}
                       <DraftText text={m.payload.draft} onSave={(t) => void editDraft(m, t)} />
                     </div>
                   )}

@@ -23,6 +23,7 @@ import { GRANT_DOCUMENTS_BUCKET } from "@/lib/grantCoach/orgDocuments";
 import { ORG_FIELDS } from "@/lib/grantCoach/orgProfile";
 import { readApplication, matchToVault, draftWithGrantCoach, measure, questionKey, type LibraryEntry, type DraftFolder, type CaseBrief, type FunderBrief } from "@/lib/grantCoach/writer";
 import QuestionChat from "@/components/admin/grantCoach/QuestionChat";
+import NeedMarks from "@/components/admin/grantCoach/NeedMarks";
 import type { ReactNode } from "react";
 import GrantReviewer from "@/components/admin/grantCoach/GrantReviewer";
 import type { Review } from "@/lib/grantCoach/review";
@@ -763,7 +764,7 @@ export default function GrantApplication({ folderId, folder, items, library, get
                   {s.rows.filter((r) => r.status !== "na").map((r) => (
                     <div key={r.id}>
                       <p className="text-sm font-semibold text-white/90">{r.label}{r.status === "done" && <Check className="inline w-3.5 h-3.5 ml-1.5 text-emerald-400" />}</p>
-                      <p className={`text-sm whitespace-pre-wrap mt-0.5 ${r.answer?.trim() ? "text-white/75" : "text-amber-300/80 italic"}`}>{r.answer?.trim() || "Not answered yet."}</p>
+                      <p className={`text-sm whitespace-pre-wrap mt-0.5 ${r.answer?.trim() ? "text-white/75" : "text-amber-300/80 italic"}`}><NeedMarks text={r.answer?.trim() || "Not answered yet."} /></p>
                     </div>
                   ))}
                 </div>
@@ -866,7 +867,7 @@ function QuestionRow({ item, pastFunder, storyTitle, focused, forceOpen, onClose
               </div>
             </div>
           ) : hasAnswer ? (
-            <p className={`mt-1 whitespace-pre-wrap ${fact ? "text-[15px] font-medium text-white" : "text-sm text-white/85 leading-relaxed"}`}>{item.answer}</p>
+            <p className={`mt-1 whitespace-pre-wrap ${fact ? "text-[15px] font-medium text-white" : "text-sm text-white/85 leading-relaxed"}`}><NeedMarks text={item.answer ?? ""} /></p>
           ) : (
             <p className="mt-1 text-sm text-white/35 italic">{item.needs_case ? "Not answered yet. Click Answer to work it out with Grant Coach." : "No answer yet."}</p>
           )}
