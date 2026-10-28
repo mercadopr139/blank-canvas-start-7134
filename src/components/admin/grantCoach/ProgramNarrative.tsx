@@ -12,7 +12,7 @@
 // the running word count, and the .docx once all seven are written.
 import { useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Sparkles, Download } from "lucide-react";
+import { Loader2, Sparkles, Download, Copy, FileText, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
@@ -21,6 +21,7 @@ import {
   type DraftFolder, type LibraryEntry, type FunderBrief, type CaseBrief,
 } from "@/lib/grantCoach/writer";
 import { downloadNarrativeDocx, headingFromLabel } from "@/lib/grantCoach/narrativeDocx";
+import { downloadNarrativePdf, narrativeText } from "@/lib/grantCoach/narrativePdf";
 import type { AppItem } from "@/components/admin/grantCoach/GrantApplication";
 import type { Fact } from "@/lib/grantCoach/liveFacts";
 import type { PromptAsk } from "@/components/admin/AskDialog";
@@ -49,7 +50,7 @@ export function NarrativeBlurb({ items }: { items: AppItem[] }) {
     <>
       {written} of {rows.length} written · {done} approved · <span className={over ? "text-red-300 font-bold" : total > NARRATIVE_WORD_LIMIT * 0.92 ? "text-amber-300" : ""}>{total.toLocaleString()} / {NARRATIVE_WORD_LIMIT.toLocaleString()} words</span> · about {Math.max(1, Math.ceil(total / 450))} page{total > 450 ? "s" : ""}
       {over && <span className="text-red-300"> · over three pages: trim {(total - NARRATIVE_WORD_LIMIT).toLocaleString()} words</span>}
-      <span className="block mt-0.5">One uploaded file on the portal. Draft all seven together, approve each below, then download the Word file and upload it on screen 8.</span>
+      <span className="block mt-0.5">One uploaded file on the portal. Draft all seven together, approve each below, then download the PDF (or Word file) and upload it on screen 8 — or Copy all and paste.</span>
     </>
   );
 }
@@ -66,7 +67,8 @@ export default function NarrativeTools({ folder, items, library, getFacts, funde
 }) {
   const rows = narrativeItems(items);
   const written = rows.filter((r) => r.answer?.trim()).length;
-  const [busy, setBusy] = useState<null | "draft" | "docx">(null);
+  const [busy, setBusy] = useState<null | "draft" | "docx" | "pdf">(null);
+  const [copied, setCopied] = useState(false);
   if (rows.length !== 7) return null;
 
   /** All seven in one pass, so the total lands inside three pages. Existing drafts are improved, not thrown away. */
@@ -105,25 +107,42 @@ export default function NarrativeTools({ folder, items, library, getFacts, funde
     finally { setBusy(null); }
   };
 
-  /** The Word file for the portal's upload slot: seven numbered sections, the funder's headings. */
-  const download = async () => {
-    setBusy("docx");
-    try {
-      const sections = rows.map((r) => ({ n: Number(r.label[0]), heading: headingFromLabel(r.label), text: (r.answer ?? "").trim() }));
-      const safe = folder.name.replace(/[^\w.-]+/g, "_").slice(0, 40);
-      await downloadNarrativeDocx(sections, { org: "No Limits Academy", grant: folder.name, program: folder.program_name }, `NLA_Program_Narrative_${safe}.docx`);
-      toast.success("Word file saved. Upload it in the portal's Program Narrative slot.");
-    } catch (e) { toast.error((e as Error).message); }
+  /** The seven sections as the file-builders want them, in the funder's order. */
+  const sections = () => rows.map((r) => ({ n: Number(r.label[0]), heading: headingFromLabel(r.label), text: (r.answer ?? "").trim() }));
+  const meta = () => ({ org: "No Limits Academy", grant: folder.name, program: folder.program_name });
+  const fileBase = () => `NLA_Program_Narrative_${folder.name.replace(/[^\w.-]+/g, "_").slice(0, 40)}`;
+
+  /** PDF, Word, or the plain text to paste straight into a portal box (Josh, 2026-10-28). */
+  const downloadPdf = () => {
+    setBusy("pdf");
+    try { downloadNarrativePdf(sections(), meta(), `${fileBase()}.pdf`); toast.success("PDF saved. Upload it in the portal's Program Narrative slot."); }
+    catch (e) { toast.error((e as Error).message); }
     finally { setBusy(null); }
   };
+  const downloadDocx = async () => {
+    setBusy("docx");
+    try { await downloadNarrativeDocx(sections(), meta(), `${fileBase()}.docx`); toast.success("Word file saved."); }
+    catch (e) { toast.error((e as Error).message); }
+    finally { setBusy(null); }
+  };
+  const copyAll = () => void navigator.clipboard.writeText(narrativeText(sections())).then(
+    () => { setCopied(true); window.setTimeout(() => setCopied(false), 1800); toast.success("All seven sections copied, headings included. Paste into the portal."); },
+    () => toast.error("Couldn't copy. Select the text and copy it by hand."),
+  );
 
   return (
     <>
       <Button size="sm" variant="outline" className={outline} disabled={busy != null} onClick={() => void draftAll()}>
         {busy === "draft" ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1.5" style={{ color: GC_BLUE }} />} {written ? "Redraft all seven" : "Draft all seven"}
       </Button>
-      <Button size="sm" className="font-bold text-black hover:brightness-110" style={{ backgroundColor: GC_BLUE }} disabled={busy != null || written < 7} onClick={() => void download()} title={written < 7 ? "Write all seven first" : "Build the Word file for the portal"}>
-        {busy === "docx" ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Download className="w-3.5 h-3.5 mr-1.5" />} Download Word file
+      <Button size="sm" variant="outline" className={outline} disabled={busy != null || written < 7} onClick={copyAll} title={written < 7 ? "Write all seven first" : "Copy all seven sections as text, to paste into the portal"}>
+        {copied ? <Check className="w-3.5 h-3.5 mr-1.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5 mr-1.5" />} Copy all
+      </Button>
+      <Button size="sm" className="font-bold text-black hover:brightness-110" style={{ backgroundColor: GC_BLUE }} disabled={busy != null || written < 7} onClick={downloadPdf} title={written < 7 ? "Write all seven first" : "Build the PDF for the portal's upload slot"}>
+        {busy === "pdf" ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Download className="w-3.5 h-3.5 mr-1.5" />} Download PDF
+      </Button>
+      <Button size="sm" variant="outline" className={outline} disabled={busy != null || written < 7} onClick={() => void downloadDocx()} title={written < 7 ? "Write all seven first" : "The same narrative as a Word file"}>
+        {busy === "docx" ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <FileText className="w-3.5 h-3.5 mr-1.5" />} Word
       </Button>
     </>
   );
