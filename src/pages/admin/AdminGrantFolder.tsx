@@ -260,22 +260,25 @@ const AdminGrantFolder = () => {
   const [docsOpen, setDocsOpen] = useState(false);
   const [showShots, setShowShots] = useState(false);
   const openDocs = (s: "funder" | "ours") => { setSide(s); setShowShots(false); setDocsOpen(true); };
+  /** The file chooser is one input; this says which list the chosen file is for. */
+  const chooseFor = useRef<"funder" | "ours">("funder");
+  const chooseFile = (sd: "funder" | "ours") => { chooseFor.current = sd; fileInput.current?.click(); };
   const isShot = (d: Doc) => !d.link_url && /^Application: screen-\d+/.test(d.title);
   const [busy, setBusy] = useState(false);
-  const upload = async (file: File) => {
+  const upload = async (file: File, sd: "funder" | "ours" = side) => {
     setBusy(true);
     try {
       const path = docPath(id!, file.name);
       const { error } = await supabase.storage.from(GRANT_DOCUMENTS_BUCKET).upload(path, file, { contentType: file.type || undefined });
       if (error) throw error;
       const { error: e2 } = await supabase.from("grant_documents" as never).insert({
-        folder_id: id, side, title: file.name.replace(/\.[^.]+$/, ""), storage_path: path, file_name: file.name,
+        folder_id: id, side: sd, title: file.name.replace(/\.[^.]+$/, ""), storage_path: path, file_name: file.name,
         mime_type: file.type || null, size_bytes: file.size, uploaded_by: user?.id ?? null,
       } as never);
       if (e2) throw e2;
       qc.invalidateQueries({ queryKey: ["grant-docs", id] });
       toast.success(`${file.name} added.`);
-      if (side === "funder" && folder) {
+      if (sd === "funder" && folder) {
         toast("Grant Coach is reading it into the funder brief…");
         const { data: fresh } = await supabase.from("grant_documents" as never).select("*").eq("folder_id", id!);
         readAndSaveBrief(id!, draftFolder(), (fresh ?? []) as unknown as Doc[], folder.funder_brief?.corrections ?? null)
@@ -399,43 +402,49 @@ const AdminGrantFolder = () => {
 
       <div className="space-y-6">
         {/* The grant's documents, full width (Josh, 2026-10-29); the numbers under them. */}
-        <GcCard icon={<FolderOpen className="w-4 h-4" />} title="Grant/RFP Info Here" blurb="The RFP, guidelines, rubric and every file about this grant">
+        <GcCard icon={<FolderOpen className="w-4 h-4" />} title="Grant/RFP Info Here" blurb="What the funder sent, and the rules Grant Coach read from it">
           <div className="p-4 space-y-3">
-            <FunderBrief folderId={id!} folder={draftFolder()} docs={docs} brief={folder.funder_brief ?? null} briefAt={folder.funder_brief_at ?? null} briefDocIds={folder.funder_brief_docs ?? []} />
-            <div className="grid gap-3 sm:grid-cols-2">
-              {(["funder", "ours"] as const).map((sd) => {
-                const all = docs.filter((d) => d.side === sd);
-                const shots = sd === "funder" ? all.filter(isShot).length : 0;
-                const files = all.length - shots;
-                return (
-                  <button key={sd} type="button" onClick={() => openDocs(sd)} className="rounded-xl border border-white/15 bg-black/30 hover:bg-white/[0.05] hover:border-sky-400/40 p-3 text-left flex items-center gap-3 transition-colors">
-                    <FileText className="w-5 h-5 shrink-0" style={{ color: GC_BLUE }} />
-                    <span className="flex-1 min-w-0">
-                      <span className="block text-sm font-bold uppercase tracking-wide">{sd === "funder" ? "From the funder" : "Ours"}</span>
-                      <span className="block text-[12px] text-white/50">
-                        {files ? `${files} file${files === 1 ? "" : "s"}` : "Nothing here yet"}{shots ? ` · ${shots} portal screenshot${shots === 1 ? "" : "s"}` : ""}
-                      </span>
+            {/* 1. What the funder sent: upload it here, and Grant Coach reads it into the rules below. */}
+            {(() => {
+              const all = docs.filter((d) => d.side === "funder");
+              const shots = all.filter(isShot).length;
+              const files = all.length - shots;
+              return (
+                <div className="rounded-xl border border-white/15 bg-black/30 p-3 flex flex-wrap items-center gap-3">
+                  <FileText className="w-5 h-5 shrink-0" style={{ color: GC_BLUE }} />
+                  <button type="button" onClick={() => openDocs("funder")} className="flex-1 min-w-[200px] text-left group">
+                    <span className="block text-sm font-bold uppercase tracking-wide group-hover:underline underline-offset-2">From the funder</span>
+                    <span className="block text-[12px] text-white/50">
+                      {files ? `${files} file${files === 1 ? "" : "s"}` : "Nothing uploaded yet — the RFP, slides, budget template, rubric"}{shots ? ` · ${shots} portal screenshot${shots === 1 ? "" : "s"}` : ""}
                     </span>
-                    <ChevronRight className="w-4 h-4 text-white/30 shrink-0" />
                   </button>
-                );
-              })}
-            </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={() => chooseFile("funder")} disabled={busy} className="font-bold" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}>
+                      {busy ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Upload className="w-3.5 h-3.5 mr-1.5" />} Upload
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => { setSide("funder"); void link(); }} className="bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white"><Link2 className="w-3.5 h-3.5 mr-1.5" /> Link</Button>
+                  </div>
+                </div>
+              );
+            })()}
+            {/* 2. The rules Grant Coach read from those documents. */}
+            <FunderBrief folderId={id!} folder={draftFolder()} docs={docs} brief={folder.funder_brief ?? null} briefAt={folder.funder_brief_at ?? null} briefDocIds={folder.funder_brief_docs ?? []} />
           </div>
         </GcCard>
+
+        <input ref={fileInput} type="file" className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f, chooseFor.current); e.target.value = ""; }} />
 
         {/* One list at a time, in a pop-up: upload, link, open, remove. Esc or the X closes it. */}
         <Dialog open={docsOpen} onOpenChange={setDocsOpen}>
           <DialogContent className="bg-neutral-950 border-white/10 text-white max-w-2xl max-h-[85vh] flex flex-col">
             <DialogHeader>
-              <DialogTitle className="text-white">{side === "funder" ? "From the funder" : "Ours"}</DialogTitle>
+              <DialogTitle className="text-white">{side === "funder" ? "From the funder" : "Attachments NLA Sent"}</DialogTitle>
               <p className="text-[12px] text-white/50">
-                {side === "funder" ? "The RFP, guidelines, budget template, rubric, reporting rules — everything they sent." : "What NLA wrote for them: narrative, budget workbook, the printed application, the award letter."}
+                {side === "funder" ? "The RFP, guidelines, budget template, rubric, reporting rules — everything they sent." : "What went out with this application: every file attached to an upload question, the printed answers, the award letter. It fills itself."}
               </p>
             </DialogHeader>
-            <input ref={fileInput} type="file" className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f); e.target.value = ""; }} />
             <div className="flex gap-2">
-              <Button size="sm" onClick={() => fileInput.current?.click()} disabled={busy} className="font-bold" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}>
+              <Button size="sm" onClick={() => chooseFile(side)} disabled={busy} className="font-bold" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}>
                 {busy ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Upload className="w-3.5 h-3.5 mr-1.5" />} Upload
               </Button>
               <Button size="sm" variant="outline" onClick={() => void link()} className="bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white"><Link2 className="w-3.5 h-3.5 mr-1.5" /> Link</Button>
@@ -504,8 +513,9 @@ const AdminGrantFolder = () => {
           </div>
         </GcCard>
 
-        {/* The application, full width */}
-        <section className="min-w-0">
+        {/* The application, full width; under it the record of what went out with it (Josh, 2026-10-29:
+            attachments only exist once you are deep in the application, so they live at the end). */}
+        <section className="min-w-0 space-y-6">
           <GrantApplication
             folderId={id!}
             folder={draftFolder()}
@@ -523,6 +533,13 @@ const AdminGrantFolder = () => {
             reviewedAt={folder.reviewed_at ?? null}
             funderBrief={folder.funder_brief ?? null}
           />
+          {(() => {
+            const ours = docs.filter((d) => d.side === "ours");
+            return (
+              <GcCard icon={<FileText className="w-4 h-4" />} title="Attachments NLA Sent" blurb={ours.length ? `${ours.length} file${ours.length === 1 ? "" : "s"} · every file attached to an upload question, the printed answers, the award letter` : "Fills itself: every file attached to an upload question, the printed answers, the award letter"}
+                right={<Button size="sm" variant="outline" onClick={() => openDocs("ours")} className="bg-transparent border-white/20 text-white/85 hover:bg-white/10 hover:text-white h-8"><FileText className="w-3.5 h-3.5 mr-1.5" /> See the files</Button>} />
+            );
+          })()}
         </section>
 
       </div>
