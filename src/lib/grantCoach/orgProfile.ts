@@ -126,7 +126,7 @@ const PROGRAM_DESCRIPTION = `NLA Boxing & Youth Development Program
 
 No Limits Academy (NLA) operates one comprehensive Boxing & Youth Development Program organized into three training groups. All groups share the same facility, coaches, transportation, daily structure, and family-style dinner. This model provides a consistent environment where young people develop physically, personally, and socially, with opportunities to participate from age seven through high school graduation.
 
-Junior Boxing serves as the entry point. Each Tuesday, children ages 7–10 participate in an hour of introductory boxing, followed by the opportunity to attend Juniors Aftercare, which includes NLA's Smile Lab and Life Lab, and a family-style dinner. Through these activities, coaches build relationships, recognize individual needs, and identify children who would benefit from more frequent participation. These children may then be invited to join the Littles for additional training throughout the week.
+Junior Boxing serves as the entry point. Each Tuesday, children ages 7–10 participate in an hour of introductory boxing, followed by the opportunity to attend Juniors Aftercare, which includes NLA's Smile Lab and Life Skills Lab, and a family-style dinner. Through these activities, coaches build relationships, recognize individual needs, and identify children who would benefit from more frequent participation. These children may then be invited to join the Littles for additional training throughout the week.
 
 The Littles (ages 7–13) provide the next level of participation. Youth follow an age-appropriate training plan emphasizing boxing fundamentals, movement, coordination, discipline, and teamwork without weightlifting. Older NLA athletes assist with coaching, reinforcing the organization's core value of Service while serving as positive role models for younger participants.
 
@@ -167,7 +167,7 @@ const OFFER_TOP5 = [
 const PROGRAMS = [
   "NLA Boxing & Youth Development Program — one program, three groups, Monday–Friday 2:30–8:30 PM (see \"The program · three groups\"): the Battle Team (ages 11–19, contact, trains to compete, earned through the House Rules and core values), the Non-Battle Team (ages 11–19, non-contact boxing, strength and conditioning in two tracks) and the Littles (ages 7–13, boxing basics without weights, chosen from Junior Boxing)",
   "Junior Boxing — ages 7–10, Tuesdays: an hour of introductory boxing, then optional Juniors Aftercare and dinner; the entry point to the program and where the coaches find the Littles",
-  "Juniors Aftercare — Tuesdays 6:00–7:00 PM for Junior Boxers: Smile Lab (oral health and hygiene, with Delta Dental) and Life Lab (character and values)",
+  "Juniors Aftercare — Tuesdays 6:00–7:00 PM for Junior Boxers: Smile Lab (oral health and hygiene, with Delta Dental) and Life Skills Lab (character and values)",
   "Meal Train — a hot dinner five nights a week during the school year, cooked and served by donor families, businesses and community groups",
   "Transportation — free rides to and from practice for youth in designated areas",
   "Summer Excursions — full-day experiences at partner venues across South Jersey, Philadelphia and the shore",

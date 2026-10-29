@@ -1,4 +1,4 @@
-// Dates for the Juniors Aftercare journal (Smile Lab / Life Lab).
+// Dates for the Juniors Aftercare journal (Smile Lab / Life Skills Lab).
 //
 // Aftercare meets on Tuesdays, and a session report always belongs to its
 // Tuesday no matter which day it is written on (Josh, 2026-10-15: a report

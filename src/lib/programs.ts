@@ -47,7 +47,7 @@ export interface ProgramConfig {
    * / BAM shape; a program on youth_registrations has fewer.
    */
   registrationColumns?: { intel: string; day: string };
-  /** Instead of Weekly Standout Moments: the Tuesday journal (Smile Lab · Life Lab notes, highlights, photos). */
+  /** Instead of Weekly Standout Moments: the Tuesday journal (Smile Lab · Life Skills Lab notes, highlights, photos). */
   journal?: "juniors";
   /** Instead of the generic program report: the Delta Dental Smile Lab grant narrative. */
   reportSheet?: "smile-lab";
@@ -259,7 +259,7 @@ export const BAM: ProgramConfig = {
 
 /**
  * Juniors Aftercare — the Tuesday aftercare for Junior Boxers (7–10), where
- * the kids rotate through Smile Lab (Coach Jaime) and Life Lab (Coach Chrissy).
+ * the kids rotate through Smile Lab (Coach Jaime) and Life Skills Lab (Coach Chrissy).
  * It gets the Hawk Squad / BAM screens, but its data stays where it always
  * was: the youth come from NLA registration (extended_program = 'Smile Lab')
  * and check-ins are attendance_records with program_source = 'Smile Lab'.
@@ -268,10 +268,10 @@ export const BAM: ProgramConfig = {
 export const JUNIORS_AFTERCARE: ProgramConfig = {
   key: "juniors",
   name: "Juniors Aftercare",
-  fullName: "Juniors Aftercare — Smile Lab · Life Lab",
+  fullName: "Juniors Aftercare — Smile Lab · Life Skills Lab",
   slug: "aftercare",
   partner: "Junior Boxing (ages 7–10) · Tuesdays 6:00–7:00 PM",
-  description: "Tuesday aftercare for Junior Boxers — Smile Lab and Life Lab",
+  description: "Tuesday aftercare for Junior Boxers — Smile Lab and Life Skills Lab",
   permKey: "operations_practice_plan",
   defaultWeekdays: [2],
   scheduleLine: "Tuesdays by default — click any day to change it",
@@ -312,7 +312,7 @@ export const JUNIORS_AFTERCARE: ProgramConfig = {
     ui: "#14b8a6",
     uiDark: "#0f766e",
     wordmark: "JUNIORS AFTERCARE",
-    sub: "SMILE LAB · LIFE LAB · AT NO LIMITS ACADEMY",
+    sub: "SMILE LAB · LIFE SKILLS LAB · AT NO LIMITS ACADEMY",
     tagline: "Tuesdays after Junior Boxing",
     formBg: "#0f766e",
   },

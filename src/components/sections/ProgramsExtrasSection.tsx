@@ -29,7 +29,7 @@ const ProgramsExtrasSection = () => {
     title: "Juniors Aftercare",
     subtitle: "Junior Boxers Only",
     ageRange: "7–10 years old",
-    blurb: "Juniors Aftercare is our complimentary aftercare for Junior Boxing participants (ages 7–10), every Tuesday from 6:00–7:00 PM. Kids rotate between two programs: Smile Lab with Coach Jaime (oral health & hygiene—brushing, flossing, nutrition, and daily habits—in partnership with Delta Dental) and Life Lab with Coach Chrissy (life skills like manners, gratitude, kindness, and confidence). Together they help kids take care of themselves and care about others—both healthy habits.",
+    blurb: "Juniors Aftercare is our complimentary aftercare for Junior Boxing participants (ages 7–10), every Tuesday from 6:00–7:00 PM. Kids rotate between two programs: Smile Lab with Coach Jaime (oral health & hygiene—brushing, flossing, nutrition, and daily habits—in partnership with Delta Dental) and Life Skills Lab with Coach Chrissy (life skills like manners, gratitude, kindness, and confidence). Together they help kids take care of themselves and care about others—both healthy habits.",
     images: resolveGroup("programs.smile-lab"),
     videoId: videoId("programs.smile-lab"),
     buttonLabel: "Back to Programs"

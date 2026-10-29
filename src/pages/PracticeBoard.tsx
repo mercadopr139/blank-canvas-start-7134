@@ -1252,7 +1252,7 @@ const PracticeBoard = () => {
                   <div className="rounded-lg border border-white/15 bg-white/[0.04] px-3 py-1">
                     <p className="text-[9px] font-bold uppercase tracking-[0.2em]" style={{ color: "#5eead4" }}>Aftercare</p>
                     <p className="text-white/90">
-                      Smile Lab <span className="text-white/40 mx-1">⇄</span> Life Lab
+                      Smile Lab <span className="text-white/40 mx-1">⇄</span> Life Skills Lab
                     </p>
                   </div>
                   <span className="self-center text-white/35 text-lg" aria-hidden="true">→</span>

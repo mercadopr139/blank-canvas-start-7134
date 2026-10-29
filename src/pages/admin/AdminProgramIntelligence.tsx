@@ -272,10 +272,10 @@ const AdminProgramIntelligence = ({ program }: { program: ProgramConfig }) => {
       </section>
 
       {/* ── In the coaches' words: the nuggets the report is built from. Last, on the program's colour.
-          Juniors keeps its Tuesday journal (Smile Lab · Life Lab notes, highlights, photos) here instead. ── */}
+          Juniors keeps its Tuesday journal (Smile Lab · Life Skills Lab notes, highlights, photos) here instead. ── */}
       {program.journal === "juniors" ? (
         <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-4 md:p-6 space-y-3">
-          <SectionLabel program={program} tag="Tuesday journal" title="Smile Lab · Life Lab · standout moments · photos" tone="primary" />
+          <SectionLabel program={program} tag="Tuesday journal" title="Smile Lab · Life Skills Lab · standout moments · photos" tone="primary" />
           <SmileLabJournalTab />
         </section>
       ) : (

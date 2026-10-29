@@ -128,7 +128,7 @@ const SmileLabJournalReview = ({ onEdit, openDate }: { onEdit?: (date: string) =
             )}
             {s.sharing_note?.trim() && (
               <div className="rounded-lg bg-white/5 p-3">
-                <div className="text-xs font-semibold text-rose-300 mb-1">😊 Life Lab (Coach Chrissy)</div>
+                <div className="text-xs font-semibold text-rose-300 mb-1">😊 Life Skills Lab (Coach Chrissy)</div>
                 <div className={`text-[11px] -mt-0.5 mb-1.5 ${s.sharing_filed_at ? "text-white/35" : "text-amber-300/80"}`}>
                   {s.sharing_filed_at ? `Submitted ${filedOn(s.sharing_filed_at)}` : "Not submitted yet"}
                 </div>

@@ -13,7 +13,7 @@ import { ChevronLeft, ChevronRight, Users, ImagePlus, Trash2, Loader2 } from "lu
 
 const TEAL = "#2dd4bf";
 // Each lab owns a colour so the two columns read apart at a glance: Smile Lab
-// keeps teal (the tooth, Delta Dental, the colour the kids know); Life Lab is
+// keeps teal (the tooth, Delta Dental, the colour the kids know); Life Skills Lab is
 // rose, which nothing else in the app uses. (Josh, 2026-10-03.)
 const LAB_COLOR = { smile: TEAL, life: "#fb7185" } as const;
 
@@ -23,6 +23,7 @@ const prettyDate = (isoStr: string): string =>
   new Date(isoStr + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
 
 const arrayToText = (arr: string[]): string => (arr.length ? arr.map((s) => "• " + s).join("\n") : "");
+// The stored heading tag stays "Life Lab — ": a database function parses it and every saved session carries it. The label people see is "Life Skills Lab".
 const LAB_PREFIX = { smile: "Smile Lab — ", life: "Life Lab — " } as const;
 /** Split the stored stories into the two labs' boxes. */
 const splitHighlights = (h: string[]) => {
@@ -139,7 +140,7 @@ const SmileLabSessionEditor = ({ date, onDateChange, showDateNav = true, onSaved
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [caring, sharing, smileMoments, lifeMoments, photos, status, date]);
 
-  const LAB_NAME: Record<Lab, string> = { smile: "Smile Lab", life: "Life Lab" };
+  const LAB_NAME: Record<Lab, string> = { smile: "Smile Lab", life: "Life Skills Lab" };
   const stampFor = (lab: Lab, value: string | null) => (lab === "smile" ? { caring_filed_at: value } : { sharing_filed_at: value });
   /** What this lab's half still needs before it can be handed in. */
   const stillNeeds = (lab: Lab): string[] => {
@@ -347,7 +348,7 @@ const SmileLabSessionEditor = ({ date, onDateChange, showDateNav = true, onSaved
       <div className="grid md:grid-cols-2 gap-4">
         {([
           { lab: "smile" as Lab, title: "🦷 Smile Lab photos", list: smilePhotos, ref: fileRef },
-          { lab: "life" as Lab, title: "😊 Life Lab photos", list: lifePhotos, ref: lifeFileRef },
+          { lab: "life" as Lab, title: "😊 Life Skills Lab photos", list: lifePhotos, ref: lifeFileRef },
         ]).map(({ lab, title, list, ref }) => (
           <div key={lab} className="rounded-2xl border bg-neutral-900/60 p-4" style={{ borderColor: `${LAB_COLOR[lab]}55`, borderLeftWidth: 4, borderLeftColor: LAB_COLOR[lab] }}>
             <div className="flex items-center justify-between mb-3">

@@ -9,7 +9,7 @@ export const NLA_RED = "#bf0f3e";
  * teal means the spiritual side of the week, whatever screen it's on.
  *
  * This is exactly the teal of the Juniors Aftercare Check-In button (`bg-teal-500`),
- * so the aftercare (Smile Lab / Life Lab) reads as the same thing wherever a kid meets it.
+ * so the aftercare (Smile Lab / Life Skills Lab) reads as the same thing wherever a kid meets it.
  */
 export const SPIRITUAL_TEAL = "#14b8a6";
 
@@ -63,7 +63,7 @@ export const groupAccent = (g: PracticeGroup) =>
  * so the room reads them as the same kind of thing: everybody together, not
  * one of the three groups.
  *
- * Teal stays reserved for Juniors Aftercare (Smile Lab / Life Lab) alone.
+ * Teal stays reserved for Juniors Aftercare (Smile Lab / Life Skills Lab) alone.
  */
 export const TOGETHER_GRAY = "#a1a1aa";
 
@@ -75,12 +75,12 @@ export const TOGETHER_GRAY = "#a1a1aa";
  */
 export const OFF_TEMPLATE_VIOLET = "#a78bfa";
 
-/** Teal only for Juniors Aftercare (Smile Lab / Life Lab); the shared grey for everything else. */
+/** Teal only for Juniors Aftercare (Smile Lab / Life Skills Lab); the shared grey for everything else. */
 export const spiritualAccent = (label: string) =>
   /smile\s*lab|life\s*lab|aftercare/i.test(label) ? SPIRITUAL_TEAL : TOGETHER_GRAY;
 
 /**
- * A block normally wears its group's colour — except Juniors Aftercare (Smile Lab / Life Lab), which keeps
+ * A block normally wears its group's colour — except Juniors Aftercare (Smile Lab / Life Skills Lab), which keeps
  * its own teal wherever it appears. It is the same programme the kids check
  * into, and it should look like it on the board too.
  */

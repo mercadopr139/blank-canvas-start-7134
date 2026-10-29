@@ -1,4 +1,4 @@
-// Storing an aftercare (Smile Lab / Life Lab) photo.
+// Storing an aftercare (Smile Lab / Life Skills Lab) photo.
 //
 // A phone photo is 3–6 MB. After the HEIC conversion it is shrunk to a
 // 1600 px JPEG for the viewer and a 320 px thumbnail for the lists, stored

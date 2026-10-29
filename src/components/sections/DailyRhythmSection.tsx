@@ -33,7 +33,7 @@ const juniorScheduleBlocks = [{
 }, {
   time: "6:00pm–7:00pm",
   title: "Juniors Aftercare",
-  description: "Our complimentary Tuesday aftercare for Junior Boxers (ages 7–10). Kids rotate between two programs: Smile Lab with Coach Jaime (oral health & hygiene, in partnership with Delta Dental) and Life Lab with Coach Chrissy (life skills like manners, gratitude, kindness, and confidence). Together they strengthen core habits—hygiene, responsibility, kindness, and respect—while encouraging youth to be good stewards of their community.",
+  description: "Our complimentary Tuesday aftercare for Junior Boxers (ages 7–10). Kids rotate between two programs: Smile Lab with Coach Jaime (oral health & hygiene, in partnership with Delta Dental) and Life Skills Lab with Coach Chrissy (life skills like manners, gratitude, kindness, and confidence). Together they strengthen core habits—hygiene, responsibility, kindness, and respect—while encouraging youth to be good stewards of their community.",
   optional: true
 }, {
   time: "7:00pm–7:15pm",
