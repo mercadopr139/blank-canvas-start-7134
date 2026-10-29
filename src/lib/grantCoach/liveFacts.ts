@@ -11,6 +11,7 @@
 // picture of where NLA is; "so far this year" numbers in October would not.
 import { supabase } from "@/integrations/supabase/client";
 import { getCurrentAttendanceYear, programYearRange, shortProgramYear } from "@/lib/programYear";
+import { buildIntelligence } from "@/lib/transportIntelligence";
 import { isBelowPoverty } from "@/lib/demographics";
 
 export interface Fact {
@@ -359,6 +360,27 @@ export async function gatherLiveFacts(today = new Date(), period?: { from: strin
       facts.push({ key: `excursions.${p.key}`, label: "Excursions", value: `unavailable (${(e as Error).message})`, period: p.label, source: "excursions" });
     }
 
+    // Excursion reach — the Excursion Intelligence page's own figures: distinct youth
+    // on at least one trip, their check-ins, and the economically disadvantaged share.
+    try {
+      const rows = await fetchAll<{ registration_id: string; check_in_date: string }>((a, b) =>
+        from("attendance_records").select("registration_id, check_in_date").eq("program_source", "Excursion").not("excursion_id", "is", null).gte("check_in_date", p.from).lte("check_in_date", p.to).range(a, b) as never);
+      const ids = [...new Set(rows.map((r) => r.registration_id).filter(Boolean))];
+      if (ids.length) {
+        const regs: RegRow[] = [];
+        for (let i = 0; i < ids.length; i += 200) {
+          const { data } = await from("youth_registrations").select("id, youth_link_id, program_year, child_sex, child_race_ethnicity, household_income_range, free_or_reduced_lunch, child_school_district, family_structure, child_date_of_birth").in("id", ids.slice(i, i + 200)) as unknown as { data: RegRow[] | null };
+          regs.push(...(data ?? []));
+        }
+        const poor = regs.filter(isBelowPoverty).length;
+        facts.push({
+          key: `excursion_reach.${p.key}`, label: "Youth reached by excursions",
+          value: `${ids.length} different youth went on at least one excursion (${rows.length.toLocaleString()} check-ins); ${pct(poor, regs.length)}% economically disadvantaged (${poor} of ${regs.length}).`,
+          period: p.label, source: "the Excursion Intelligence page (excursion check-ins matched to registration forms)",
+        });
+      }
+    } catch { /* optional */ }
+
     // Meals.
     try {
       const rows = await fetchAll<{ event_date: string; meal_count: number; donor_name: string | null }>((a, b) =>
@@ -421,10 +443,24 @@ export async function gatherLiveFacts(today = new Date(), period?: { from: strin
       const regs = await fetchAll<RegRow & { child_first_name: string; child_last_name: string }>((a, b) =>
         from("youth_registrations").select("id, youth_link_id, program_year, child_first_name, child_last_name, child_sex, child_race_ethnicity, household_income_range, free_or_reduced_lunch, child_school_district, family_structure, child_date_of_birth").eq("program_year", year.year).range(a, b) as never);
       const pr = riderProfile(riders, regs, new Date(year.to + "T12:00:00"));
+      // The counts and the poverty shares are the Transport Intelligence page's own
+      // (per zone, divided by youth matched to a registration) — the figures Josh
+      // reads and quotes. The ages come from the rider list.
+      let vans = "";
+      try {
+        const ti = await buildIntelligence(year.year);
+        const zone = (name: "Woodbine" | "Wildwood") => {
+          const z = ti[name];
+          return `${name}: ${z.uniqueYouth} youth served, ${z.rides.toLocaleString()} rides on ${z.trips} trips, ${z.povertyPct}% economically disadvantaged (${z.povertyCount} of ${z.assessedYouth} matched to a registration)`;
+        };
+        vans = `Transport Intelligence, ${shortProgramYear(year.year)}: ${ti.Combined.uniqueYouth} youth served, ${ti.Combined.rides.toLocaleString()} rides on ${ti.Combined.trips} completed trips, ${ti.Combined.povertyPct}% economically disadvantaged (${ti.Combined.povertyCount} of ${ti.Combined.assessedYouth} matched). ${zone("Woodbine")}. ${zone("Wildwood")}. `;
+      } catch { /* the rider-list figures below still stand */ }
       facts.push({
         key: "riders.profile", label: "Who rides NLA's vans",
-        value: `${pr.riders} different youth rode${pr.ageMedian != null ? `, ages ${pr.ageMin}–${pr.ageMax} (median ${pr.ageMedian})` : ""}. Pick-up areas: ${pr.zones.map(([z, n]) => `${z} ${pct(n, pr.riders)}%`).join(", ")}. Economically disadvantaged: ${pr.disadvantaged} of the ${pr.matched} riders matched to a registration form (${pct(pr.disadvantaged, pr.matched)}%)${pr.matched < pr.riders ? `; ${pr.riders - pr.matched} riders could not be matched by name and date of birth` : ""}. The driver app began in spring 2026, so these are the riders since then.`,
-        period: year.label, source: "the driver app's rider list, matched to registration forms by name and date of birth",
+        value: vans
+          ? `${vans}${pr.ageMedian != null ? `Riders are ages ${pr.ageMin}–${pr.ageMax} (median ${pr.ageMedian}). ` : ""}The driver app began in spring 2026, so these are the riders since then.`
+          : `${pr.riders} different youth rode${pr.ageMedian != null ? `, ages ${pr.ageMin}–${pr.ageMax} (median ${pr.ageMedian})` : ""}. Pick-up areas: ${pr.zones.map(([z, n]) => `${z} ${pct(n, pr.riders)}%`).join(", ")}. Economically disadvantaged: ${pr.disadvantaged} of the ${pr.matched} riders matched to a registration form (${pct(pr.disadvantaged, pr.matched)}%)${pr.matched < pr.riders ? `; ${pr.riders - pr.matched} riders could not be matched by name and date of birth` : ""}. The driver app began in spring 2026, so these are the riders since then.`,
+        period: year.label, source: "the Transport Intelligence page (completed trips, riders by pick-up zone, poverty share of riders matched to a registration), and the driver app's rider list for ages",
       });
     }
   } catch { /* optional */ }

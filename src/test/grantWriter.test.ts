@@ -3,7 +3,7 @@
 // order and word count, and the Word file.
 import { describe, it, expect } from "vitest";
 import { factPeriods, factYearLabel, summarizeRegistrations, summarizeAttendance, pct, isSingleParent, districtGroup, coverage, fullMonthRates, describeRates } from "@/lib/grantCoach/liveFacts";
-import { narrativeItems, narrativeWordCount, wordCount, NARRATIVE_SECTION, NARRATIVE_WORD_LIMIT, STORY_ONLY_KEYS, APPROVED_FIGURE_KEYS } from "@/lib/grantCoach/writer";
+import { narrativeItems, narrativeWordCount, wordCount, NARRATIVE_SECTION, WORDS_PER_PAGE, STORY_ONLY_KEYS, APPROVED_FIGURE_KEYS } from "@/lib/grantCoach/writer";
 import { ORG_FIELDS } from "@/lib/grantCoach/orgProfile";
 import { buildNarrativeDocument, headingFromLabel } from "@/lib/grantCoach/narrativeDocx";
 import { OCEAN_2027 } from "@/lib/grantCoach/oceanChecklist";
@@ -147,7 +147,7 @@ describe("where the numbers come from", () => {
   });
 });
 
-describe("the three-page narrative", () => {
+describe("the Program Narrative", () => {
   const seeded = OCEAN_2027.items.map((seed, i) => ({ ...seed, id: String(i), detail: seed.detail ?? null, answer: null as string | null, required: seed.required ?? true, status: "todo" }));
 
   it("finds the seven items in the funder's order, and nothing else from that screen", () => {
@@ -157,11 +157,11 @@ describe("the three-page narrative", () => {
     expect(seven.some((i) => i.kind === "upload")).toBe(false);
   });
 
-  it("counts words across all seven against the limit", () => {
+  it("counts words across all seven (there is no limit — Josh, 2026-10-29)", () => {
     const seven = narrativeItems(seeded).map((i) => ({ ...i, answer: "one two three" }));
     expect(narrativeWordCount(seven)).toBe(21);
     expect(wordCount("  a  b\nc ")).toBe(3);
-    expect(NARRATIVE_WORD_LIMIT).toBe(1350);
+    expect(WORDS_PER_PAGE).toBe(450);
   });
 
   it("turns the funder's label into a heading", () => {

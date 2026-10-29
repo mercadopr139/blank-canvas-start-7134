@@ -15,6 +15,7 @@ import {
   Sparkles, RefreshCw, FolderOpen,
 } from "lucide-react";
 import { buildAnswersPdf, answersPdfFileName, printableItems } from "@/lib/grantCoach/answersPdf";
+import { planMerge, mergePdfs, setWriterFolder } from "@/lib/grantCoach/attachments";
 import { GRANT_DOCUMENTS_BUCKET } from "@/lib/grantCoach/orgDocuments";
 import { gatherLiveFacts, factYearLabel } from "@/lib/grantCoach/liveFacts";
 import { loadLibrary, type CaseBrief, type FunderBrief as FunderBriefT } from "@/lib/grantCoach/writer";
@@ -199,6 +200,8 @@ const AdminGrantFolder = () => {
   // The amount, the dates and the program name the portal asked for, once
   // approved, fill the folder's blanks — the header stops showing dashes for
   // things already settled on screen 4. Only blanks; a typed value stays.
+  // Every Grant Coach call on this page carries this folder's attachments (2026-10-29).
+  useEffect(() => { setWriterFolder(id ?? null); return () => setWriterFolder(null); }, [id]);
   const filledFrom = useRef<string | null>(null);
   useEffect(() => {
     if (!folder || !items.length || filledFrom.current === id) return;
@@ -216,7 +219,8 @@ const AdminGrantFolder = () => {
   /* ───── The hardcopy ─────
      After the online application is submitted, the folder is NLA's only
      record of what went in. Print downloads every question and answer in
-     portal order and files the same PDF under our documents. */
+     portal order, an attachments page, and every attached PDF merged after
+     it (Josh, 2026-10-29) — and files the same PDF under our documents. */
   const [printing, setPrinting] = useState(false);
   const printAnswers = async () => {
     if (!folder) return;
@@ -224,10 +228,15 @@ const AdminGrantFolder = () => {
     if (!rows.length) { toast.error("Nothing to print yet. Read the portal screenshots in first."); return; }
     setPrinting(true);
     try {
-      const pdf = await buildAnswersPdf(folder, rows);
+      const uploads = items.filter((i) => i.kind === "upload" && i.status !== "na");
+      const { notes, pdfs } = await planMerge(uploads.map((i) => ({ label: i.label, doc: i.attachment_id ? docs.find((d) => d.id === i.attachment_id) ?? null : null })));
+      const pdf = await buildAnswersPdf(folder, rows, new Date(), notes);
       const name = answersPdfFileName(folder);
-      pdf.save(name);
-      const blob = pdf.output("blob");
+      const merged = await mergePdfs(pdf.output("arraybuffer"), pdfs);
+      const blob = new Blob([merged as BlobPart], { type: "application/pdf" });
+      const href = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = href; a.download = name; a.click();
+      setTimeout(() => URL.revokeObjectURL(href), 10_000);
       const path = docPath(id!, name);
       const { error } = await supabase.storage.from(GRANT_DOCUMENTS_BUCKET).upload(path, blob, { contentType: "application/pdf" });
       if (error) throw error;
@@ -237,7 +246,7 @@ const AdminGrantFolder = () => {
       } as never);
       if (e2) throw e2;
       qc.invalidateQueries({ queryKey: ["grant-docs", id] });
-      toast.success("Answers printed. A copy is filed under our documents.");
+      toast.success(pdfs.length ? `Printed with ${pdfs.length} attached PDF${pdfs.length === 1 ? "" : "s"}. A copy is filed under our documents.` : "Answers printed. A copy is filed under our documents.");
     } catch (e) {
       toast.error(`Couldn't print: ${(e as Error).message}`);
     } finally {

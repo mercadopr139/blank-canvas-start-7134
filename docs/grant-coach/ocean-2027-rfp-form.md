@@ -69,7 +69,7 @@ Deadline: Oct 30, 2026, 5 PM. Max $75,000. Period Jan 1–Dec 31, 2027. Reimburs
 - Who will review files for completeness? * (name)
 - Buttons: Back, Save, Next
 
-## Screen 8 — Program Narrative (upload, max 3 pages; address each item IN THIS ORDER)
+## Screen 8 — Program Narrative (upload; NO page limit — the "max 3 pages" was Josh's own preference, not the funder's (Josh, 2026-10-29); address each item IN THIS ORDER)
 NOTE: seven items here — the slides listed six and omitted #4 (staffing).
 1. Statement of need supported by recent local information or experience.
 2. Program design, major activities, and program service schedule.

@@ -107,7 +107,15 @@ async function createBest(anthropic: Anthropic, params: Record<string, any>) {
   throw lastError ?? new Error("No model answered.");
 }
 type Req = {
-  mode: "item" | "narrative" | "chat" | "read_screens" | "classify" | "strategy" | "story" | "review" | "funder_brief" | "snapshot" | "reporting_plan" | "report" | "fit" | "budget" | "learn";
+  mode: "item" | "narrative" | "chat" | "read_screens" | "classify" | "strategy" | "story" | "review" | "review_chat" | "read_document" | "funder_brief" | "snapshot" | "reporting_plan" | "report" | "fit" | "budget" | "learn";
+  /** Every call: what NLA is submitting with the answers — the attached files, read as written (2026-10-29). */
+  attachments?: { label: string; title: string; text: string }[];
+  /** review_chat: a Reply thread under ONE note of the review. */
+  note?: { key: string; text: string; criterion?: string } | null;
+  /** review / review_chat: facts Josh settled with the reviewer in earlier threads — true, and never raised again. */
+  clarifications?: string[];
+  /** review_chat: the reviewer's last read, which the conversation is about. */
+  review?: { overall: number; verdict: string; criteria: { name: string; score: number; max: number; why: string }[]; weakest: { i: number; problem: string; fix: string; instruction: string }[]; contradictions: string[]; wrong_numbers: string[] } | null;
   /** The public website's words, as published — Grant Coach's first source (scripts/make-site-text.mjs). */
   siteText?: string | null;
   /** The approved Program Year Snapshot (Josh, 2026-10-24): source 2, its words used as written. */
@@ -192,7 +200,6 @@ async function docContent(docs: { title: string; path?: string; text?: string }[
 const isYmd = (v: unknown) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
 const strList = (v: unknown, n = 12) => (Array.isArray(v) ? v.filter((x) => typeof x === "string" && x.trim()).map((x: string) => x.trim()).slice(0, n) : []);
 
-const NARRATIVE_WORD_LIMIT = 1350;
 
 const SYSTEM = `You are Grant Coach, the grant writer for No Limits Academy (NLA), a free, year-round youth development center in Rio Grande, Cape May County, New Jersey. You write in NLA's own voice: first person plural ("we"), plain and concrete, confident without boasting, no jargon, no filler, no buzzwords. American English.
 
@@ -211,6 +218,7 @@ HARD RULES
 1a. THE YEAR. The live numbers cover NLA's last complete program year (September 1 to August 31). Use that year for every count of youth, check-ins, meals, rides and demographics, and name it the first time ("in the 2025–26 program year…"). A complete year is an honest picture; never present a partial year as if it were a year.
 1c. YOUNG LOGS: USE RATES, NOT TOTALS. NLA's logging systems (the check-in kiosk, the Meal Tracker, the driver app) are new, so some live numbers say "records on file <date> to <date> only, not the whole year". For those, do NOT cite the total as if it were the year's. Instead cite the RATES the fact gives from its full months: "NLA serves an average of 58 meals a night" or "in May 2026, a full month of logging, NLA served 62 meals a night over 20 nights". You may lead with the strongest full month, named as such; you may give the average across full months; you may say the rate was measured in the school year and that these months were not peak season (January and February are NLA's busiest), but never project a number beyond what was measured and never state a year's total from a partial log. Take the program's shape (five dinners a week in the school year, year-round programming) from the library. Never propose to "expand" from a partial count: NLA already runs at full size; the log is what is new.
 1d. YOUTH SERVED = YOUTH REGISTERED. For any program year, the number of youth NLA served is the number registered that year (every youth re-registers each September 1; the registration is the enrolment). The kiosk's "unduplicated youth served" is a young log — it began in spring 2026 — so it is a partial-year count: never lead with it, never put it beside the registered count as if the two measured the same thing ("served 275 and registered 518" reads as a contradiction). Use the kiosk for what it measures: attendance rates, nights a week, the share of registered youth who checked in, named as from the months on file.
+1f. HOUSEHOLDS ARE NEVER INVENTED (Josh, 2026-10-29: a projected "75 households" for 47 youth came from nowhere). There is no household count in the live numbers. A household figure is at most the youth figure (siblings share a household). Only write one Josh has given or that an approved answer states; otherwise leave [NEED: the number of households the youth come from] and say so.
 1e. WILDWOOD AND WOODBINE ARE SCHOOL DISTRICTS. The live number for Wildwood and Woodbine counts youth by the school district on the registration form (the "School districts" fact). Write it that way — "attend school in Wildwood and Woodbine", "from the Wildwood and Woodbine school districts" — never "live in" or "from the municipalities of". The same for every other town named from that fact.
 1b. WHERE NUMBERS COME FROM. Every statistic about NLA's youth — how many served or registered, attendance, nights, meals, rides, ages, sex, race, school districts, single-parent homes, economically disadvantaged share, Wildwood and Woodbine counts — comes ONLY from the LIVE NUMBERS section. The ABOUT NLA LIBRARY is for story, voice, programs, partners, people, money and history. Library entries marked [STORY AND CONTEXT ONLY] were written from the website and an earlier proposal and contain youth statistics from another moment: take their wording and flow, never their figures, even where the live numbers have no match (write [NEED: …] instead). Numbers that are not about NLA's youth — county or school-district poverty rates from the census, the facility's size, revenue and budget figures, award amounts, dates — may be cited from the library, naming the source the library gives.
 1f. JOSH'S CORRECTIONS. A library entry named "Josh's Corrections · rules Grant Coach learned" holds rules Josh taught you by editing your answers. Every one is a standing rule for every answer, on every grant: apply it without being asked. On wording they beat the house example and the website.
@@ -248,7 +256,7 @@ THE FUNDER
 O.C.E.A.N., Inc. is the Community Action Agency for Ocean, Atlantic and Cape May Counties, passing through federal Community Services Block Grant (CSBG) money. CSBG funds work that addresses the causes and conditions of poverty and moves low-income people toward self-sufficiency. Participants must be at or below 200% of the federal poverty level, verified with documents before service, and reported in the EmpowOR system. Funding is reimbursement-based with monthly reimbursement packages. Applications are scored out of 100 on: community need and CSBG alignment; program design, delivery and feasibility; measurable outputs and outcomes with realistic targets; organizational capacity, staffing and partnerships; budget reasonableness and cost effectiveness; data, eligibility, fiscal and compliance capacity; past performance with O.C.E.A.N. Write so a reviewer can tick each of these.
 
 LENGTH
-A short form field: one to three sentences. A text-box answer (funding purpose, outcomes, measures, tools, eligibility process, file security): one tight paragraph, 60–140 words. A narrative item: 150–230 words. The whole seven-item narrative must fit three pages: at most ${NARRATIVE_WORD_LIMIT} words in total.`;
+A short form field: one to three sentences. A text-box answer (funding purpose, outcomes, measures, tools, eligibility process, file security): one tight paragraph, 60–140 words. A narrative item: as long as it takes to prove the point with the record — the PROGRAM NARRATIVE HAS NO PAGE OR WORD LIMIT (Josh, 2026-10-29). Length is never a reason to cut substance; cut only filler. Never invent a limit the funder did not set, and never mark an answer down for length unless the funder's own limit on that question says so.`;
 
 const OCEAN_START = "THE FUNDER\n(This section describes O.C.E.A.N.; it is replaced for any other funder.)";
 const OCEAN_END = "\n\nLENGTH";
@@ -311,6 +319,10 @@ const siteBlock = (body: Req) => body.siteText?.trim() ? block("THE WEBSITE — 
 /** The approved Snapshot — source 2: its figures and sentences are used as written. */
 const snapshotBlock = (body: Req) => (body.snapshot?.sections ?? []).length
   ? block(`THE SNAPSHOT — program year ${body.snapshot!.year}, approved by Josh word for word (source 2: use its figures and sentences as written; never contradict it)`, body.snapshot!.sections.map((x) => x.body.trim()).join("\n\n\n"))
+  : "";
+/** The attachments — what NLA is submitting with the answers, as written (2026-10-29). */
+const attachmentsBlock = (body: Req) => (body.attachments ?? []).length
+  ? block("THE ATTACHMENTS — the files NLA is submitting with this application, read as written (the budget narrative, the workbook, the 990…). Quote their figures and line items exactly; never recompute or contradict them; where an answer and an attachment must agree, the attachment is the record", body.attachments!.map((a) => `=== ${a.label} — ${a.title} ===\n${a.text.trim()}`).join("\n\n"))
   : "";
 /** Josh's proposals, as THE HOUSE EXAMPLE — the voice every answer matches. */
 const houseExample = (lib: Entry[] | undefined) => {
@@ -539,7 +551,7 @@ Deno.serve(async (req) => {
           (body.instruction ? `\n\nJosh's instruction: ${body.instruction}` : "") +
           block("THE GRANT", describeFolder(body.folder)) +
           block("WHAT THE APPLICATION PROMISED (approved answers)", promised || "(no approved answers on file)") +
-          siteBlock(body) + snapshotBlock(body) +
+          siteBlock(body) + snapshotBlock(body) + attachmentsBlock(body) +
           block("ABOUT NLA LIBRARY", describeLibrary(body.library)) +
           block("LIVE NUMBERS FOR THE REPORT PERIOD (from the back end)", describeFacts(body.facts)) +
           `\n\nReturn ONLY JSON: {"answer":"<the report, ready to submit, with a heading per part the funder requires>","gaps":["<a promised measure or required item with no number yet — what's needed>"]}` }],
@@ -560,7 +572,7 @@ Deno.serve(async (req) => {
           `Should NLA apply to this grant?` +
           block("THE GRANT", describeFolder(body.folder)) +
           (body.funderBrief ? block("WHAT THE FUNDER'S DOCUMENTS SAY", JSON.stringify(body.funderBrief)) : "\n\n(No funder documents read yet — say so, and judge from the grant's name and notes only, with low confidence.)") +
-          siteBlock(body) + snapshotBlock(body) +
+          siteBlock(body) + snapshotBlock(body) + attachmentsBlock(body) +
           block("ABOUT NLA LIBRARY", describeLibrary(body.library)) +
           block("LIVE NUMBERS", describeFacts(body.facts)) +
           `\n\nWeigh eligibility first (a hard no on eligibility is a no-go), then fit with what the funder funds, NLA's strength against their rubric, the effort against the amount, and any requirement NLA would struggle to meet (match, audit, reimbursement cash flow, data it doesn't collect).\n\nReturn ONLY JSON: {"verdict":"go"|"maybe"|"no_go","score":<0-100 fit>,"summary":"<two sentences>","strengths":["<why NLA scores>"],"risks":["<what could sink it>"],"must_haves":["<requirement NLA must meet or prepare>"],"questions":["<what to ask the funder before deciding>"]}` }],
@@ -601,6 +613,33 @@ Deno.serve(async (req) => {
     }
 
     // ── The funder's documents, read once into the brief ──
+    // ── Read one attachment (a PDF or an image) into text, faithfully ──
+    if (body.mode === "read_document") {
+      const d = Array.isArray(body.docs) ? body.docs[0] : null;
+      if (!d?.path) return json({ error: "Nothing to read." }, 400);
+      const service = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      const { data, error } = await service.storage.from("grant-documents").download(d.path);
+      if (error || !data) return json({ error: `Couldn't open the file: ${error?.message ?? "no file"}` }, 400);
+      const buf = new Uint8Array(await data.arrayBuffer());
+      let b64 = "";
+      for (let i = 0; i < buf.length; i += 0x8000) b64 += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+      const p = d.path.toLowerCase();
+      // deno-lint-ignore no-explicit-any
+      const content: any[] = [];
+      if (p.endsWith(".pdf")) content.push({ type: "document", source: { type: "base64", media_type: "application/pdf", data: btoa(b64) } });
+      else if (/\.(png|jpe?g|webp)$/.test(p)) content.push({ type: "image", source: { type: "base64", media_type: p.endsWith(".png") ? "image/png" : p.endsWith(".webp") ? "image/webp" : "image/jpeg", data: btoa(b64) } });
+      else return json({ error: "That file type can't be read here." }, 400);
+      content.push({ type: "text", text: `Transcribe this document ("${d.title}") into plain text, completely and faithfully: every heading, paragraph, number and dollar figure exactly as printed; tables as one row per line with cells separated by " | "; totals where they appear. Add nothing, summarize nothing, correct nothing. Return the text only.` });
+      const response = await anthropic.messages.create({
+        model: MODEL, max_tokens: 16000,
+        system: "You transcribe documents exactly. You never add, summarize, interpret or correct.",
+        messages: [{ role: "user", content }],
+      });
+      const text = textOf(response as never).trim();
+      if (!text) return json({ error: "The file came back empty." }, 400);
+      return json({ text });
+    }
+
     if (body.mode === "funder_brief") {
       const docs = Array.isArray(body.docs) ? body.docs.slice(0, 20) : [];
       if (!docs.length) return json({ error: "Upload the funder's documents first." }, 400);
@@ -648,7 +687,9 @@ Deno.serve(async (req) => {
       const context =
         block("THE GRANT", describeFolder(body.folder)) +
         (body.caseBrief ? block("THE CASE NLA LOCKED (the answers should all tell this)", describeCase(body.caseBrief)) : "") +
-        block("LIVE NUMBERS (the only true figures about NLA's youth — check every number in the answers against these)", describeFacts(body.facts)) +
+        siteBlock(body) + snapshotBlock(body) + attachmentsBlock(body) +
+        block("LIVE NUMBERS (NLA's recorded figures — check every number in the answers against these and against THE SNAPSHOT; a figure that matches either is NLA's own record, not an unsupported claim)", describeFacts(body.facts)) +
+        (Array.isArray(body.clarifications) && body.clarifications.length ? block("JOSH'S CLARIFICATIONS (facts he settled with you in earlier threads — treat each as true; never raise a note these settle)", body.clarifications.map((c) => "- " + c).join("\n")) : "") +
         block("THE APPLICATION, AS IT WILL BE SUBMITTED", listed);
       const response = await createBest(anthropic, {
         max_tokens: 14000,
@@ -657,7 +698,7 @@ Deno.serve(async (req) => {
 YOU ARE NOW THE REVIEWER, NOT THE WRITER
 Read this application the way the funder's scoring panel will: experienced, skeptical, reading forty applications this week, scoring against the criteria above. You want to fund programs that deliver; you have been fooled before by polished writing from weak programs, so you reward PROOF — specific numbers with periods, named places, measured outcomes with targets, a real example — and you mark down adjectives, vague claims, unmeasured promises and answers that don't answer the question asked.
 Be honest and specific. A generous score helps no one: Josh wants to know where it would lose points while there is still time to fix it.
-Check: every criterion the funder scores; whether each answer answers exactly what was asked, within its limit; contradictions between answers (program name, amounts, counts, dates, who is served); any number that doesn't match the live numbers; required questions left blank.`,
+Check: every criterion the funder scores; whether each answer answers exactly what was asked, within its limit (only a limit stated on that question counts — the Program Narrative has no page or word limit, so never mark it down for length); contradictions between answers (program name, amounts, counts, dates, who is served); any number that doesn't match the live numbers; required questions left blank.`,
         messages: [{ role: "user", content: context +
           `\n\nReturn ONLY JSON: {"overall":<0-100, your honest total>,"verdict":"<two sentences: would you fund it as written, and the one thing that would move the score most>",` +
           `"criteria":[{"name":"<the funder's criterion>","score":<points>,"max":<points available>,"why":"<one line: what earned or lost points, citing the answer>"}],` +
@@ -681,6 +722,65 @@ Check: every criterion the funder scores; whether each answer answers exactly wh
       });
     }
 
+    // ── Talk to the reviewer: questions, pushback, and "write it" (Josh, 2026-10-29) ──
+    if (body.mode === "review_chat") {
+      const app = Array.isArray(body.application) ? body.application : [];
+      if (!app.length) return json({ error: "There is nothing to talk about yet." }, 400);
+      const history = Array.isArray(body.messages) ? body.messages.filter((m) => m && typeof m.content === "string") : [];
+      if (!history.length) return json({ error: "Say something first." }, 400);
+      const listed = app.map((q) =>
+        `[${q.i}] (${q.section.replace(/^Portal · /, "")}) ${q.label}${q.required ? "" : " (optional)"}${q.limit_value ? ` — limit ${q.limit_value} ${q.limit_kind}` : ""}\n${q.answer?.trim() ? q.answer.trim() : "(NOT ANSWERED)"}`).join("\n\n");
+      const r = body.review;
+      const reviewText = r
+        ? `Score ${r.overall}/100. ${r.verdict}\n\nCriteria:\n${(r.criteria ?? []).map((c) => `- ${c.name}: ${c.score}/${c.max} — ${c.why}`).join("\n")}\n\nWhere it loses the most points:\n${(r.weakest ?? []).map((w) => `- [${w.i}] ${w.problem} FIX: ${w.fix}`).join("\n")}${r.contradictions?.length ? `\n\nAnswers that disagree:\n${r.contradictions.map((c) => "- " + c).join("\n")}` : ""}${r.wrong_numbers?.length ? `\n\nNumbers that don't match the back end:\n${r.wrong_numbers.map((c) => "- " + c).join("\n")}` : ""}`
+        : "(No review on file yet — read the application and answer from it.)";
+      const context =
+        block("THE GRANT", describeFolder(body.folder)) +
+        (body.caseBrief ? block("THE CASE NLA LOCKED", describeCase(body.caseBrief)) : "") +
+        siteBlock(body) + snapshotBlock(body) + attachmentsBlock(body) +
+        block("LIVE NUMBERS (NLA's recorded figures; a figure that matches these or THE SNAPSHOT is NLA's own record)", describeFacts(body.facts)) +
+        (Array.isArray(body.clarifications) && body.clarifications.length ? block("JOSH'S CLARIFICATIONS (facts he settled with you in earlier threads — treat each as true; never raise a note these settle)", body.clarifications.map((c) => "- " + c).join("\n")) : "") +
+        block("THE APPLICATION, AS IT WILL BE SUBMITTED", listed) +
+        block("YOUR REVIEW (what you wrote last time you read it)", reviewText) +
+        (body.note ? block("THIS THREAD IS ABOUT ONE NOTE OF YOURS", `${body.note.text}${body.note.criterion ? `\n(Criterion: ${body.note.criterion})` : ""}`) : "");
+      const wantsWrite = /\b(write|rewrite|draft|fix) (it|that|this|them|\[?\d+\]?|question \d+|number \d+)\b|\bwrite it\b|\bdraft it\b|\bfix it\b/i.test(history[history.length - 1].content);
+      const response = await createBest(anthropic, {
+        max_tokens: wantsWrite ? 6000 : 2500,
+        system: systemFor(body.folder, body.funderBrief) + `
+
+YOU ARE THE REVIEWER, IN CONVERSATION WITH JOSH
+You are the same skeptical scoring-panel reviewer who wrote YOUR REVIEW. Josh (Program Director, the one who runs the program) is sitting with you to understand it before he changes anything. Answer as that person, against the record in front of you.
+- Answer exactly what he asks, in plain words, citing the question numbers in square brackets like [32] so he can click to them.
+- When he pushes back, check the application and the live numbers again. If he is right, say so plainly and say what you would score instead; if the note still stands, hold it and say why with the evidence. Never flatter, never fold just because he argued.
+- When he asks which fix moves the score most, rank them with the points at stake.
+- Your score does not change in this conversation; it changes when he runs Review again. Say so if he asks.
+- The Program Narrative has no page or word limit. Only a limit stated on a question counts.
+- When he asks you to WRITE or FIX a specific question, write the full answer for THAT question the way the writer would (THE WRITING STANDARD, the sources, the rules), apply the one-change rule to the answer as it stands when he asks for one change, and put it in "draft" with the question's index. Write for one question at a time; if he names none, ask which.
+${body.note ? `- THIS IS A REPLY THREAD UNDER ONE NOTE. Josh is explaining his side of that note. Weigh what he says against the application and the record. Two outcomes: (a) HOLD — the note still stands because the APPLICATION AS WRITTEN still has the problem (a reviewer on the panel will not hear Josh's explanation; only the page counts): say exactly what the page must say for the note to go away, in one or two sentences; or (b) WITHDRAW — his explanation shows the note was wrong, or the page already says what is needed: set "withdraw": true, give "clarification" (ONE sentence of fact, in the third person, to be remembered for every future review — e.g. "NLA's budget is built per youth at about $1,600; 47 Battle Team youth is $75,000, the CSBG share of a $794,427 program"), and "revised": {"criterion": "<the criterion this note sat under, exactly as named in YOUR REVIEW>", "score": <that criterion's new points>, "overall": <the new overall>} — revise only for this note, honestly, never more than the note was worth. Never withdraw a note because the page SHOULD be read a certain way; withdraw only when the page already works or the note was mistaken.` : ""}
+Return ONLY JSON: {"reply":"<your answer, plain text, paragraphs allowed>","draft":{"i":<question index>,"text":"<the full answer>"} (only when he asked you to write or fix a question; otherwise omit),"withdraw":<true only in a reply thread when the note is withdrawn; otherwise omit>,"clarification":"<one sentence of fact; only with withdraw>","revised":{"criterion":"","score":0,"overall":0} (only with withdraw)}`,
+        messages: [
+          { role: "user", content: context + "\n\nThe conversation follows. Reply to the last message." },
+          { role: "assistant", content: "Ready." },
+          ...history.map((m) => ({ role: (m.role === "user" ? "user" : "assistant") as "user" | "assistant", content: m.content })),
+        ],
+        ...thinking(wantsWrite ? "high" : "medium"),
+      });
+      // The reviewer sometimes answers in prose instead of JSON (2026-10-29): a
+      // plain answer is still the answer, so it is kept as the reply.
+      const rawText = textOf(response as never);
+      // deno-lint-ignore no-explicit-any
+      let parsed: Record<string, any>;
+      try { parsed = extractJson(rawText); }
+      catch { parsed = { reply: rawText.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim() }; }
+      const reply = String(parsed.reply ?? "").trim();
+      if (!reply) throw new Error("The reviewer came back with nothing. Try again.");
+      const ids = new Set(app.map((q) => q.i));
+      const d = parsed.draft && typeof parsed.draft.text === "string" && ids.has(Number(parsed.draft.i)) ? { i: Number(parsed.draft.i), text: String(parsed.draft.text).trim(), words: String(parsed.draft.text).trim().split(/\s+/).filter(Boolean).length } : null;
+      const withdraw = !!body.note && parsed.withdraw === true;
+      const revised = withdraw && parsed.revised && typeof parsed.revised.overall === "number" ? { criterion: String(parsed.revised.criterion ?? ""), score: Number(parsed.revised.score ?? 0), overall: Number(parsed.revised.overall) } : null;
+      return json({ reply, draft: d, withdraw, clarification: withdraw && typeof parsed.clarification === "string" ? parsed.clarification.trim() : null, revised, model: (response as { model?: string }).model ?? null });
+    }
+
     // ── The strategy session: pick the program, build the case ──
     if (body.mode === "strategy") {
       const history = Array.isArray(body.messages) ? body.messages.filter((m) => m && typeof m.content === "string") : [];
@@ -689,7 +789,7 @@ Check: every criterion the funder scores; whether each answer answers exactly wh
         block("THE GRANT", describeFolder(body.folder)) +
         block("THE STORY QUESTIONS WAITING FOR THE CASE (the case must let every one be answered well)", waiting.map((w) => `• ${w.label}${w.help ? " — " + w.help : ""}${w.limit_value ? ` (limit ${w.limit_value} ${w.limit_kind})` : ""}`).join("\n")) +
         (body.caseBrief ? block("THE CASE AS IT STANDS (revise it if the conversation changes it)", describeCase(body.caseBrief)) : "") +
-        siteBlock(body) + snapshotBlock(body) + houseExample(body.library) + block("ABOUT NLA LIBRARY", describeLibrary(body.library)) +
+        siteBlock(body) + snapshotBlock(body) + attachmentsBlock(body) + houseExample(body.library) + block("ABOUT NLA LIBRARY", describeLibrary(body.library)) +
         block("THE STORY BANK", describeStories(body.stories ?? [])) +
         block("LIVE NUMBERS (as of today, from the back end)", describeFacts(body.facts)) +
         block("ALREADY WRITTEN IN THIS FOLDER", describeAnswered(body.answered ?? []));
@@ -731,7 +831,7 @@ Check: every criterion the funder scores; whether each answer answers exactly wh
         block("THE GRANT", describeFolder(body.folder)) +
         (sibs.length ? block("THE OTHER QUESTIONS ON THIS SCREEN (fill one ONLY when asked, by its number)", sibs.map((q) => `[${q.i}] ${q.label}${q.help ? " — " + q.help : ""}${q.limit_value ? ` (limit ${q.limit_value} ${q.limit_kind})` : ""}\n    now: ${q.answer?.trim() ? q.answer.trim() : "(empty)"}`).join("\n")) : "") +
         (body.caseBrief ? block("THE CASE NLA SETTLED ON", describeCase(body.caseBrief)) : "") +
-        siteBlock(body) + snapshotBlock(body) + houseExample(body.library) + block("ABOUT NLA LIBRARY", describeLibrary(body.library)) +
+        siteBlock(body) + snapshotBlock(body) + attachmentsBlock(body) + houseExample(body.library) + block("ABOUT NLA LIBRARY", describeLibrary(body.library)) +
         ((body.stories ?? []).length ? block("THE STORY BANK", describeStories(body.stories ?? [], body.usedStoryIds ?? [])) : "") +
         block("LIVE NUMBERS (as of today, from the back end)", describeFacts(body.facts)) +
         block("ALREADY WRITTEN IN THIS FOLDER", describeAnswered(body.answered ?? []));
@@ -774,7 +874,7 @@ Check: every criterion the funder scores; whether each answer answers exactly wh
     const context =
       block("THE GRANT", describeFolder(body.folder)) +
       (body.caseBrief ? block("THE LOCKED CASE — write this answer FROM it: same program, same numbers, same story; consistent with every other answer", describeCase(body.caseBrief)) : "") +
-      siteBlock(body) + snapshotBlock(body) + houseExample(body.library) + block("ABOUT NLA LIBRARY", describeLibrary(body.library)) +
+      siteBlock(body) + snapshotBlock(body) + attachmentsBlock(body) + houseExample(body.library) + block("ABOUT NLA LIBRARY", describeLibrary(body.library)) +
       ((body.stories ?? []).length ? block("THE STORY BANK", describeStories(body.stories ?? [], body.usedStoryIds ?? [])) : "") +
       block("LIVE NUMBERS (as of today, from the back end)", describeFacts(body.facts)) +
       block("ALREADY WRITTEN IN THIS FOLDER", describeAnswered(body.answered ?? []));
@@ -788,8 +888,8 @@ Check: every criterion the funder scores; whether each answer answers exactly wh
       if (items.length !== 7) return json({ error: "The narrative needs its seven items." }, 400);
       const list = items.map((it, i) => `${i + 1}. ${it.label.replace(/^\d\.\s*/, "")}${it.detail ? ` — ${it.detail}` : ""}${it.answer ? `\n   (current draft to improve, keep what works: ${it.answer})` : ""}`).join("\n");
       userContent =
-        `Write the funder's three-page PROGRAM NARRATIVE: seven items, in this order, each its own section with the funder's heading.\n\n${list}` +
-        `\n\nTotal across all seven: at most ${NARRATIVE_WORD_LIMIT} words. Each section 150–230 words, plain paragraphs (blank line between paragraphs), no bullet lists, no sub-headings.` +
+        `Write the funder's PROGRAM NARRATIVE: seven items, in this order, each its own section with the funder's heading.\n\n${list}` +
+        `\n\nThere is no page or word limit. Each section is as long as it needs to be to prove its point from the record — every program, number and partner that answers the item, with nothing padded. Plain paragraphs (blank line between paragraphs), no bullet lists, no sub-headings.` +
         (body.instruction ? `\n\nJosh's instruction for this draft: ${body.instruction}` : "") +
         context +
         `\n\nReturn ONLY JSON: {"sections":[{"n":1,"heading":"<the funder's heading for item 1>","text":"<the section>"}, … seven entries]}`;

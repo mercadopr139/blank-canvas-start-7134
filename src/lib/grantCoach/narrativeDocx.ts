@@ -1,7 +1,7 @@
 // The program narrative as a Word file, ready for the funder's upload slot.
 // Seven numbered sections in the funder's order, 11-point type, one-inch
-// margins, NLA's name in the header. Three pages is the funder's limit; the
-// word count on screen keeps the draft inside it before this is built.
+// margins, NLA's name in the header. There is no page limit (Josh,
+// 2026-10-29); the word count on screen is information only.
 import { AlignmentType, Document, Footer, Header, Packer, PageNumber, Paragraph, TextRun } from "docx";
 import { saveAs } from "file-saver";
 

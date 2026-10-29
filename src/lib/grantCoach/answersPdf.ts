@@ -6,6 +6,7 @@
 // print or file a record of exactly what went in.
 import jsPDF from "jspdf";
 import nlaLogo from "@/assets/nla-logo.png";
+import type { MergeNote } from "@/lib/grantCoach/attachments";
 
 export interface AnswersPdfFolder {
   name: string;
@@ -58,7 +59,18 @@ const loadLogo = async (): Promise<string | null> => {
   } catch { return null; }
 };
 
-export async function buildAnswersPdf(folder: AnswersPdfFolder, items: AnswersPdfItem[], printedAt = new Date()): Promise<jsPDF> {
+/** What the attachments page says about each file. */
+const howLine = (n: MergeNote) => {
+  switch (n.how) {
+    case "merged": return "follows, after the answers";
+    case "not a PDF": return "filed in the folder's documents (not a PDF, so it is not merged here)";
+    case "link": return "a link, not a file";
+    case "could not read": return "filed in the folder's documents (the PDF could not be merged)";
+    default: return "NOT ATTACHED";
+  }
+};
+
+export async function buildAnswersPdf(folder: AnswersPdfFolder, items: AnswersPdfItem[], printedAt = new Date(), attachments: MergeNote[] = []): Promise<jsPDF> {
   const doc = new jsPDF({ unit: "pt", format: "letter" });
   const W = doc.internal.pageSize.getWidth();
   const H = doc.internal.pageSize.getHeight();
@@ -122,6 +134,21 @@ export async function buildAnswersPdf(folder: AnswersPdfFolder, items: AnswersPd
     if (it.answer?.trim()) para(it.answer.trim(), 10.5, DARK, "normal", 1.45);
     else para("Not answered.", 10.5, RED, "italic");
     y += 14;
+  }
+
+  // ── Attachments: what was submitted with the answers, and where each file is ──
+  if (attachments.length) {
+    need(40); y += 6;
+    para("ATTACHMENTS", 9.5, RED, "bold");
+    doc.setDrawColor(...RULE); doc.setLineWidth(0.6); doc.line(L, y + 2, R, y + 2); y += 10;
+    para(`${attachments.filter((a) => a.how === "merged").length} of ${attachments.length} attached files follow this page as PDF pages, in this order. The rest are in the folder's documents.`, 9, GRAY, "italic");
+    y += 4;
+    attachments.forEach((a, i) => {
+      need(40);
+      para(`${i + 1}. ${a.label}`, 11, DARK, "bold");
+      para(`${a.fileName ?? "—"} · ${howLine(a)}`, 10, a.how === "missing" ? RED : DARK);
+      y += 8;
+    });
   }
 
   // ── Footer on every page ──

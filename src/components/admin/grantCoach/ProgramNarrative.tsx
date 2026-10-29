@@ -1,4 +1,4 @@
-// The three-page Program Narrative (Josh, 2026-10-28: "I don't think my
+// The Program Narrative (Josh, 2026-10-28: "I don't think my
 // current grant coach is built for this"). It was half-built: the writer's
 // narrative mode drafts the funder's seven items in order inside the word
 // limit, and narrativeDocx.ts turns them into the Word file the portal's
@@ -8,7 +8,7 @@
 // "8 · Program Narrative"), so each one has its own conversation, Approve
 // and the reviewer like every other answer. These tools sit in that screen's
 // own header (Josh: "why is Program Narrative written twice!" — one card, not
-// two): Draft all seven in one pass so the total stays inside three pages,
+// two): Draft all seven in one pass so they read as one document (no page limit — Josh, 2026-10-29),
 // the running word count, and the .docx once all seven are written.
 import { useState } from "react";
 import { toast } from "sonner";
@@ -17,7 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
 import {
-  draftWithGrantCoach, narrativeItems, narrativeWordCount, NARRATIVE_SECTION, NARRATIVE_WORD_LIMIT,
+  draftWithGrantCoach, narrativeItems, narrativeWordCount, NARRATIVE_SECTION, WORDS_PER_PAGE,
   type DraftFolder, type LibraryEntry, type FunderBrief, type CaseBrief,
 } from "@/lib/grantCoach/writer";
 import { downloadNarrativeDocx, headingFromLabel } from "@/lib/grantCoach/narrativeDocx";
@@ -39,17 +39,16 @@ export const NARRATIVE_LABELS = [
   "7. Sustainability or transition plan if CSBG funding ends",
 ];
 
-/** The screen card's second line: how many written, the running total against three pages. */
+/** The screen card's second line: how many written, and the running length (information, not a limit). */
 export function NarrativeBlurb({ items }: { items: AppItem[] }) {
   const rows = narrativeItems(items);
   const total = narrativeWordCount(rows);
   const written = rows.filter((r) => r.answer?.trim()).length;
   const done = rows.filter((r) => r.status === "done").length;
-  const over = total > NARRATIVE_WORD_LIMIT;
+  const pages = Math.max(1, Math.ceil(total / WORDS_PER_PAGE));
   return (
     <>
-      {written} of {rows.length} written · {done} approved · <span className={over ? "text-red-300 font-bold" : total > NARRATIVE_WORD_LIMIT * 0.92 ? "text-amber-300" : ""}>{total.toLocaleString()} / {NARRATIVE_WORD_LIMIT.toLocaleString()} words</span> · about {Math.max(1, Math.ceil(total / 450))} page{total > 450 ? "s" : ""}
-      {over && <span className="text-red-300"> · over three pages: trim {(total - NARRATIVE_WORD_LIMIT).toLocaleString()} words</span>}
+      {written} of {rows.length} written · {done} approved · {total.toLocaleString()} words · about {pages} page{pages === 1 ? "" : "s"} · no page limit
       <span className="block mt-0.5">One uploaded file on the portal. Draft all seven together, approve each below, then download the PDF (or Word file) and upload it on screen 8 — or Copy all and paste.</span>
     </>
   );
@@ -74,12 +73,12 @@ export default function NarrativeTools({ folder, items, library, getFacts, funde
   const [copied, setCopied] = useState(false);
   if (rows.length !== 7) return null;
 
-  /** All seven in one pass, so the total lands inside three pages. Approved sections are kept word for word; open ones are drafted (or improved, if a draft is there). */
+  /** All seven in one pass, so they read as one document. Approved sections are kept word for word; open ones are drafted (or improved, if a draft is there). */
   const draftAll = async () => {
     const kept = rows.length - open.length;
     const got = await prompt({
       title: kept ? `Draft the ${open.length} open section${open.length === 1 ? "" : "s"}` : "Draft the Program Narrative",
-      body: `Grant Coach writes the narrative in the funder's order, from the Snapshot, the Vault and the answers already approved in this application — at most ${NARRATIVE_WORD_LIMIT.toLocaleString()} words in all.${kept ? ` Your ${kept} approved section${kept === 1 ? " is" : "s are"} kept word for word; only the ${open.length} not yet approved ${open.length === 1 ? "is" : "are"} written.` : " Each section lands as a draft you approve one by one."}`,
+      body: `Grant Coach writes the narrative in the funder's order, from the Snapshot, the Vault and the answers already approved in this application. There is no page limit: each section is as long as it takes to prove its point.${kept ? ` Your ${kept} approved section${kept === 1 ? " is" : "s are"} kept word for word; only the ${open.length} not yet approved ${open.length === 1 ? "is" : "are"} written.` : " Each section lands as a draft you approve one by one."}`,
       fields: [{ key: "instruction", label: "Anything to steer it? (optional)", placeholder: "e.g. lead with the Battle Team; keep the Launch Pad short" }],
       confirmLabel: kept ? `Draft the ${open.length} open` : written ? "Redraft all seven" : "Draft all seven",
     });

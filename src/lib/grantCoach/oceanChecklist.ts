@@ -111,7 +111,7 @@ export const OCEAN_2027: FolderTemplate = {
     { section: "8 · Program Narrative", label: "5. Coordination with other organizations and avoidance of duplicated services", kind: "narrative", required: true, owner: "Josh" },
     { section: "8 · Program Narrative", label: "6. Experience delivering comparable services and evidence of past effectiveness", kind: "narrative", required: true, owner: "Josh" },
     { section: "8 · Program Narrative", label: "7. Sustainability or transition plan if CSBG funding ends", kind: "narrative", required: true, owner: "Josh" },
-    { section: "8 · Program Narrative", label: "Upload the detailed program narrative (PDF or DOCX, max 3 pages, items 1–7 in order)", kind: "upload", required: true, owner: "Josh" },
+    { section: "8 · Program Narrative", label: "Upload the detailed program narrative (PDF or DOCX, items 1–7 in order)", kind: "upload", required: true, owner: "Josh" },
 
     // Screen 9
     F("9 · Budget and Financial Capacity", "Most recent approved annual operating budget", "A number — from the library.", "Josh"),

@@ -6,6 +6,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { SITE_TEXT } from "@/lib/grantCoach/siteText";
 import { approvedSnapshotForWriter, type WriterSnapshot } from "@/lib/grantCoach/snapshot";
+import { attachmentsForWriter, type WriterAttachment } from "@/lib/grantCoach/attachments";
 import { ORG_FIELDS, orgFieldValue, formatEin } from "@/lib/grantCoach/orgProfile";
 import type { Fact } from "@/lib/grantCoach/liveFacts";
 import type { StoryDraft } from "@/lib/grantCoach/stories";
@@ -87,6 +88,8 @@ export interface DraftRequest {
   siteText?: string;
   /** The approved Program Year Snapshot — source 2, added to every call by draftWithGrantCoach. */
   snapshot?: WriterSnapshot | null;
+  /** What NLA is submitting with the answers — the attached files, read as written (2026-10-29). */
+  attachments?: WriterAttachment[];
   /** chat: the other questions on the same screen, numbered from 1, which Grant Coach fills only when asked. */
   siblings?: { i: number; label: string; help: string | null; kind: string; answer: string | null; limit_kind?: string | null; limit_value?: number | null }[];
 }
@@ -166,8 +169,8 @@ export const measure = (text: string | null | undefined, kind: "words" | "charac
 export async function draftWithGrantCoach(req: DraftRequest): Promise<DraftResult> {
   // The website goes with every call: Grant Coach's first source (Josh, 2026-10-23).
   // The approved Snapshot goes with it: source 2, its words used as written (2026-10-24).
-  const snapshot = await approvedSnapshotForWriter();
-  const { data, error } = await supabase.functions.invoke("grant-writer", { body: { ...req, siteText: SITE_TEXT, snapshot } });
+  const [snapshot, attachments] = await Promise.all([approvedSnapshotForWriter(), attachmentsForWriter()]);
+  const { data, error } = await supabase.functions.invoke("grant-writer", { body: { ...req, siteText: SITE_TEXT, snapshot, attachments } });
   if (error) {
     let reason = error.message;
     try {
@@ -181,11 +184,11 @@ export async function draftWithGrantCoach(req: DraftRequest): Promise<DraftResul
   return data as DraftResult;
 }
 
-/* ── The three-page narrative ── */
+/* ── The Program Narrative (no page limit — Josh, 2026-10-29) ── */
 
 export const NARRATIVE_SECTION = "8 · Program Narrative";
-/** About three pages at 11-point type with one-inch margins. */
-export const NARRATIVE_WORD_LIMIT = 1350;
+/** Roughly how many words fill a page at 11-point type with one-inch margins — for the running page count, not a limit. */
+export const WORDS_PER_PAGE = 450;
 
 /** The seven narrative items of a folder, in the funder's order. */
 export const narrativeItems = <T extends { section: string; label: string; kind: string }>(items: T[]) =>
@@ -282,8 +285,8 @@ export async function learnFromEdit(input: { question: string; before: string; a
 /* ── After the application: reporting, the fit check, the budget ── */
 
 const call = async <T,>(body: Record<string, unknown>): Promise<T> => {
-  const snapshot = await approvedSnapshotForWriter();
-  const { data, error } = await supabase.functions.invoke("grant-writer", { body: { answered: [], ...body, siteText: SITE_TEXT, snapshot } });
+  const [snapshot, attachments] = await Promise.all([approvedSnapshotForWriter(), attachmentsForWriter()]);
+  const { data, error } = await supabase.functions.invoke("grant-writer", { body: { answered: [], ...body, siteText: SITE_TEXT, snapshot, attachments } });
   if (error) throw await fail(error);
   if (data?.error) throw new Error(data.error);
   return data as T;

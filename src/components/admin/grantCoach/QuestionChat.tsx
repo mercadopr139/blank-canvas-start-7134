@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Check, Loader2, Send, Sparkles, Library } from "lucide-react";
 import ResourcePanel from "@/components/admin/grantCoach/ResourcePanel";
-import { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
+import { GC_BLUE, GC_SHADE } from "@/components/admin/grantCoach/GcCard";
 import { StoryDraftCard } from "@/components/admin/grantCoach/StoryBank";
 import { draftWithGrantCoach, type DraftFolder, type LibraryEntry, type FunderBrief, type WriterStory } from "@/lib/grantCoach/writer";
 import type { Fact } from "@/lib/grantCoach/liveFacts";
@@ -68,7 +68,15 @@ export default function QuestionChat({ folderId, item, draft, siblings, folder, 
       return (data ?? []) as unknown as Msg[];
     },
   });
-  useEffect(() => { const el = listRef.current; if (el) el.scrollTop = el.scrollHeight; }, [msgs.length, thinking]);
+  // A new reply is read from its first line (Josh, 2026-10-29: landing at the
+  // bottom of a long draft card meant scrolling back up to find the note).
+  // While the reviewer is thinking, the "thinking…" line is kept in view.
+  useEffect(() => {
+    const el = listRef.current; if (!el) return;
+    if (thinking) { el.scrollTop = el.scrollHeight; return; }
+    const last = el.querySelector<HTMLElement>("[data-msg]:last-of-type");
+    if (last) el.scrollTop = Math.max(0, last.offsetTop - el.offsetTop - 8); else el.scrollTop = el.scrollHeight;
+  }, [msgs.length, thinking]);
 
   const save = async (role: "user" | "coach", content: string, payload: Msg["payload"] = null) => {
     const { error } = await supabase.from("grant_messages" as never).insert({ folder_id: folderId, item_id: item.id, role, content, payload, created_by: userId } as never);
@@ -121,14 +129,18 @@ Left out: ${left.join("; ")}` : "");
   };
 
   return (
-    <div className="rounded-xl border overflow-hidden" style={{ borderColor: `${GC_BLUE}66`, backgroundColor: `${GC_BLUE}0f` }}>
+    <div className="rounded-xl border-2 overflow-hidden" style={{ borderColor: GC_BLUE, backgroundColor: "#0a2238", boxShadow: `0 0 0 4px ${GC_BLUE}26, 0 16px 40px -12px ${GC_BLUE}99` }}>
       {/* The chat wears the Finance blue: a header band and a tint, so it never reads as the answer box under it. */}
       <div className="px-3 py-2 border-b flex items-center justify-between gap-2" style={{ backgroundColor: `${GC_BLUE}26`, borderColor: `${GC_BLUE}55` }}>
         <p className="text-[11px] font-black uppercase tracking-[0.18em] inline-flex items-center gap-1.5" style={{ color: GC_BLUE }}>
           <Sparkles className="w-3.5 h-3.5" /> Grant Coach · the conversation
         </p>
         <div className="flex items-center gap-3">
-          <p className="text-[11px] text-white/45 hidden md:block">Drafts land here · "Use this" puts one in the answer box below, where you edit</p>
+          {thinking ? (
+            <p className="text-[11px] font-bold inline-flex items-center gap-1.5 rounded-md px-2 py-0.5" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}><Loader2 className="w-3.5 h-3.5 animate-spin" /> Grant Coach is working on it…</p>
+          ) : (
+            <p className="text-[11px] text-white/45 hidden md:block">Drafts land here · "Use this" puts one in the answer box below, where you edit</p>
+          )}
           <button
             type="button"
             onClick={() => setResources(true)}
@@ -153,18 +165,18 @@ Left out: ${left.join("; ")}` : "");
         </div>
       )}
       {(msgs.length > 0 || thinking) && (
-        <div ref={listRef} className="max-h-[420px] overflow-y-auto p-3 space-y-2.5">
+        <div ref={listRef} className="relative max-h-[420px] overflow-y-auto p-3 space-y-2.5">
           {msgs.map((m) => (
-            <div key={m.id} className={m.role === "user" ? "flex justify-end" : "space-y-2"}>
+            <div key={m.id} data-msg className={m.role === "user" ? "flex justify-end" : "space-y-2"}>
               {m.role === "user" ? (
-                <p className="max-w-[85%] rounded-xl bg-white/[0.1] px-3 py-1.5 text-sm text-white whitespace-pre-wrap">{m.content}</p>
+                <p className="max-w-[85%] rounded-xl px-3 py-1.5 text-sm text-white whitespace-pre-wrap border" style={{ backgroundColor: `${GC_BLUE}2e`, borderColor: `${GC_BLUE}55` }}>{m.content}</p>
               ) : (
                 <>
                   <p className="max-w-[92%] text-sm text-white/90 whitespace-pre-wrap leading-relaxed"><span className="font-bold mr-1.5" style={{ color: GC_BLUE }}>Grant Coach</span><NeedMarks text={m.content} /></p>
                   {m.payload?.draft && (
                     <div className="max-w-[92%] rounded-lg border bg-black/40 overflow-hidden" style={{ borderColor: `${GC_BLUE}66` }}>
                       <div className="px-3 py-1.5 border-b flex items-center justify-between gap-2" style={{ borderColor: `${GC_BLUE}33`, backgroundColor: `${GC_BLUE}14` }}>
-                        <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: GC_BLUE }}>Draft{m.payload.draft_words ? ` · ${m.payload.draft_words} words` : ""}<span className="ml-2 font-semibold normal-case tracking-normal text-white/40">click to edit · Enter for a new paragraph</span></p>
+                        <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: GC_BLUE }}>Draft{m.payload.draft_words ? ` · ${m.payload.draft_words} words` : ""}<span className="ml-2 font-semibold normal-case tracking-normal text-white/40">Use this puts it in your answer box below, where you edit</span></p>
                         {draft.trim() === m.payload.draft.trim() ? (
                           <p className="text-[11px] font-semibold text-emerald-300 inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" /> In the answer box</p>
                         ) : (
@@ -206,7 +218,8 @@ Left out: ${left.join("; ")}` : "");
             // Enter is a new paragraph (Josh, 2026-10-24: paste a whole answer with its paragraphs); Ctrl+Enter sends.
             onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void send(line); } }}
             rows={8}
-            placeholder="Ask Grant Coach anything about this question, or say “write it”…"
+            disabled={thinking}
+            placeholder={thinking ? "Grant Coach is working on it…" : "Ask Grant Coach anything about this question, or say “write it”…"}
             className="min-h-[200px] max-h-[560px] bg-black/50 text-white text-base leading-relaxed resize-y"
             style={{ borderColor: `${GC_BLUE}66` }}
           />

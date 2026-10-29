@@ -18,8 +18,10 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Check, Copy, Loader2, Upload, X, FileQuestion, Globe, History, BookHeart, Award, RefreshCw, Sparkles, Eye, Printer, MoreHorizontal, Trash2, AlertCircle, Pencil, Vault,
+  Check, Copy, Loader2, Upload, X, FileQuestion, Globe, History, BookHeart, Award, RefreshCw, Sparkles, Eye, Printer, MoreHorizontal, Trash2, AlertCircle, Pencil, Vault, Paperclip, ExternalLink,
 } from "lucide-react";
+import AttachPicker from "@/components/admin/grantCoach/AttachPicker";
+import { attachedAnswer, openFolderDoc, readAttachment, readLabel, type FolderDoc } from "@/lib/grantCoach/attachments";
 import { GRANT_DOCUMENTS_BUCKET } from "@/lib/grantCoach/orgDocuments";
 import { ORG_FIELDS } from "@/lib/grantCoach/orgProfile";
 import { readApplication, matchToVault, draftWithGrantCoach, measure, questionKey, NARRATIVE_SECTION, type LibraryEntry, type DraftFolder, type CaseBrief, type FunderBrief } from "@/lib/grantCoach/writer";
@@ -49,7 +51,7 @@ export interface AppItem {
   id: string; folder_id: string; section: string; label: string; detail: string | null; kind: string; required: boolean;
   status: "todo" | "in_progress" | "done" | "na"; answer: string | null; sort_order: number;
   limit_kind?: "words" | "characters" | null; limit_value?: number | null; source_path?: string | null; pasted_at?: string | null;
-  vault_key?: string | null; vault_part?: string | null; answer_source?: "vault" | "coach" | "you" | "portal" | "memory" | null; memory_id?: string | null; needs_case?: boolean; story_id?: string | null; score_note?: string | null; updated_at?: string; left_out?: string[]; needs?: string | null;
+  attachment_id?: string | null; vault_key?: string | null; vault_part?: string | null; answer_source?: "vault" | "coach" | "you" | "portal" | "memory" | null; memory_id?: string | null; needs_case?: boolean; story_id?: string | null; score_note?: string | null; updated_at?: string; left_out?: string[]; needs?: string | null;
 }
 
 interface Props {
@@ -106,6 +108,17 @@ export default function GrantApplication({ folderId, folder, items, library, get
       return new Set(((data ?? []) as { key: string; storage_path: string | null; link_url: string | null }[]).filter((d) => d.storage_path || d.link_url).map((d) => d.key));
     },
   });
+
+  /* This folder's documents: what an "Upload" row can point at. */
+  const { data: folderDocs = [] } = useQuery({
+    queryKey: ["grant-docs", folderId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("grant_documents" as never).select("*").eq("folder_id", folderId).order("uploaded_at");
+      if (error) throw error;
+      return (data ?? []) as unknown as FolderDoc[];
+    },
+  });
+  const docById = useMemo(() => new Map(folderDocs.map((d) => [d.id, d])), [folderDocs]);
 
   /* Every answer approved on a past grant (and this one): checked before anything is written. */
   const { data: memory = [] } = useQuery({ queryKey: ["grant-memory"], queryFn: loadMemory });
@@ -409,6 +422,7 @@ export default function GrantApplication({ folderId, folder, items, library, get
   };
 
   const live = items.filter((i) => i.status !== "na");
+  const numberOf = new Map(live.map((r, i) => [r.id, i + 1]));
   const approvedCount = live.filter((i) => i.status === "done").length;
   const readyFacts = live.filter((i) => isFactRow(i) && i.status === "in_progress" && i.answer?.trim() && !i.needs);
   const waiting = live.filter((i) => !i.answer?.trim() && !writing.has(i.id) && !(i.vault_key && i.needs) && !(i.needs_case && !caseLocked));
@@ -492,6 +506,49 @@ export default function GrantApplication({ folderId, folder, items, library, get
     await forget(fills.map((f) => f.id));
     refresh();
   };
+  /* The reviewer's Fix it: the rewrite is a draft card in the question's
+     conversation, never the answer itself. Josh reads it there and clicks
+     "Use this", or asks for something else. */
+  const openQuestion = (it: AppItem) => {
+    setOpenId(it.id);
+    setFocusId(it.id);
+    window.setTimeout(() => { document.getElementById(`q-${it.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }); setFocusId((f) => (f === it.id ? null : f)); }, 300);
+  };
+  const sayOn = (it: AppItem) => async (role: "user" | "coach", content: string, payload: Record<string, unknown> | null = null) => {
+    const { error } = await supabase.from("grant_messages" as never).insert({ folder_id: folderId, item_id: it.id, role, content, payload, created_by: userId } as never);
+    if (error) throw new Error(error.message);
+    qc.invalidateQueries({ queryKey: ["grant-chat", it.id] });
+  };
+  /** A finished draft (from the reviewer's conversation) lands on the question as a draft card, and the question opens. */
+  const postDraft = async (it: AppItem, note: string, text: string, words: number) => {
+    const say = sayOn(it);
+    await say("user", note);
+    await say("coach", "Here is the rewrite from the reviewer's conversation. Use it, or tell me what to change.", { draft: text, draft_story_id: null, draft_words: words });
+    openQuestion(it);
+  };
+  const fixInChat = async (it: AppItem, w: { problem: string; fix: string; instruction: string }) => {
+    openQuestion(it);
+    const say = sayOn(it);
+    setWriting((w2) => new Set(w2).add(it.id));
+    try {
+      await say("user", `The reviewer: ${w.problem}\n\nFix: ${w.fix}`);
+      const res = await draftWithGrantCoach({
+        mode: "item", folder, library, facts: await getFacts(), answered: answered(), instruction: w.instruction || w.fix,
+        caseBrief: it.needs_case ? caseBrief : null, funderBrief,
+        stories: it.kind === "narrative" || it.needs_case ? usableStories(stories) : [],
+        usedStoryIds: itemsRef.current.filter((x) => x.id !== it.id && x.story_id).map((x) => x.story_id!),
+        item: { id: it.id, section: it.section, label: it.label, detail: it.detail, kind: it.kind, answer: it.answer, limit_kind: it.limit_kind, limit_value: it.limit_value },
+      });
+      const answer = (res.answer ?? "").trim();
+      if (!answer) throw new Error("Grant Coach came back with nothing.");
+      const left = res.left_out ?? [];
+      const reply = (res.reply ?? "Here is the rewrite the reviewer asked for. Use it, or tell me what to change.") + (left.length ? `\n\nLeft out: ${left.join("; ")}` : "");
+      await say("coach", reply, { draft: answer, draft_story_id: res.story_id ?? null, draft_words: res.words });
+    } finally {
+      setWriting((w2) => { const n = new Set(w2); n.delete(it.id); return n; });
+    }
+  };
+
   const jumpTo = (id: string) => {
     const it = items.find((i) => i.id === id);
     const target = document.getElementById(`q-${id}`);
@@ -633,14 +690,14 @@ export default function GrantApplication({ folderId, folder, items, library, get
             const rows = s.rows.filter((r) => r.status !== "na");
             const done = rows.filter((r) => r.status === "done").length;
             const all = rows.length > 0 && done === rows.length;
-            // The three-page narrative is one screen like the others, in the portal's order
+            // The Program Narrative is one screen like the others, in the portal's order
             // (Josh, 2026-10-28): its tools and word count live in this card's own header.
             const narrative = s.name === NARRATIVE_SECTION;
             return (
             <GcCard
               key={s.name}
               icon={<FileQuestion className="w-4 h-4" />}
-              title={narrative ? "Program Narrative · three pages" : sectionTitle(s.name)}
+              title={narrative ? "Program Narrative · one upload" : sectionTitle(s.name)}
               blurb={narrative ? <NarrativeBlurb items={items} /> : `${rows.length} question${rows.length === 1 ? "" : "s"} · ${done} approved`}
               right={
                 <>
@@ -664,6 +721,7 @@ export default function GrantApplication({ folderId, folder, items, library, get
                   <QuestionRow
                     key={r.id}
                     item={r}
+                    number={numberOf.get(r.id)}
                     pastFunder={r.memory_id ? memoryById.get(r.memory_id)?.funder ?? null : null}
                     focused={focusId === r.id}
                     forceOpen={openId === r.id}
@@ -701,11 +759,32 @@ export default function GrantApplication({ folderId, folder, items, library, get
                     onUnapprove={() => void unapprove(r)}
                     onCopy={() => void copy(r.answer ?? "")}
                     onRemove={() => void removeRow(r)}
+                    folderId={folderId}
+                    userId={userId}
+                    folderDocs={folderDocs}
+                    attachment={r.attachment_id ? docById.get(r.attachment_id) ?? null : null}
+                    onAttach={async (doc) => {
+                      // The file is the answer: attached is approved.
+                      await patch(r.id, { attachment_id: doc.id, answer: attachedAnswer(doc), status: "done", answer_source: "you", needs: null, pasted_at: null, score_note: null, left_out: [] });
+                      qc.invalidateQueries({ queryKey: ["grant-docs", folderId] });
+                      refresh();
+                      toast.success(`${doc.file_name ?? doc.title} attached.`);
+                      // Grant Coach reads it now, so the writer and the reviewer see what is in it.
+                      if (!doc.read_text?.trim() && doc.storage_path) {
+                        toast("Grant Coach is reading it…");
+                        readAttachment(doc)
+                          .then(() => { qc.invalidateQueries({ queryKey: ["grant-docs", folderId] }); toast.success(`Read. The writer and the reviewer now see what ${doc.file_name ?? doc.title} says.`); })
+                          .catch((e) => toast.error(`Couldn't read ${doc.file_name ?? doc.title}: ${(e as Error).message}`));
+                      }
+                    }}
                     onClear={async () => {
-                      if (!(await confirm({ title: "Clear this answer?", body: "The answer comes out of the box and the question goes back to open. The Grant Vault is unchanged.", confirmLabel: "Clear it", danger: true }))) return;
+                      const upload = r.kind === "upload";
+                      if (!(await confirm(upload
+                        ? { title: "Detach this file?", body: "The row goes back to open. The file stays in this folder's documents.", confirmLabel: "Detach", danger: true }
+                        : { title: "Clear this answer?", body: "The answer comes out of the box and the question goes back to open. The Grant Vault is unchanged.", confirmLabel: "Clear it", danger: true }))) return;
                       await forget([r.id]);
                       remembered();
-                      await patch(r.id, { answer: null, status: "in_progress", pasted_at: null, answer_source: null, score_note: null, left_out: [] });
+                      await patch(r.id, { answer: null, status: "in_progress", pasted_at: null, answer_source: null, score_note: null, left_out: [], ...(upload ? { attachment_id: null } : {}) });
                       refresh();
                     }}
                     onSave={async (answer, toVault) => {
@@ -761,7 +840,9 @@ export default function GrantApplication({ folderId, folder, items, library, get
             lastChange={items.reduce<string | null>((m, i) => (i.updated_at && (!m || i.updated_at > m) ? i.updated_at : m), null)}
             busy={busy}
             onJump={jumpTo}
-            onFix={async (it, instruction) => { try { await writeOne(it, await getFacts(), instruction); } catch (e) { toast.error(`Grant Coach: ${(e as Error).message}`); } }}
+            onFix={async (it, w) => { try { await fixInChat(it, w); } catch (e) { toast.error(`Grant Coach: ${(e as Error).message}`); } }}
+            userId={userId}
+            onDraftToQuestion={postDraft}
           />
         </>
       )}
@@ -784,7 +865,7 @@ export default function GrantApplication({ folderId, folder, items, library, get
                 <div className="space-y-4">
                   {s.rows.filter((r) => r.status !== "na").map((r) => (
                     <div key={r.id}>
-                      <p className="text-sm font-semibold text-white/90">{r.label}{r.status === "done" && <Check className="inline w-3.5 h-3.5 ml-1.5 text-emerald-400" />}</p>
+                      <p className="text-sm font-semibold text-white/90"><span className="tabular-nums text-[11px] font-normal text-white/35 mr-1.5">{numberOf.get(r.id)}</span>{r.label}{r.status === "done" && <Check className="inline w-3.5 h-3.5 ml-1.5 text-emerald-400" />}</p>
                       <p className={`text-sm whitespace-pre-wrap mt-0.5 ${r.answer?.trim() ? "text-white/75" : "text-amber-300/80 italic"}`}><NeedMarks text={r.answer?.trim() || "Not answered yet."} /></p>
                     </div>
                   ))}
@@ -799,14 +880,16 @@ export default function GrantApplication({ folderId, folder, items, library, get
 }
 
 /* ───── One question ───── */
-function QuestionRow({ item, pastFunder, storyTitle, focused, forceOpen, onClosed, onApproveNext, renderChat, writing, busy, onApprove, onUnapprove, onCopy, onRemove, onSave, onRegenerate, onClear }: {
-  item: AppItem; pastFunder?: string | null; storyTitle?: string | null; focused?: boolean; writing: boolean; busy: boolean;
+function QuestionRow({ item, number, pastFunder, storyTitle, focused, forceOpen, onClosed, onApproveNext, renderChat, writing, busy, onApprove, onUnapprove, onCopy, onRemove, onSave, onRegenerate, onClear, folderId, userId, folderDocs, attachment, onAttach }: {
+  item: AppItem; number?: number; pastFunder?: string | null; storyTitle?: string | null; focused?: boolean; writing: boolean; busy: boolean;
+  folderId: string; userId: string | null; folderDocs: FolderDoc[]; attachment: FolderDoc | null; onAttach: (doc: FolderDoc) => Promise<void>;
   forceOpen?: boolean; onClosed?: () => void;
   onApproveNext: (answer: string, source: "coach" | "you", storyId: string | null, before: string | null) => Promise<void>;
   renderChat: (draft: string, fill: (text: string, storyId: string | null) => void) => ReactNode;
   onApprove: () => void; onUnapprove: () => void; onCopy: () => void; onRemove: () => void; onClear: () => void;
   onSave: (answer: string, toVault: boolean) => Promise<void>; onRegenerate: (instruction: string) => Promise<void>;
 }) {
+  const qc = useQueryClient();
   // One place to edit: the box. Open it by clicking the answer, the pencil, or
   // Answer; it stays open until Close or Approve.
   const [open, setOpen] = useState(false);
@@ -822,6 +905,73 @@ function QuestionRow({ item, pastFunder, storyTitle, focused, forceOpen, onClose
   const fact = isFactRow(item);
   const approved = item.status === "done";
   const hasAnswer = !!item.answer?.trim();
+  /* An "Upload" row: the answer is a file. Attach picks it (Vault, this folder,
+     or new); attached is approved; the file name opens the file. */
+  const isUpload = item.kind === "upload";
+  const [picking, setPicking] = useState(false);
+  const [reading, setReading] = useState(false);
+  if (isUpload) {
+    const missing = !!item.attachment_id && !attachment;
+    const uploadMenu = (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button type="button" className="p-2 rounded-md text-white/35 hover:text-white hover:bg-white/10" aria-label="More for this attachment"><MoreHorizontal className="w-4 h-4" /></button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="bg-neutral-900 border-white/[0.08] text-white">
+          {attachment && <DropdownMenuItem onSelect={() => void openFolderDoc(attachment).then((ok) => { if (!ok) toast.error("Couldn't open that file."); })} className="focus:bg-white/10 focus:text-white"><ExternalLink className="w-4 h-4 mr-2" /> Open the file</DropdownMenuItem>}
+          {attachment?.storage_path && (
+            <DropdownMenuItem disabled={reading} onSelect={() => { setReading(true); toast("Grant Coach is reading it…"); readAttachment(attachment).then(() => { qc.invalidateQueries({ queryKey: ["grant-docs", folderId] }); toast.success("Read."); }).catch((e) => toast.error(`Couldn't read it: ${(e as Error).message}`)).finally(() => setReading(false)); }} className="focus:bg-white/10 focus:text-white"><RefreshCw className="w-4 h-4 mr-2" /> {attachment.read_text ? "Read it again" : "Have Grant Coach read it"}</DropdownMenuItem>
+          )}
+          <DropdownMenuItem onSelect={() => setPicking(true)} className="focus:bg-white/10 focus:text-white"><Paperclip className="w-4 h-4 mr-2" /> {attachment ? "Replace the file" : "Attach a file"}</DropdownMenuItem>
+          <DropdownMenuSeparator className="bg-white/10" />
+          {(attachment || hasAnswer) && (
+            <DropdownMenuItem onSelect={onClear} className="text-red-300 focus:bg-red-500/15 focus:text-red-200"><X className="w-4 h-4 mr-2" /> Detach</DropdownMenuItem>
+          )}
+          <DropdownMenuItem onSelect={onRemove} className="text-red-300 focus:bg-red-500/15 focus:text-red-200"><Trash2 className="w-4 h-4 mr-2" /> Not a question — remove</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+    return (
+      <div id={`q-${item.id}`} className={`scroll-mt-28 px-4 py-2.5 transition-shadow ${approved ? "bg-emerald-500/[0.04]" : ""} ${focused ? "ring-2 ring-inset ring-sky-400/80 bg-sky-400/[0.06]" : ""}`}>
+        <div className="flex items-start gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-white/60">
+              {number != null && <span className="tabular-nums text-[11px] text-white/30 mr-1.5">{number}</span>}
+              {item.label}
+              {!item.required && <span className="ml-1.5 text-[10px] text-white/30 uppercase">optional</span>}
+            </p>
+            {item.detail && <p className="text-[12px] text-white/40 mt-0.5">{item.detail}</p>}
+            {attachment ? (
+              <button type="button" onClick={() => void openFolderDoc(attachment).then((ok) => { if (!ok) toast.error("Couldn't open that file."); })} title="Open the file" className="mt-1 inline-flex items-center gap-1.5 text-[15px] font-medium text-white hover:underline">
+                <Paperclip className="w-4 h-4 text-white/50" /> {attachment.file_name ?? attachment.title}
+                {attachment.title !== (attachment.file_name ?? "").replace(/\.[^.]+$/, "") && <span className="text-[11px] font-normal text-white/40">· {attachment.title}</span>}
+                <span className={`text-[11px] font-normal ${attachment.read_text?.trim() ? "text-emerald-300/80" : "text-amber-300/80"}`}>· {reading ? "Reading…" : readLabel(attachment)}</span>
+              </button>
+            ) : missing ? (
+              <p className="mt-1 text-sm text-amber-300 italic">The attached file was removed from this folder. Attach it again.</p>
+            ) : hasAnswer ? (
+              <p className="mt-1 text-sm text-white/60"><NeedMarks text={item.answer ?? ""} /></p>
+            ) : (
+              <p className="mt-1 text-sm text-white/35 italic">No file attached yet.</p>
+            )}
+            {item.needs && !attachment && <p className="mt-1.5 text-[12px] text-amber-300 inline-flex items-start gap-1.5"><AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" /> {item.needs}</p>}
+          </div>
+          <div className="shrink-0 flex items-center gap-1.5">
+            {approved && attachment ? (
+              <span className="inline-flex items-center gap-1.5 text-[12px] text-emerald-300 font-semibold pl-1"><Check className="w-4 h-4" /> Approved</span>
+            ) : null}
+            {attachment ? (
+              <button type="button" onClick={() => setPicking(true)} title="Replace the file" className="p-2 rounded-md text-white/50 hover:text-white hover:bg-white/10"><Paperclip className="w-4 h-4" /></button>
+            ) : (
+              <Button size="sm" onClick={() => setPicking(true)} disabled={busy} className="font-bold h-8" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}><Paperclip className="w-4 h-4 mr-1" /> Attach</Button>
+            )}
+            {uploadMenu}
+          </div>
+        </div>
+        <AttachPicker open={picking} onOpenChange={setPicking} folderId={folderId} label={item.label} docs={folderDocs} userId={userId} onPicked={onAttach} />
+      </div>
+    );
+  }
   const vaultField = !!item.vault_key && !item.vault_key.startsWith("doc:") && !item.vault_part;
   // A Vault fact with nothing in the Vault: the box to type it in is open from the start.
   const typeIn = !hasAnswer && !!item.vault_key && !!item.needs && !item.vault_key.startsWith("doc:");
@@ -884,6 +1034,7 @@ function QuestionRow({ item, pastFunder, storyTitle, focused, forceOpen, onClose
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
           <p className={`text-sm ${fact ? "text-white/60" : "font-semibold text-white"}`}>
+            {number != null && <span className="tabular-nums text-[11px] font-normal text-white/30 mr-1.5">{number}</span>}
             {item.label}
             {!item.required && <span className="ml-1.5 text-[10px] text-white/30 uppercase">optional</span>}
             {item.answer_source === "vault" && hasAnswer && <span className="ml-2 inline-flex items-center gap-1 text-[10px] text-white/35 uppercase tracking-wide"><Vault className="w-3 h-3" /> from your Vault</span>}
