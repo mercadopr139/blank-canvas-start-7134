@@ -259,7 +259,7 @@ const AdminGrantFolder = () => {
   // into one line at the bottom of the funder's list; the RFP and guidelines stay on top.
   const [docsOpen, setDocsOpen] = useState(false);
   const [showShots, setShowShots] = useState(false);
-  const openDocs = (s: "funder" | "ours") => { setSide(s); setShowShots(false); setDocsOpen(true); };
+  const openDocs = (s: "funder" | "ours") => { setSide(s); setDocsOpen(true); };
   /** The file chooser is one input; this says which list the chosen file is for. */
   const chooseFor = useRef<"funder" | "ours">("funder");
   const chooseFile = (sd: "funder" | "ours") => { chooseFor.current = sd; fileInput.current?.click(); };
@@ -404,26 +404,55 @@ const AdminGrantFolder = () => {
         {/* The grant's documents, full width (Josh, 2026-10-29); the numbers under them. */}
         <GcCard icon={<FolderOpen className="w-4 h-4" />} title="Grant/RFP Info Here" blurb="What the funder sent, and the rules Grant Coach read from it">
           <div className="p-4 space-y-3">
-            {/* 1. What the funder sent: upload it here, and Grant Coach reads it into the rules below. */}
+            {/* 1. What the funder sent: upload it here, see it here, and Grant Coach reads it into the rules below
+                  (Josh, 2026-10-29: the files themselves, not a pop-up). The screenshots that built the application fold to one line. */}
             {(() => {
               const all = docs.filter((d) => d.side === "funder");
-              const shots = all.filter(isShot).length;
-              const files = all.length - shots;
+              const files = all.filter((d) => !isShot(d));
+              const shots = all.filter(isShot);
               return (
-                <div className="rounded-xl border border-white/15 bg-black/30 p-3 flex flex-wrap items-center gap-3">
-                  <FileText className="w-5 h-5 shrink-0" style={{ color: GC_BLUE }} />
-                  <button type="button" onClick={() => openDocs("funder")} className="flex-1 min-w-[200px] text-left group">
-                    <span className="block text-sm font-bold uppercase tracking-wide group-hover:underline underline-offset-2">From the funder</span>
-                    <span className="block text-[12px] text-white/50">
-                      {files ? `${files} file${files === 1 ? "" : "s"}` : "Nothing uploaded yet — the RFP, slides, budget template, rubric"}{shots ? ` · ${shots} portal screenshot${shots === 1 ? "" : "s"}` : ""}
-                    </span>
-                  </button>
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={() => chooseFile("funder")} disabled={busy} className="font-bold" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}>
-                      {busy ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Upload className="w-3.5 h-3.5 mr-1.5" />} Upload
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => { setSide("funder"); void link(); }} className="bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white"><Link2 className="w-3.5 h-3.5 mr-1.5" /> Link</Button>
+                <div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <p className="flex-1 min-w-[160px] text-sm font-bold uppercase tracking-wide inline-flex items-center gap-2"><FileText className="w-4 h-4" style={{ color: GC_BLUE }} /> From the funder</p>
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={() => chooseFile("funder")} disabled={busy} className="font-bold" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}>
+                        {busy ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Upload className="w-3.5 h-3.5 mr-1.5" />} Upload
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => { setSide("funder"); void link(); }} className="bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white"><Link2 className="w-3.5 h-3.5 mr-1.5" /> Link</Button>
+                    </div>
                   </div>
+                  <ul className="divide-y divide-white/[0.06] mt-1">
+                    {files.map((d) => (
+                  <li key={d.id} className="py-2 flex items-center gap-2">
+                    <button type="button" onClick={() => void openDoc(d)} className="flex-1 min-w-0 text-left group">
+                      <p className="text-sm truncate group-hover:underline underline-offset-2">{d.title}</p>
+                      <p className="text-[11px] text-white/40">{d.link_url ? "Link" : d.file_name}{d.size_bytes ? ` · ${kb(d.size_bytes)}` : ""} · {whenOn(d.uploaded_at)}</p>
+                    </button>
+                    <button type="button" onClick={() => void removeDoc(d)} className="text-white/30 hover:text-red-400 p-1" aria-label={`Remove ${d.title}`}><Trash2 className="w-4 h-4" /></button>
+                  </li>
+                    ))}
+                    {files.length === 0 && <li className="py-2 text-[12px] text-white/35">Nothing uploaded yet — the RFP, the slides, the budget template, the rubric. Grant Coach reads each one into the rules below.</li>}
+                  </ul>
+                  {shots.length > 0 && (
+                    <div className="mt-1">
+                      <button type="button" onClick={() => setShowShots((o) => !o)} className="inline-flex items-center gap-1.5 text-[12px] text-white/50 hover:text-white">
+                        {showShots ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />} {shots.length} portal screenshot{shots.length === 1 ? "" : "s"} that built the application
+                      </button>
+                      {showShots && (
+                        <ul className="divide-y divide-white/[0.06] mt-1">
+                          {shots.map((d) => (
+                  <li key={d.id} className="py-2 flex items-center gap-2">
+                    <button type="button" onClick={() => void openDoc(d)} className="flex-1 min-w-0 text-left group">
+                      <p className="text-sm truncate group-hover:underline underline-offset-2">{d.title}</p>
+                      <p className="text-[11px] text-white/40">{d.link_url ? "Link" : d.file_name}{d.size_bytes ? ` · ${kb(d.size_bytes)}` : ""} · {whenOn(d.uploaded_at)}</p>
+                    </button>
+                    <button type="button" onClick={() => void removeDoc(d)} className="text-white/30 hover:text-red-400 p-1" aria-label={`Remove ${d.title}`}><Trash2 className="w-4 h-4" /></button>
+                  </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })()}
