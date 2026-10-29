@@ -87,10 +87,10 @@ export default function FunderBrief({ folderId, folder, docs, brief, briefAt, br
         {hidden ? <ChevronRight className="w-4 h-4 mt-0.5 shrink-0 text-white/50" /> : <ChevronDown className="w-4 h-4 mt-0.5 shrink-0 text-white/50" />}
         <BookOpenCheck className="w-4 h-4 mt-0.5 shrink-0" style={{ color: GC_BLUE }} />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-white">What the funder told us</p>
+          <p className="text-sm font-bold text-white">The Rules of This Grant</p>
           <p className="text-[11px] text-white/45">
             {brief
-              ? `Read from ${brief.sources?.length ?? sources.length} document${(brief.sources?.length ?? sources.length) === 1 ? "" : "s"}${briefAt ? ` · ${new Date(briefAt).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "America/New_York" })}` : ""} · every answer is written to this`
+              ? `Read from ${brief.sources?.length ?? sources.length} document${(brief.sources?.length ?? sources.length) === 1 ? "" : "s"}${briefAt ? ` · ${new Date(briefAt).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "America/New_York" })}` : ""} · deadlines, eligibility, scoring and reporting · every answer is written to this`
               : sources.length ? `${sources.length} document${sources.length === 1 ? "" : "s"} not read yet` : "Upload the RFP, guidelines, rubric and slides, and Grant Coach reads them"}
           </p>
         </div>

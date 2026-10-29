@@ -9,9 +9,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   ArrowLeft, Loader2, Upload, Link2, ExternalLink, Trash2, CalendarClock,
-  Sparkles, RefreshCw, FolderOpen,
+  Sparkles, RefreshCw, FolderOpen, FileText, ChevronRight, ChevronDown,
 } from "lucide-react";
 import { buildAnswersPdf, answersPdfFileName, printableItems } from "@/lib/grantCoach/answersPdf";
 import { planMerge, mergePdfs, setWriterFolder } from "@/lib/grantCoach/attachments";
@@ -253,6 +254,13 @@ const AdminGrantFolder = () => {
   /* ───── Documents ───── */
   const fileInput = useRef<HTMLInputElement>(null);
   const [side, setSide] = useState<"funder" | "ours">("funder");
+  // The two document lists open as pop-ups, not long lists on the page (Josh, 2026-10-29:
+  // "long scroll isn't working"). The portal screenshots that built the application fold
+  // into one line at the bottom of the funder's list; the RFP and guidelines stay on top.
+  const [docsOpen, setDocsOpen] = useState(false);
+  const [showShots, setShowShots] = useState(false);
+  const openDocs = (s: "funder" | "ours") => { setSide(s); setShowShots(false); setDocsOpen(true); };
+  const isShot = (d: Doc) => !d.link_url && /^Application: screen-\d+/.test(d.title);
   const [busy, setBusy] = useState(false);
   const upload = async (file: File) => {
     setBusy(true);
@@ -390,22 +398,41 @@ const AdminGrantFolder = () => {
       )}
 
       <div className="space-y-6">
-        {/* Documents, and the numbers the writer uses */}
-        <aside className="grid gap-4 lg:grid-cols-2 min-w-0 items-start">
-          {/* What the funder sent, and what NLA sends back. */}
-          <GcCard icon={<FolderOpen className="w-4 h-4" />} title="Grant/RFP Info Here" blurb="The RFP, guidelines, rubric and every file about this grant">
-            <div className="p-4 space-y-3">
-              <FunderBrief folderId={id!} folder={draftFolder()} docs={docs} brief={folder.funder_brief ?? null} briefAt={folder.funder_brief_at ?? null} briefDocIds={folder.funder_brief_docs ?? []} />
-            <div className="flex rounded-lg bg-black overflow-hidden text-xs border border-white/10">
-              {(["funder", "ours"] as const).map((s) => (
-                <button key={s} type="button" onClick={() => setSide(s)} className={`flex-1 px-2 py-2 font-bold uppercase tracking-wide border-b-2 ${side === s ? "text-white" : "text-white/45 hover:text-white border-transparent"}`} style={side === s ? { borderBottomColor: GC_BLUE } : undefined}>
-                  {s === "funder" ? "From the funder" : "Ours"}
-                </button>
-              ))}
+        {/* The grant's documents, full width (Josh, 2026-10-29); the numbers under them. */}
+        <GcCard icon={<FolderOpen className="w-4 h-4" />} title="Grant/RFP Info Here" blurb="The RFP, guidelines, rubric and every file about this grant">
+          <div className="p-4 space-y-3">
+            <FunderBrief folderId={id!} folder={draftFolder()} docs={docs} brief={folder.funder_brief ?? null} briefAt={folder.funder_brief_at ?? null} briefDocIds={folder.funder_brief_docs ?? []} />
+            <div className="grid gap-3 sm:grid-cols-2">
+              {(["funder", "ours"] as const).map((sd) => {
+                const all = docs.filter((d) => d.side === sd);
+                const shots = sd === "funder" ? all.filter(isShot).length : 0;
+                const files = all.length - shots;
+                return (
+                  <button key={sd} type="button" onClick={() => openDocs(sd)} className="rounded-xl border border-white/15 bg-black/30 hover:bg-white/[0.05] hover:border-sky-400/40 p-3 text-left flex items-center gap-3 transition-colors">
+                    <FileText className="w-5 h-5 shrink-0" style={{ color: GC_BLUE }} />
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-sm font-bold uppercase tracking-wide">{sd === "funder" ? "From the funder" : "Ours"}</span>
+                      <span className="block text-[12px] text-white/50">
+                        {files ? `${files} file${files === 1 ? "" : "s"}` : "Nothing here yet"}{shots ? ` · ${shots} portal screenshot${shots === 1 ? "" : "s"}` : ""}
+                      </span>
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-white/30 shrink-0" />
+                  </button>
+                );
+              })}
             </div>
-            <p className="text-[12px] text-white/45">
-              {side === "funder" ? "The RFP, guidelines, budget template, rubric, reporting rules — everything they sent." : "What NLA wrote for them: narrative, budget workbook, the printed application, the award letter."}
-            </p>
+          </div>
+        </GcCard>
+
+        {/* One list at a time, in a pop-up: upload, link, open, remove. Esc or the X closes it. */}
+        <Dialog open={docsOpen} onOpenChange={setDocsOpen}>
+          <DialogContent className="bg-neutral-950 border-white/10 text-white max-w-2xl max-h-[85vh] flex flex-col">
+            <DialogHeader>
+              <DialogTitle className="text-white">{side === "funder" ? "From the funder" : "Ours"}</DialogTitle>
+              <p className="text-[12px] text-white/50">
+                {side === "funder" ? "The RFP, guidelines, budget template, rubric, reporting rules — everything they sent." : "What NLA wrote for them: narrative, budget workbook, the printed application, the award letter."}
+              </p>
+            </DialogHeader>
             <input ref={fileInput} type="file" className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f); e.target.value = ""; }} />
             <div className="flex gap-2">
               <Button size="sm" onClick={() => fileInput.current?.click()} disabled={busy} className="font-bold" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}>
@@ -413,39 +440,69 @@ const AdminGrantFolder = () => {
               </Button>
               <Button size="sm" variant="outline" onClick={() => void link()} className="bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white"><Link2 className="w-3.5 h-3.5 mr-1.5" /> Link</Button>
             </div>
-            <ul className="divide-y divide-white/[0.06]">
-              {docs.filter((d) => d.side === side).map((d) => (
-                <li key={d.id} className="py-2 flex items-center gap-2">
-                  <button type="button" onClick={() => void openDoc(d)} className="flex-1 min-w-0 text-left">
-                    <p className="text-sm truncate">{d.title}</p>
-                    <p className="text-[11px] text-white/40">{d.link_url ? "Link" : d.file_name}{d.size_bytes ? ` · ${kb(d.size_bytes)}` : ""} · {whenOn(d.uploaded_at)}</p>
-                  </button>
-                  <button type="button" onClick={() => void removeDoc(d)} className="text-white/30 hover:text-red-400 p-1" aria-label={`Remove ${d.title}`}><Trash2 className="w-4 h-4" /></button>
-                </li>
-              ))}
-              {docs.filter((d) => d.side === side).length === 0 && <li className="py-2 text-[12px] text-white/35">Nothing here yet.</li>}
-            </ul>
+            <div className="overflow-y-auto pr-1 -mr-1">
+              {(() => {
+                const all = docs.filter((d) => d.side === side);
+                const files = side === "funder" ? all.filter((d) => !isShot(d)) : all;
+                const shots = side === "funder" ? all.filter(isShot) : [];
+                return (
+                  <>
+                    <ul className="divide-y divide-white/[0.06]">
+                      {files.map((d) => (
+                  <li key={d.id} className="py-2 flex items-center gap-2">
+                    <button type="button" onClick={() => void openDoc(d)} className="flex-1 min-w-0 text-left">
+                      <p className="text-sm truncate">{d.title}</p>
+                      <p className="text-[11px] text-white/40">{d.link_url ? "Link" : d.file_name}{d.size_bytes ? ` · ${kb(d.size_bytes)}` : ""} · {whenOn(d.uploaded_at)}</p>
+                    </button>
+                    <button type="button" onClick={() => void removeDoc(d)} className="text-white/30 hover:text-red-400 p-1" aria-label={`Remove ${d.title}`}><Trash2 className="w-4 h-4" /></button>
+                  </li>
+                      ))}
+                      {files.length === 0 && <li className="py-2 text-[12px] text-white/35">Nothing here yet.</li>}
+                    </ul>
+                    {shots.length > 0 && (
+                      <div className="mt-3 border-t border-white/10 pt-2">
+                        <button type="button" onClick={() => setShowShots((o) => !o)} className="inline-flex items-center gap-1.5 text-[12px] text-white/50 hover:text-white">
+                          {showShots ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />} {shots.length} portal screenshot{shots.length === 1 ? "" : "s"} that built the application
+                        </button>
+                        {showShots && (
+                          <ul className="divide-y divide-white/[0.06] mt-1">
+                            {shots.map((d) => (
+                  <li key={d.id} className="py-2 flex items-center gap-2">
+                    <button type="button" onClick={() => void openDoc(d)} className="flex-1 min-w-0 text-left">
+                      <p className="text-sm truncate">{d.title}</p>
+                      <p className="text-[11px] text-white/40">{d.link_url ? "Link" : d.file_name}{d.size_bytes ? ` · ${kb(d.size_bytes)}` : ""} · {whenOn(d.uploaded_at)}</p>
+                    </button>
+                    <button type="button" onClick={() => void removeDoc(d)} className="text-white/30 hover:text-red-400 p-1" aria-label={`Remove ${d.title}`}><Trash2 className="w-4 h-4" /></button>
+                  </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
-          </GcCard>
+          </DialogContent>
+        </Dialog>
 
-          <GcCard icon={<Sparkles className="w-4 h-4" />} title="The numbers Grant Coach uses" blurb={factsLoading ? "reading…" : `${facts.length} facts · program year ${factYearLabel()}`} open={factsOpen} onToggle={() => setFactsOpen((o) => !o)}>
-            <div className="px-4 pb-3">
-                <p className="text-[12px] text-white/45 py-2">Program year {factYearLabel()}, the last complete year, pulled live from the back end. Every number about NLA's youth in a draft comes from here, never from the website or the CPF proposal; the library supplies the story, not the statistics. Nothing is made up.</p>
-                <ul className="space-y-2">
-                  {facts.map((f) => (
-                    <li key={f.key} className="text-[12px]">
-                      <span className="text-white/80">{f.label}:</span> <span className="text-white">{f.value}</span>
-                      <span className="block text-[11px] text-white/35">{f.period} · {f.source}</span>
-                    </li>
-                  ))}
-                  {!facts.length && !factsLoading && <li className="text-[12px] text-white/35">Nothing read yet.</li>}
-                </ul>
-                <Button size="sm" variant="outline" onClick={() => void refetchFacts()} disabled={factsLoading} className="mt-3 bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white">
-                  <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${factsLoading ? "animate-spin" : ""}`} /> Refresh the numbers
-                </Button>
-            </div>
-          </GcCard>
-        </aside>
+        <GcCard icon={<Sparkles className="w-4 h-4" />} title="The numbers Grant Coach uses" blurb={factsLoading ? "reading…" : `${facts.length} facts · program year ${factYearLabel()}`} open={factsOpen} onToggle={() => setFactsOpen((o) => !o)}>
+          <div className="px-4 pb-3">
+              <p className="text-[12px] text-white/45 py-2">Program year {factYearLabel()}, the last complete year, pulled live from the back end. Every number about NLA's youth in a draft comes from here, never from the website or the CPF proposal; the library supplies the story, not the statistics. Nothing is made up.</p>
+              <ul className="space-y-2">
+                {facts.map((f) => (
+                  <li key={f.key} className="text-[12px]">
+                    <span className="text-white/80">{f.label}:</span> <span className="text-white">{f.value}</span>
+                    <span className="block text-[11px] text-white/35">{f.period} · {f.source}</span>
+                  </li>
+                ))}
+                {!facts.length && !factsLoading && <li className="text-[12px] text-white/35">Nothing read yet.</li>}
+              </ul>
+              <Button size="sm" variant="outline" onClick={() => void refetchFacts()} disabled={factsLoading} className="mt-3 bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white">
+                <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${factsLoading ? "animate-spin" : ""}`} /> Refresh the numbers
+              </Button>
+          </div>
+        </GcCard>
 
         {/* The application, full width */}
         <section className="min-w-0">
