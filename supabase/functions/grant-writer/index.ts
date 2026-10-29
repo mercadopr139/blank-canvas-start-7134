@@ -635,12 +635,14 @@ Deno.serve(async (req) => {
       if (p.endsWith(".pdf")) content.push({ type: "document", source: { type: "base64", media_type: "application/pdf", data: btoa(b64) } });
       else if (/\.(png|jpe?g|webp)$/.test(p)) content.push({ type: "image", source: { type: "base64", media_type: p.endsWith(".png") ? "image/png" : p.endsWith(".webp") ? "image/webp" : "image/jpeg", data: btoa(b64) } });
       else return json({ error: "That file type can't be read here." }, 400);
-      content.push({ type: "text", text: `Transcribe this document ("${d.title}") into plain text, completely and faithfully: every heading, paragraph, number and dollar figure exactly as printed; tables as one row per line with cells separated by " | "; totals where they appear. Add nothing, summarize nothing, correct nothing. Return the text only.` });
-      const response = await anthropic.messages.create({
-        model: MODEL, max_tokens: 16000,
+      content.push({ type: "text", text: `Transcribe this document ("${d.title}") into plain text, completely and faithfully: every heading, paragraph, number and dollar figure exactly as printed; tables as one row per line with cells separated by " | "; totals where they appear. On a printed form (an IRS return, a government application) transcribe every line that carries a value and skip the form's own instructions, blank lines and unchecked boxes. Add nothing, summarize nothing, correct nothing. Return the text only.` });
+      // Scans and pictures only: a text PDF is read in the browser (src/lib/grantCoach/readPdf.ts).
+      // Streamed, so a long transcription is not cut off by an idle connection (a 48-page 990, 2026-10-29).
+      const response = await anthropic.messages.stream({
+        model: "claude-sonnet-5-5", max_tokens: 24000,
         system: "You transcribe documents exactly. You never add, summarize, interpret or correct.",
         messages: [{ role: "user", content }],
-      });
+      }).finalMessage();
       const text = textOf(response as never).trim();
       if (!text) return json({ error: "The file came back empty." }, 400);
       return json({ text });

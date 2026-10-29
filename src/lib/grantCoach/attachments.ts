@@ -12,6 +12,7 @@ import { PDFDocument } from "pdf-lib";
 import { supabase } from "@/integrations/supabase/client";
 import { GRANT_DOCUMENTS_BUCKET, ORG_DOCUMENTS } from "@/lib/grantCoach/orgDocuments";
 import { officeText, readsAsText } from "@/lib/grantCoach/readOffice";
+import { pdfText, pdfHasText } from "@/lib/grantCoach/readPdf";
 
 export interface FolderDoc {
   id: string; folder_id: string; side: "funder" | "ours"; title: string; storage_path: string | null; file_name: string | null;
@@ -125,9 +126,11 @@ export async function mergePdfs(answers: ArrayBuffer, pdfs: { bytes: ArrayBuffer
 const wordsOf = (t: string) => t.trim().split(/\s+/).filter(Boolean).length;
 
 /**
- * Read a folder document once and keep its text: Word/Excel/PowerPoint/text in
- * the browser, a PDF or image through the writer (a faithful transcription),
- * a link not at all. Returns the text; throws when nothing could be read.
+ * Read a folder document once and keep its text: Word/Excel/PowerPoint/text
+ * and any PDF that carries text in the browser (a 48-page Form 990 in under a
+ * second — Josh, 2026-10-29); a scanned PDF or an image through the writer's
+ * eyes (a faithful transcription); a link not at all. Returns the text;
+ * throws when nothing could be read.
  */
 export async function readAttachment(doc: FolderDoc): Promise<string> {
   if (!doc.storage_path) throw new Error(doc.link_url ? "A link can't be read; attach the file itself." : "No file to read.");
@@ -138,6 +141,14 @@ export async function readAttachment(doc: FolderDoc): Promise<string> {
     if (error || !data) throw new Error(error?.message ?? "Couldn't open the file.");
     text = await officeText(name, data);
   } else if (/\.(pdf|png|jpe?g|webp)$/i.test(name)) {
+    let local = "";
+    if (/\.pdf$/i.test(name)) {
+      const { data, error } = await supabase.storage.from(GRANT_DOCUMENTS_BUCKET).download(doc.storage_path);
+      if (error || !data) throw new Error(error?.message ?? "Couldn't open the file.");
+      try { local = await pdfText(data); } catch { local = ""; }
+    }
+    if (pdfHasText(local)) { text = local; }
+    else {
     const { data, error } = await supabase.functions.invoke("grant-writer", { body: { mode: "read_document", docs: [{ title: doc.title, path: doc.storage_path }], folder: { name: "", funder: "" }, library: [], facts: [], answered: [] } });
     if (error) {
       let reason = error.message;
@@ -146,6 +157,7 @@ export async function readAttachment(doc: FolderDoc): Promise<string> {
     }
     if (data?.error) throw new Error(data.error);
     text = String(data?.text ?? "");
+    }
   } else {
     throw new Error("That file type can't be read. Attach a PDF, Word or Excel file.");
   }
