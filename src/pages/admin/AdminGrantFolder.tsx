@@ -2,7 +2,7 @@
 // (GrantApplication: paste the screens, approve or reject each answer), the
 // funder's documents and NLA's, and the facts of the grant (due date,
 // amount, period). See docs/grant-coach/README.md.
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,6 +51,48 @@ const whenAt = (iso: string) =>
 const whenOn = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "America/New_York" });
 const daysLeft = (iso: string) => Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
 const money = (n: number | null) => (n == null ? "" : `$${Number(n).toLocaleString()}`);
+
+/** "January 1, 2027", "01/01/2027" or "2027-01-01" → "2027-01-01", from local getters (never toISOString). */
+const toYmd = (text: string | null | undefined): string | null => {
+  const t = (text ?? "").trim();
+  if (!t) return null;
+  const iso = t.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  const d = new Date(t);
+  if (Number.isNaN(d.getTime())) return null;
+  const mm = String(d.getMonth() + 1).padStart(2, "0"), dd = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mm}-${dd}`;
+};
+/** "$75,000" or "75000" → 75000. */
+const toMoney = (text: string): number | null => {
+  const n = Number(text.replace(/[^0-9.]/g, ""));
+  return text.trim() && Number.isFinite(n) ? n : null;
+};
+
+/** A line that edits in place: click, type, Enter or click away saves; Esc puts it back. */
+function Inline({ value, onSave, className = "", placeholder = "—", title = "Click to edit" }: { value: string; onSave: (v: string) => void; className?: string; placeholder?: string; title?: string }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  useEffect(() => { if (!editing) setDraft(value); }, [value, editing]);
+  const done = () => { setEditing(false); const v = draft.trim(); if (v !== value.trim()) onSave(v); else setDraft(value); };
+  if (!editing) {
+    return (
+      <button type="button" onClick={() => setEditing(true)} title={title} className={`text-left rounded px-1 -mx-1 border-b border-dashed border-transparent hover:border-white/30 hover:bg-white/[0.04] ${className} ${value.trim() ? "" : "text-white/35"}`}>
+        {value.trim() || placeholder}
+      </button>
+    );
+  }
+  return (
+    <input
+      autoFocus
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={done}
+      onKeyDown={(e) => { if (e.key === "Enter") done(); if (e.key === "Escape") { setDraft(value); setEditing(false); } }}
+      className={`rounded bg-white/10 border border-white/30 px-1 -mx-1 outline-none min-w-0 w-full ${className}`}
+    />
+  );
+}
 const kb = (n: number | null) => (n == null ? "" : n > 1_000_000 ? `${(n / 1_000_000).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1000))} KB`);
 const docPath = (folderId: string, fileName: string) => `grants/${folderId}/${Date.now()}_${fileName.replace(/[^\w.-]+/g, "_").slice(0, 80)}`;
 
@@ -153,6 +195,23 @@ const AdminGrantFolder = () => {
     qc.invalidateQueries({ queryKey: ["grant-folder", id] });
     qc.invalidateQueries({ queryKey: ["grant-folders"] });
   };
+
+  // The amount, the dates and the program name the portal asked for, once
+  // approved, fill the folder's blanks — the header stops showing dashes for
+  // things already settled on screen 4. Only blanks; a typed value stays.
+  const filledFrom = useRef<string | null>(null);
+  useEffect(() => {
+    if (!folder || !items.length || filledFrom.current === id) return;
+    const approved = (label: RegExp) => items.find((it) => it.status === "done" && label.test(it.label) && it.answer?.trim())?.answer?.trim() ?? null;
+    const patch: Partial<Folder> = {};
+    if (folder.amount_requested == null) { const n = toMoney(approved(/requested grant amount|amount requested/i) ?? ""); if (n != null) patch.amount_requested = n; }
+    if (!folder.period_start) { const d = toYmd(approved(/program start date|start date/i)); if (d) patch.period_start = d; }
+    if (!folder.period_end) { const d = toYmd(approved(/program end date|end date/i)); if (d) patch.period_end = d; }
+    if (!folder.program_name) { const p = approved(/program\/project name|program name/i); if (p) patch.program_name = p; }
+    filledFrom.current = id ?? null;
+    if (Object.keys(patch).length) void patchFolder(patch);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [folder, items, id]);
 
   /* ───── The hardcopy ─────
      After the online application is submitted, the folder is NLA's only
@@ -261,9 +320,9 @@ const AdminGrantFolder = () => {
       <div className="rounded-2xl border border-white/15 bg-[#141416] p-5 shadow-[0_0.3em_1.2em_rgba(0,0,0,0.45)]" style={{ borderTop: `3px solid ${GC_BLUE}` }}>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/40">{folder.funder}</p>
-            <h1 className="text-2xl font-bold mt-0.5">{folder.name}</h1>
-            {folder.program_name && <p className="text-sm text-white/60">Program: {folder.program_name}</p>}
+            <Inline value={folder.funder} onSave={(v) => void patchFolder({ funder: v })} title="The funder — click to edit" className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/40" placeholder="Funder" />
+            <h1 className="text-2xl font-bold mt-0.5"><Inline value={folder.name} onSave={(v) => { if (v) void patchFolder({ name: v }); }} title="The grant's name — click to edit" placeholder="Name this grant" /></h1>
+            <p className="text-sm text-white/60">Program: <Inline value={folder.program_name ?? ""} onSave={(v) => void patchFolder({ program_name: v || null })} title="The program this grant funds — click to edit" placeholder="program name" /></p>
           </div>
           <div className="text-right">
             <span className="inline-block rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide bg-white/10 text-white/80">{folder.status}</span>
@@ -275,8 +334,15 @@ const AdminGrantFolder = () => {
           </div>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-3 text-sm">
-          <div className="rounded-lg bg-white/[0.04] p-3"><p className="text-[11px] text-white/40 uppercase tracking-wide">Requesting</p><p className="font-semibold">{money(folder.amount_requested) || "—"}</p></div>
-          <div className="rounded-lg bg-white/[0.04] p-3"><p className="text-[11px] text-white/40 uppercase tracking-wide">Grant period</p><p className="font-semibold">{folder.period_start && folder.period_end ? `${whenOn(folder.period_start + "T12:00:00")} – ${whenOn(folder.period_end + "T12:00:00")}, ${folder.period_end.slice(0, 4)}` : "—"}</p></div>
+          <div className="rounded-lg bg-white/[0.04] p-3"><p className="text-[11px] text-white/40 uppercase tracking-wide">Requesting</p><p className="font-semibold"><Inline value={money(folder.amount_requested)} onSave={(v) => void patchFolder({ amount_requested: toMoney(v) })} title="The amount requested — click to edit" placeholder="—" /></p></div>
+          <div className="rounded-lg bg-white/[0.04] p-3">
+            <p className="text-[11px] text-white/40 uppercase tracking-wide">Grant period</p>
+            <p className="font-semibold inline-flex items-center gap-1 flex-wrap">
+              <Inline value={folder.period_start ?? ""} onSave={(v) => void patchFolder({ period_start: toYmd(v) })} title="Start date — click to edit (YYYY-MM-DD)" placeholder="start" className="tabular-nums" />
+              <span className="text-white/40">–</span>
+              <Inline value={folder.period_end ?? ""} onSave={(v) => void patchFolder({ period_end: toYmd(v) })} title="End date — click to edit (YYYY-MM-DD)" placeholder="end" className="tabular-nums" />
+            </p>
+          </div>
           <div className="rounded-lg bg-white/[0.04] p-3">
             <p className="text-[11px] text-white/40 uppercase tracking-wide">Application</p>
             <p className="font-semibold">{progress.done} of {progress.total} approved</p>

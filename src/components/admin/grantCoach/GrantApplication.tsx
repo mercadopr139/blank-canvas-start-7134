@@ -4,7 +4,8 @@
 // a Word file, or the question text) and Grant Coach does the rest — reads
 // every question, fills the facts exactly from the Grant Vault, writes the
 // rest from the Vault and the back end's live numbers. The person only says
-// Approve or Reject. Rejecting opens the answer to edit, or to tell Grant
+// Approve, or click the answer to edit it in place (one place to edit;
+// Josh, 2026-10-29). An approved answer that changes is "Changed · approve again".
 // Coach what to change. Anything it can't stand behind says "Needs you".
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -700,6 +701,13 @@ export default function GrantApplication({ folderId, folder, items, library, get
                     onUnapprove={() => void unapprove(r)}
                     onCopy={() => void copy(r.answer ?? "")}
                     onRemove={() => void removeRow(r)}
+                    onClear={async () => {
+                      if (!(await confirm({ title: "Clear this answer?", body: "The answer comes out of the box and the question goes back to open. The Grant Vault is unchanged.", confirmLabel: "Clear it", danger: true }))) return;
+                      await forget([r.id]);
+                      remembered();
+                      await patch(r.id, { answer: null, status: "in_progress", pasted_at: null, answer_source: null, score_note: null, left_out: [] });
+                      refresh();
+                    }}
                     onSave={async (answer, toVault) => {
                       // Saved over Grant Coach's own answer: learn from the change now, before its draft is gone.
                       if ((r.answer_source === "coach" || r.answer_source === "memory") && isEdit(r.answer, answer)) learnFrom(r.label, r.answer!, answer);
@@ -791,23 +799,25 @@ export default function GrantApplication({ folderId, folder, items, library, get
 }
 
 /* ───── One question ───── */
-function QuestionRow({ item, pastFunder, storyTitle, focused, forceOpen, onClosed, onApproveNext, renderChat, writing, busy, onApprove, onUnapprove, onCopy, onRemove, onSave, onRegenerate }: {
+function QuestionRow({ item, pastFunder, storyTitle, focused, forceOpen, onClosed, onApproveNext, renderChat, writing, busy, onApprove, onUnapprove, onCopy, onRemove, onSave, onRegenerate, onClear }: {
   item: AppItem; pastFunder?: string | null; storyTitle?: string | null; focused?: boolean; writing: boolean; busy: boolean;
   forceOpen?: boolean; onClosed?: () => void;
   onApproveNext: (answer: string, source: "coach" | "you", storyId: string | null, before: string | null) => Promise<void>;
   renderChat: (draft: string, fill: (text: string, storyId: string | null) => void) => ReactNode;
-  onApprove: () => void; onUnapprove: () => void; onCopy: () => void; onRemove: () => void;
+  onApprove: () => void; onUnapprove: () => void; onCopy: () => void; onRemove: () => void; onClear: () => void;
   onSave: (answer: string, toVault: boolean) => Promise<void>; onRegenerate: (instruction: string) => Promise<void>;
 }) {
-  const [rejecting, setRejecting] = useState(false);
+  // One place to edit: the box. Open it by clicking the answer, the pencil, or
+  // Answer; it stays open until Close or Approve.
+  const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(item.answer ?? "");
   const [saving, setSaving] = useState(false);
   /** What Grant Coach last put in the box, so an untouched draft is credited to it. */
   const [fromCoach, setFromCoach] = useState<{ text: string; storyId: string | null } | null>(null);
-  useEffect(() => { if (!rejecting) setDraft(item.answer ?? ""); }, [item.answer, rejecting]);
+  useEffect(() => { if (!open) setDraft(item.answer ?? ""); }, [item.answer, open]);
   // Opened from outside: "Approve and next", or a jump from the reviewer.
-  useEffect(() => { if (forceOpen) setRejecting(true); }, [forceOpen]);
-  const close = () => { setRejecting(false); setFromCoach(null); onClosed?.(); };
+  useEffect(() => { if (forceOpen) setOpen(true); }, [forceOpen]);
+  const close = () => { setOpen(false); setFromCoach(null); onClosed?.(); };
 
   const fact = isFactRow(item);
   const approved = item.status === "done";
@@ -815,14 +825,27 @@ function QuestionRow({ item, pastFunder, storyTitle, focused, forceOpen, onClose
   const vaultField = !!item.vault_key && !item.vault_key.startsWith("doc:") && !item.vault_part;
   // A Vault fact with nothing in the Vault: the box to type it in is open from the start.
   const typeIn = !hasAnswer && !!item.vault_key && !!item.needs && !item.vault_key.startsWith("doc:");
-  const editing = rejecting || typeIn;
+  const editing = open || typeIn;
+  const changed = draft.trim() !== (item.answer ?? "").trim();
   const count = measure(editing ? draft : item.answer, item.limit_kind);
   const over = !!item.limit_value && count > item.limit_value;
 
-  const save = async (toVault: boolean) => {
+  /** A word changed in an approved answer: it is no longer approved, on its own. */
+  const onType = (text: string) => {
+    setDraft(text);
+    if (approved && text.trim() !== (item.answer ?? "").trim()) onUnapprove();
+  };
+  /** Saves as you go: when focus leaves the box, what is there is kept (for this grant). */
+  const keep = async () => {
+    const text = draft.trim();
+    if (!text || text === (item.answer ?? "").trim()) return;
+    setSaving(true);
+    try { await onSave(text, false); } finally { setSaving(false); }
+  };
+  const saveToVault = async () => {
     if (!draft.trim()) return;
     setSaving(true);
-    try { await onSave(draft.trim(), toVault && vaultField); close(); } finally { setSaving(false); }
+    try { await onSave(draft.trim(), true); close(); } finally { setSaving(false); }
   };
   const approveNext = async () => {
     const text = draft.trim();
@@ -833,9 +856,28 @@ function QuestionRow({ item, pastFunder, storyTitle, focused, forceOpen, onClose
       // What Grant Coach wrote before Josh touched it: the draft card he used, or the answer it filled in.
       const before = fromCoach?.text ?? (item.answer_source === "coach" || item.answer_source === "memory" ? item.answer : null);
       await onApproveNext(text, coachWrote ? "coach" : "you", coachWrote ? fromCoach!.storyId : null, before);
-      setRejecting(false); setFromCoach(null);
+      setOpen(false); setFromCoach(null);
     } finally { setSaving(false); }
   };
+
+  const menu = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button type="button" className="p-2 rounded-md text-white/35 hover:text-white hover:bg-white/10" aria-label="More for this question"><MoreHorizontal className="w-4 h-4" /></button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="bg-neutral-900 border-white/[0.08] text-white">
+        {hasAnswer && item.answer !== LEAVE_BLANK && (
+          <DropdownMenuItem onSelect={onCopy} className="focus:bg-white/10 focus:text-white"><Copy className="w-4 h-4 mr-2" /> Copy</DropdownMenuItem>
+        )}
+        <DropdownMenuItem disabled={busy} onSelect={() => void onRegenerate("")} className="focus:bg-white/10 focus:text-white"><RefreshCw className="w-4 h-4 mr-2" /> Have Grant Coach write it</DropdownMenuItem>
+        <DropdownMenuSeparator className="bg-white/10" />
+        {hasAnswer && (
+          <DropdownMenuItem onSelect={onClear} className="text-red-300 focus:bg-red-500/15 focus:text-red-200"><X className="w-4 h-4 mr-2" /> Clear the answer</DropdownMenuItem>
+        )}
+        <DropdownMenuItem onSelect={onRemove} className="text-red-300 focus:bg-red-500/15 focus:text-red-200"><Trash2 className="w-4 h-4 mr-2" /> Not a question — remove</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 
   return (
     <div id={`q-${item.id}`} className={`scroll-mt-28 px-4 transition-shadow ${fact && !editing ? "py-2.5" : "py-4"} ${approved ? "bg-emerald-500/[0.04]" : ""} ${focused ? "ring-2 ring-inset ring-sky-400/80 bg-sky-400/[0.06]" : ""}`}>
@@ -858,29 +900,38 @@ function QuestionRow({ item, pastFunder, storyTitle, focused, forceOpen, onClose
             <div className="mt-2 space-y-2">
               {/* The conversation first, the answer box right under the typing box —
                   so the answer being talked about stays in view while typing. */}
-              {renderChat(draft, (text, storyId) => { setDraft(text); setFromCoach({ text, storyId }); })}
-              {!fact && <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/50 pt-1">Your answer · what goes into the portal</p>}
-              <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={fact ? 1 : Math.min(12, Math.max(4, Math.ceil(draft.length / 90)))} placeholder={typeIn ? "Type it here" : "Edit the answer"} className="bg-neutral-950 border-white/15 text-white text-sm" autoFocus={rejecting} />
+              {renderChat(draft, (text, storyId) => { onType(text); setFromCoach({ text, storyId }); })}
+              {!fact && (
+                <div className="flex items-center justify-between gap-3 pt-1">
+                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/50">Your answer · what goes into the portal</p>
+                  {approved && !changed
+                    ? <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-300"><Check className="w-3.5 h-3.5" /> Approved</span>
+                    : changed ? <span className="text-[11px] font-semibold text-amber-300">Changed · approve again</span> : null}
+                </div>
+              )}
+              <Textarea
+                value={draft}
+                onChange={(e) => onType(e.target.value)}
+                onBlur={() => void keep()}
+                rows={fact ? 1 : Math.min(12, Math.max(4, Math.ceil(draft.length / 90)))}
+                placeholder={typeIn ? "Type it here" : "Your answer"}
+                className="bg-neutral-950 border-white/15 text-white text-sm"
+                autoFocus={open}
+              />
               <div className="flex flex-wrap items-center gap-2">
-                <Button size="sm" onClick={() => void approveNext()} disabled={saving || busy || !draft.trim()} className="bg-emerald-700 hover:bg-emerald-600 text-white">
-                  {saving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Check className="w-4 h-4 mr-1.5" />} Approve and next
+                <Button size="sm" onClick={() => void approveNext()} disabled={saving || busy || !draft.trim() || (approved && !changed)} className="bg-emerald-700 hover:bg-emerald-600 text-white">
+                  {saving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Check className="w-4 h-4 mr-1.5" />} {approved && !changed ? "Approved" : "Approve and next"}
                 </Button>
-                {vaultField ? (
-                  <>
-                    {/* Two clear choices, never a hidden default: this grant only, or every grant from now on. */}
-                    <Button size="sm" onClick={() => void save(false)} disabled={saving || !draft.trim()} className="bg-transparent border border-white/20 text-white/85 hover:bg-white/10">Save for this grant</Button>
-                    <Button size="sm" onClick={() => void save(true)} disabled={saving || !draft.trim()} className="bg-transparent border border-white/20 text-white/85 hover:bg-white/10"><Vault className="w-4 h-4 mr-1.5" /> Save to the Vault</Button>
-                  </>
-                ) : (
-                  <Button size="sm" onClick={() => void save(false)} disabled={saving || !draft.trim()} className="bg-transparent border border-white/20 text-white/85 hover:bg-white/10">Save, don't approve yet</Button>
+                {vaultField && (
+                  <Button size="sm" onClick={() => void saveToVault()} disabled={saving || !draft.trim()} title="Every grant from now on starts from the Vault" className="bg-transparent border border-white/20 text-white/85 hover:bg-white/10"><Vault className="w-4 h-4 mr-1.5" /> Save to the Vault</Button>
                 )}
-                {rejecting && <Button size="sm" variant="outline" onClick={() => { setDraft(item.answer ?? ""); close(); }} className="bg-transparent border-white/20 text-white/70 hover:bg-white/10 hover:text-white">Close</Button>}
-                {vaultField && <span className="text-[11px] text-white/40">The Vault is what every future grant starts from.</span>}
+                {!typeIn && <Button size="sm" variant="outline" onClick={close} className="bg-transparent border-white/20 text-white/70 hover:bg-white/10 hover:text-white">Close</Button>}
+                <span className="text-[11px] text-white/35">{saving ? "Saving…" : "Saves as you go"}</span>
                 {item.limit_value && <span className={`ml-auto text-[11px] tabular-nums ${over ? "text-amber-300" : "text-white/40"}`}>{count.toLocaleString()} / {item.limit_value.toLocaleString()} {item.limit_kind}</span>}
               </div>
             </div>
           ) : hasAnswer ? (
-            <p className={`mt-1 whitespace-pre-wrap ${fact ? "text-[15px] font-medium text-white" : "text-sm text-white/85 leading-relaxed"}`}><NeedMarks text={item.answer ?? ""} /></p>
+            <button type="button" onClick={() => setOpen(true)} title="Click to edit" className={`mt-1 block w-full text-left whitespace-pre-wrap rounded-md -mx-1 px-1 hover:bg-white/[0.04] ${fact ? "text-[15px] font-medium text-white" : "text-sm text-white/85 leading-relaxed"}`}><NeedMarks text={item.answer ?? ""} /></button>
           ) : (
             <p className="mt-1 text-sm text-white/35 italic">{item.needs_case ? "Not answered yet. Click Answer to work it out with Grant Coach." : "No answer yet."}</p>
           )}
@@ -900,7 +951,7 @@ function QuestionRow({ item, pastFunder, storyTitle, focused, forceOpen, onClose
             </div>
           )}
           {!editing && !writing && item.limit_value && hasAnswer && (
-            <p className={`mt-1.5 text-[11px] tabular-nums ${over ? "text-amber-300" : "text-white/35"}`}>{count.toLocaleString()} / {item.limit_value.toLocaleString()} {item.limit_kind}{over ? " · over the limit — Reject and ask for shorter" : ""}</p>
+            <p className={`mt-1.5 text-[11px] tabular-nums ${over ? "text-amber-300" : "text-white/35"}`}>{count.toLocaleString()} / {item.limit_value.toLocaleString()} {item.limit_kind}{over ? " · over the limit — open it and ask Grant Coach for shorter" : ""}</p>
           )}
         </div>
 
@@ -911,31 +962,19 @@ function QuestionRow({ item, pastFunder, storyTitle, focused, forceOpen, onClose
               <button type="button" onClick={onCopy} title="Copy" className="p-2 rounded-md text-white/50 hover:text-white hover:bg-white/10"><Copy className="w-4 h-4" /></button>
             )}
             {approved ? (
-              <span className="inline-flex items-center gap-1.5 text-[12px] text-emerald-300 font-semibold pl-1">
-                <Check className="w-4 h-4" /> Approved
-                <button type="button" onClick={onUnapprove} className="font-normal text-white/40 hover:text-white underline underline-offset-2">Undo</button>
-              </span>
+              <span className="inline-flex items-center gap-1.5 text-[12px] text-emerald-300 font-semibold pl-1"><Check className="w-4 h-4" /> Approved</span>
             ) : hasAnswer ? (
-              <>
-                <Button size="sm" onClick={onApprove} className="bg-emerald-700 hover:bg-emerald-600 text-white h-8"><Check className="w-4 h-4 mr-1" /> Approve</Button>
-                <Button size="sm" variant="outline" onClick={() => setRejecting(true)} className="bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white h-8"><X className="w-4 h-4 mr-1" /> Reject</Button>
-              </>
+              <Button size="sm" onClick={onApprove} className="bg-emerald-700 hover:bg-emerald-600 text-white h-8"><Check className="w-4 h-4 mr-1" /> Approve</Button>
+            ) : null}
+            {hasAnswer ? (
+              <button type="button" onClick={() => setOpen(true)} title="Edit, or ask Grant Coach" className="p-2 rounded-md text-white/50 hover:text-white hover:bg-white/10"><Pencil className="w-4 h-4" /></button>
             ) : (
-              <Button size="sm" variant="outline" onClick={() => setRejecting(true)} className="bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white h-8"><Pencil className="w-4 h-4 mr-1" /> Answer</Button>
+              <Button size="sm" variant="outline" onClick={() => setOpen(true)} className="bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white h-8"><Pencil className="w-4 h-4 mr-1" /> Answer</Button>
             )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button type="button" className="p-2 rounded-md text-white/35 hover:text-white hover:bg-white/10" aria-label="More for this question"><MoreHorizontal className="w-4 h-4" /></button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-neutral-900 border-white/[0.08] text-white">
-                <DropdownMenuItem disabled={busy} onSelect={() => void onRegenerate("")} className="focus:bg-white/10 focus:text-white"><RefreshCw className="w-4 h-4 mr-2" /> Have Grant Coach write it</DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setRejecting(true)} className="focus:bg-white/10 focus:text-white"><Pencil className="w-4 h-4 mr-2" /> Edit it myself</DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-white/10" />
-                <DropdownMenuItem onSelect={onRemove} className="text-red-300 focus:bg-red-500/15 focus:text-red-200"><Trash2 className="w-4 h-4 mr-2" /> Not a question — remove</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {menu}
           </div>
         )}
+        {editing && !writing && <div className="shrink-0">{menu}</div>}
       </div>
     </div>
   );

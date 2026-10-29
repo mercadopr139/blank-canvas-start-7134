@@ -43,25 +43,6 @@ interface Props {
   onStartOver: () => Promise<void>;
 }
 
-/** The draft's words: click to edit in place; the edit is kept when focus leaves. */
-function DraftText({ text, onSave }: { text: string; onSave: (t: string) => void }) {
-  const [value, setValue] = useState(text);
-  useEffect(() => { setValue(text); }, [text]);
-  const grow = (el: HTMLTextAreaElement) => { el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; };
-  return (
-    <Textarea
-      value={value}
-      onChange={(e) => { setValue(e.target.value); grow(e.currentTarget); }}
-      onFocus={(e) => grow(e.currentTarget)}
-      onBlur={() => onSave(value)}
-      ref={(el) => { if (el) grow(el); }}
-      rows={3}
-      title="Click to edit this draft in place"
-      className="px-3 py-2 text-sm text-white leading-relaxed bg-transparent border-0 rounded-none shadow-none resize-none min-h-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:bg-white/[0.04]"
-    />
-  );
-}
-
 export default function QuestionChat({ folderId, item, draft, siblings, folder, library, getFacts, answered, funderBrief, stories, usedStoryIds, userId, onAnswer, onFills, onStartOver }: Props) {
   const qc = useQueryClient();
   const key = ["grant-chat", item.id];
@@ -134,17 +115,6 @@ Left out: ${left.join("; ")}` : "");
     }
   };
 
-  // An edit typed into a draft card is kept on the message, so it survives a reload
-  // and is what "Use this as my answer" sends.
-  const editDraft = async (m: Msg, text: string) => {
-    const next = text.trim();
-    if (!next || next === (m.payload?.draft ?? "").trim()) return;
-    const payload = { ...(m.payload ?? {}), draft: next, draft_words: next.split(/\s+/).filter(Boolean).length };
-    qc.setQueryData<Msg[]>(key, (old = []) => old.map((x) => (x.id === m.id ? { ...x, payload } : x)));
-    const { error } = await supabase.from("grant_messages" as never).update({ payload } as never).eq("id", m.id);
-    if (error) toast.error(`Couldn't keep that edit: ${error.message}`);
-  };
-
   const settle = async (m: Msg) => {
     await supabase.from("grant_messages" as never).update({ payload: { ...(m.payload ?? {}), story_done: true } } as never).eq("id", m.id);
     qc.invalidateQueries({ queryKey: key });
@@ -158,7 +128,7 @@ Left out: ${left.join("; ")}` : "");
           <Sparkles className="w-3.5 h-3.5" /> Grant Coach · the conversation
         </p>
         <div className="flex items-center gap-3">
-          <p className="text-[11px] text-white/45 hidden md:block">Drafts land here first · "Use this as my answer" puts one in the box below</p>
+          <p className="text-[11px] text-white/45 hidden md:block">Drafts land here · "Use this" puts one in the answer box below, where you edit</p>
           <button
             type="button"
             onClick={() => setResources(true)}
@@ -199,7 +169,7 @@ Left out: ${left.join("; ")}` : "");
                           <p className="text-[11px] font-semibold text-emerald-300 inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" /> In the answer box</p>
                         ) : (
                           <button type="button" onClick={() => onAnswer(m.payload!.draft!, m.payload!.draft_story_id ?? null)} className="rounded-md px-2.5 py-1 text-[11px] font-bold text-white hover:opacity-90" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}>
-                            Use this as my answer
+                            Use this
                           </button>
                         )}
                       </div>
@@ -208,7 +178,7 @@ Left out: ${left.join("; ")}` : "");
                       {needsFrom(m.payload.draft) && (
                         <p className="px-3 py-1.5 text-[12px] font-bold text-red-300 bg-red-500/10 border-b border-red-500/30">{needsFrom(m.payload.draft)}</p>
                       )}
-                      <DraftText text={m.payload.draft} onSave={(t) => void editDraft(m, t)} />
+                      <p className="px-3 py-2 text-sm text-white whitespace-pre-wrap leading-relaxed">{m.payload.draft}</p>
                     </div>
                   )}
                   {m.payload?.story_draft && !m.payload.story_done && (
