@@ -75,7 +75,7 @@ export default function QuestionChat({ folderId, item, draft, siblings, folder, 
     const el = listRef.current; if (!el) return;
     if (thinking) { el.scrollTop = el.scrollHeight; return; }
     const last = el.querySelector<HTMLElement>("[data-msg]:last-of-type");
-    if (last) el.scrollTop = Math.max(0, last.offsetTop - el.offsetTop - 8); else el.scrollTop = el.scrollHeight;
+    if (last) el.scrollTop = Math.max(0, last.offsetTop - 8); else el.scrollTop = el.scrollHeight;
   }, [msgs.length, thinking]);
 
   const save = async (role: "user" | "coach", content: string, payload: Msg["payload"] = null) => {

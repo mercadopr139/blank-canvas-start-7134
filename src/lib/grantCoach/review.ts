@@ -13,13 +13,19 @@ import { SITE_TEXT } from "@/lib/grantCoach/siteText";
 import { approvedSnapshotForWriter } from "@/lib/grantCoach/snapshot";
 import { attachmentsForWriter } from "@/lib/grantCoach/attachments";
 
+/** One of the funder's scoring criteria: the points, why, and two or three short lines of advice, each citing its questions. */
+export interface Criterion { name: string; score: number; max: number; why: string; advice?: { text: string; i: number[] }[] }
 export interface Review {
   overall: number; verdict: string;
-  criteria: { name: string; score: number; max: number; why: string }[];
+  criteria: Criterion[];
   weakest: { i: number; problem: string; fix: string; instruction: string }[];
   contradictions: string[]; wrong_numbers: string[]; model: string | null;
   /** Notes the reviewer withdrew in a Reply thread (Josh, 2026-10-29), by note key. */
   withdrawn?: Record<string, { at: string; why: string }>;
+  /** Josh's call on each criterion (2026-10-29): fixed, or submitting as is. Settled stays settled through Review again. */
+  decisions?: Record<string, { status: "fixed" | "as_is"; at: string }>;
+  /** @deprecated the old per-note clears; kept so older saved reviews still parse. */
+  cleared?: Record<string, { at: string }>;
 }
 
 /** One note of the review a Reply thread is about. Keys: "w:<i>" weakest, "c:<n>" contradiction, "n:<n>" wrong number. */
@@ -33,7 +39,7 @@ export const noteKeys = {
 /** A message in the reviewer's conversation (grant_messages, item_id null, payload.scope "review"). */
 export interface ReviewerMsg {
   id: string; role: "user" | "coach"; content: string;
-  payload: { scope?: string; note?: string; draft?: string; draft_i?: number; draft_words?: number; sent?: boolean; withdrawn?: boolean; clarification?: boolean } | null;
+  payload: { scope?: string; note?: string; draft?: string; draft_i?: number; draft_words?: number; sent?: boolean; withdrawn?: boolean; clarification?: boolean; dismissed?: boolean; note_key?: string } | null;
 }
 export async function reviewerMessages(folderId: string): Promise<ReviewerMsg[]> {
   const { data, error } = await supabase.from("grant_messages" as never).select("id, role, content, payload").eq("folder_id", folderId).is("item_id", null).eq("payload->>scope", "review").order("created_at");
@@ -42,6 +48,9 @@ export async function reviewerMessages(folderId: string): Promise<ReviewerMsg[]>
 }
 /** The facts Josh has settled with the reviewer; the next review treats them as true. */
 export const clarificationsOf = (msgs: ReviewerMsg[]) => msgs.filter((m) => m.payload?.clarification).map((m) => m.content);
+/** Notes Josh cleared: not an issue, never raised again (2026-10-29). */
+export const dismissedOf = (msgs: ReviewerMsg[]) => msgs.filter((m) => m.payload?.dismissed);
+export type ReviewFocus = "must_fix" | "all";
 
 interface Checkable {
   id: string; label: string; required: boolean; status: string; answer: string | null;
@@ -65,6 +74,8 @@ export const preSubmitChecks = (items: Checkable[]): PreSubmit => {
 /** The skeptical reviewer, on the whole application in portal order. */
 export async function reviewApplication(req: {
   folder: DraftFolder; library: LibraryEntry[]; facts: Fact[]; caseBrief: CaseBrief | null; funderBrief?: FunderBrief | null; clarifications?: string[];
+  /** Memory (2026-10-29): the last review, which answers changed since it, what Josh dismissed, and how much to flag. */
+  previousReview?: Review | null; changedSince?: number[]; dismissed?: string[]; focus?: ReviewFocus;
   application: { i: number; section: string; label: string; help: string | null; kind: string; required: boolean; answer: string | null; limit_kind?: string | null; limit_value?: number | null }[];
 }): Promise<Review> {
   const [snapshot, attachments] = await Promise.all([approvedSnapshotForWriter(), attachmentsForWriter()]);

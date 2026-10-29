@@ -110,6 +110,11 @@ type Req = {
   mode: "item" | "narrative" | "chat" | "read_screens" | "classify" | "strategy" | "story" | "review" | "review_chat" | "read_document" | "funder_brief" | "snapshot" | "reporting_plan" | "report" | "fit" | "budget" | "learn";
   /** Every call: what NLA is submitting with the answers — the attached files, read as written (2026-10-29). */
   attachments?: { label: string; title: string; text: string }[];
+  /** review: memory (2026-10-29) — the last review, the questions changed since it, the notes Josh dismissed, and the focus. */
+  previousReview?: { overall: number; verdict: string; criteria: { name: string; score: number; max: number; why: string; advice?: { text: string; i: number[] }[] }[]; weakest?: { i: number; problem: string; fix: string }[]; contradictions?: string[]; wrong_numbers?: string[] } | null;
+  changedSince?: number[];
+  dismissed?: string[];
+  focus?: "must_fix" | "all";
   /** review_chat: a Reply thread under ONE note of the review. */
   note?: { key: string; text: string; criterion?: string } | null;
   /** review / review_chat: facts Josh settled with the reviewer in earlier threads — true, and never raised again. */
@@ -233,6 +238,7 @@ HARD RULES
 9. THE PROGRAM IS ONE PROGRAM IN THREE GROUPS (Josh, 2026-10-28). The library entry "Boxing Groups Explained" is the description of what NLA runs every night: the NLA Boxing & Youth Development Program, with Junior Boxing on Tuesdays as the entry point and three groups training nightly — the Littles (ages 7–13, no weights), the Non-Battle Team (ages 11–19, non-contact boxing) and the Battle Team (ages 11–19, contact, earned through the House Rules and core values, trains to compete). Describe the program that way, never as "Senior Boxing and Junior Boxing" alone. Its attendance figures (40–120 a night; 45% Battle Team, 30% Non-Battle Team, 25% Littles among youth who train nightly) are Josh's and may be cited as written; they are interim until the January–February 2027 counts replace them. When a funder wants the boxing program in a few lines, the library entry "Battle Team and Non-Battle Team · in four sentences" is Josh's own four sentences on the Battle Team and the Non-Battle Team (ages 11–19) — use it as written; it describes the two teams, not the whole program, so the Littles and Junior Boxing still belong wherever the whole program is described.
 9d. "NON-CONTACT BOXING" IS THE FULL PHRASE. Never shorten it to "non-contact" on its own: write "non-contact boxing", "train in non-contact boxing", "95% of NLA youth participate in non-contact boxing".
 9e. THE LABS' NAMES. Juniors Aftercare has two labs: "Smile Lab" (oral health and hygiene, with Delta Dental) and "Life Skills Lab" (character and values). Always "Life Skills Lab" — never "Life Lab".
+9f. THE PEOPLE, EXACTLY (Josh, 2026-10-29). The Launch Pad Accountability Coach is a retired NYPD lieutenant with 21 years of service and 22 years teaching psychology as a college professor. Chrissy Casiello is a former police detective and the Program Coordinator — she is NOT the Accountability Coach. Name every role and background exactly as the Vault ("Staff Bios", "Staffing", "Programs and Services") states it; never assign a role or a background to a person the Vault does not give it to.
 9a. COMPETE, NEVER FIGHT. What the youth do in the ring is "compete", "competition", "bout", "athlete" — never "fight" or "fighter". The one exception is the Battle Team's mentality, quoted as written: "We are fighting" — the fight for one's future, teammates and potential.
 9b. HAWK SQUAD AND BAM ARE NOT THE PROGRAM. They are separate fee-for-service programs run for the school districts. They bring youth into NLA and earn revenue that helps pay the bills — so they belong under earned income and partnerships in an organizational overview or a budget, never in the program description and never in the youth counts.
 9c. THE VALUES AND THE RULES. The library entry "Core Values and House Rules" holds NLA's seven core values and ten House Rules word for word. Where a funder asks about character, discipline, behavior expectations or youth development, name them; the path onto the Battle Team runs through them.
@@ -690,7 +696,11 @@ Deno.serve(async (req) => {
         siteBlock(body) + snapshotBlock(body) + attachmentsBlock(body) +
         block("LIVE NUMBERS (NLA's recorded figures — check every number in the answers against these and against THE SNAPSHOT; a figure that matches either is NLA's own record, not an unsupported claim)", describeFacts(body.facts)) +
         (Array.isArray(body.clarifications) && body.clarifications.length ? block("JOSH'S CLARIFICATIONS (facts he settled with you in earlier threads — treat each as true; never raise a note these settle)", body.clarifications.map((c) => "- " + c).join("\n")) : "") +
+        (Array.isArray(body.dismissed) && body.dismissed.length ? block("NOTES JOSH DISMISSED (he read each and decided it is not an issue — never raise these again, nor the same point in other words)", body.dismissed.map((c) => "- " + c).join("\n")) : "") +
+        (body.previousReview ? block("YOUR PREVIOUS REVIEW (your last read of this application — start from it; see the consistency rule)",
+          `Score ${body.previousReview.overall}/100. ${body.previousReview.verdict}\n\nCriteria:\n${(body.previousReview.criteria ?? []).map((c) => `- ${c.name}: ${c.score}/${c.max} — ${c.why}${(c.advice ?? []).length ? `\n    advice: ${c.advice!.map((a) => a.text).join(" | ")}` : ""}`).join("\n")}\n\nWhere it lost the most points:\n${(body.previousReview.weakest ?? []).map((w) => `- [${w.i}] ${w.problem} FIX: ${w.fix}`).join("\n")}${body.previousReview.contradictions?.length ? `\n\nAnswers that disagreed:\n${body.previousReview.contradictions.map((c) => "- " + c).join("\n")}` : ""}${body.previousReview.wrong_numbers?.length ? `\n\nNumbers that didn't match:\n${body.previousReview.wrong_numbers.map((c) => "- " + c).join("\n")}` : ""}\n\nANSWERS CHANGED SINCE THAT REVIEW: ${(body.changedSince ?? []).length ? body.changedSince!.map((i) => `[${i}]`).join(", ") : "none"}`) : "") +
         block("THE APPLICATION, AS IT WILL BE SUBMITTED", listed);
+      const mustFix = body.focus !== "all";
       const response = await createBest(anthropic, {
         max_tokens: 14000,
         system: systemFor(body.folder, body.funderBrief) + `
@@ -698,25 +708,32 @@ Deno.serve(async (req) => {
 YOU ARE NOW THE REVIEWER, NOT THE WRITER
 Read this application the way the funder's scoring panel will: experienced, skeptical, reading forty applications this week, scoring against the criteria above. You want to fund programs that deliver; you have been fooled before by polished writing from weak programs, so you reward PROOF — specific numbers with periods, named places, measured outcomes with targets, a real example — and you mark down adjectives, vague claims, unmeasured promises and answers that don't answer the question asked.
 Be honest and specific. A generous score helps no one: Josh wants to know where it would lose points while there is still time to fix it.
+${body.previousReview ? `CONSISTENCY (Josh, 2026-10-29: a review that churns is useless). Start from YOUR PREVIOUS REVIEW. For each note in it: if the answers it cites are in ANSWERS CHANGED SINCE and now fix it, DROP it; if they are unchanged, CARRY IT FORWARD in the same words; if changed and still wrong, carry it forward and say what is still wrong. Raise a NEW note only for a real defect you missed or one a change introduced. Never raise a dismissed note or the same point in other words. Scores move only as much as the changes warrant: an unchanged criterion keeps its score unless you say in "why" what you missed.\n` : ""}${mustFix ? `FOCUS: MUST-FIX ONLY. List only what would cost points or disqualify. No style, no grammar, no "could be tighter", no "consider". In "contradictions" and "wrong_numbers" list only genuine conflicts of fact — two answers that cannot both be true, or a figure that contradicts the record — never a difference in detail or rounding. If a criterion has nothing that costs points, say so in one clause.\n` : `FOCUS: EVERYTHING. Note what costs points first, then what a careful panel would also say.\n`}
 Check: every criterion the funder scores; whether each answer answers exactly what was asked, within its limit (only a limit stated on that question counts — the Program Narrative has no page or word limit, so never mark it down for length); contradictions between answers (program name, amounts, counts, dates, who is served); any number that doesn't match the live numbers; required questions left blank.`,
         messages: [{ role: "user", content: context +
           `\n\nReturn ONLY JSON: {"overall":<0-100, your honest total>,"verdict":"<two sentences: would you fund it as written, and the one thing that would move the score most>",` +
-          `"criteria":[{"name":"<the funder's criterion>","score":<points>,"max":<points available>,"why":"<one line: what earned or lost points, citing the answer>"}],` +
-          `"weakest":[{"i":<question index>,"problem":"<what a reviewer marks down, one line>","fix":"<how to fix it, one line>","instruction":"<the instruction to give the writer to rewrite it, e.g. 'Lead with the 71% low-income share; cut the second paragraph; add the 2025-26 retention figure'>"}] (the three answers that cost the most points, worst first),` +
-          `"contradictions":["<answer [i] says X; answer [j] says Y>"],"wrong_numbers":["<answer [i] says N; the live numbers say M>"]}` }],
+          `"criteria":[{"name":"<the funder's criterion, exactly as the funder names it>","score":<points>,"max":<points available>,"why":"<one line: what earned or lost points, citing the answers as [i]>",` +
+          `"advice":[{"text":"<ONE short sentence Josh can act on: what to change and where, citing the question as [i] — e.g. 'In [32] state the total program cost as $794,427 and the $75,000 as the CSBG share'>","i":[<the question indexes this is about>]}]}] ` +
+          `(advice: zero to three lines per criterion, worst first; ${mustFix ? "ONLY what costs points or disqualifies — an empty list means nothing here costs points" : "what costs points first, then what a careful panel would also say"}; a contradiction between answers or a figure that does not match the record goes here, under the criterion it hurts, as one line naming both questions)}` }],
         // Medium on the best model keeps a full-application read inside the function's time limit.
         ...thinking("medium"),
       });
       const parsed = extractJson(textOf(response as never));
       if (typeof parsed.overall !== "number" && !Array.isArray(parsed.criteria)) throw new Error("The review came back empty. Try again.");
       const ids = new Set(app.map((q) => q.i));
-      const weakest = (Array.isArray(parsed.weakest) ? parsed.weakest : []).filter((w: { i?: number }) => ids.has(Number(w.i))).slice(0, 3);
+      // deno-lint-ignore no-explicit-any
+      const criteria = (Array.isArray(parsed.criteria) ? parsed.criteria : []).map((c: any) => ({
+        name: String(c.name ?? ""), score: Number(c.score ?? 0), max: Number(c.max ?? 0), why: String(c.why ?? ""),
+        // deno-lint-ignore no-explicit-any
+        advice: (Array.isArray(c.advice) ? c.advice : []).map((a: any) => ({
+          text: String(a?.text ?? "").trim(),
+          i: Array.isArray(a?.i) ? a.i.map(Number).filter((n: number) => ids.has(n)) : [...String(a?.text ?? "").matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1])).filter((n) => ids.has(n)),
+        })).filter((a: { text: string }) => a.text).slice(0, mustFix ? 3 : 4),
+      }));
       return json({
         review: {
           overall: Number(parsed.overall ?? 0), verdict: String(parsed.verdict ?? ""),
-          criteria: Array.isArray(parsed.criteria) ? parsed.criteria : [],
-          weakest, contradictions: Array.isArray(parsed.contradictions) ? parsed.contradictions : [],
-          wrong_numbers: Array.isArray(parsed.wrong_numbers) ? parsed.wrong_numbers : [],
+          criteria, weakest: [], contradictions: [], wrong_numbers: [],
           model: (response as { model?: string }).model ?? null,
         },
       });
