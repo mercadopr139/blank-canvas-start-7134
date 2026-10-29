@@ -180,9 +180,10 @@ const AdminGrantFolder = () => {
     if (!folder) return;
     const ok = await ask.confirm({
       title: `Remove "${folder.name}"?`,
-      body: "Everything in it goes: the checklist, the conversations, the documents and files. The Grant Vault is not affected. This cannot be undone.",
-      confirmLabel: "Remove the folder",
+      body: "Everything in it goes: the checklist, every answer and conversation, the documents and files, the review. The Grant Vault is not affected. This cannot be undone.",
+      confirmLabel: "Delete the folder",
       danger: true,
+      typeToConfirm: "DELETE",
     });
     if (!ok) return;
     try {

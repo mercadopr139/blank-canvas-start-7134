@@ -64,7 +64,7 @@ interface Props {
   userId: string | null;
   onPrint: () => void;
   printing: boolean;
-  confirm: (o: { title: string; body: string; confirmLabel: string; danger?: boolean }) => Promise<boolean>;
+  confirm: (o: { title: string; body: string; confirmLabel: string; danger?: boolean; typeToConfirm?: string }) => Promise<boolean>;
   prompt: (a: PromptAsk) => Promise<Record<string, string> | null>;
   /** The case Josh locked in the strategy session; story questions wait for it. */
   caseBrief: CaseBrief | null;
@@ -442,7 +442,7 @@ export default function GrantApplication({ folderId, folder, items, library, get
     try { await answerRows(waiting); } catch (e) { toast.error(`Grant Coach: ${(e as Error).message}`); } finally { setStage(null); refresh(); }
   };
   const startOver = async () => {
-    if (!(await confirm({ title: "Start over?", body: "Every question and answer in this application comes off. The Grant Vault, the documents and the screenshots stay.", confirmLabel: "Clear the application", danger: true }))) return;
+    if (!(await confirm({ title: "Start over?", body: `Every one of the ${live.length} questions and answers in this application comes off, approved or not. The Grant Vault, the documents and the screenshots stay. This cannot be undone.`, confirmLabel: "Clear the application", danger: true, typeToConfirm: "DELETE" }))) return;
     const { error } = await supabase.from("grant_checklist_items" as never).delete().eq("folder_id", folderId);
     if (error) { toast.error(error.message); return; }
     refresh();
