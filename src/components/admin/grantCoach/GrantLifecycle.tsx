@@ -37,6 +37,8 @@ const STEPS: { key: FolderStatus; label: string }[] = [
   { key: "closed", label: "Closed" },
 ];
 
+/** Submitted is the waiting state: amber, the colour that means "needs you" across Grant Coach (Josh, 2026-10-29: "let the user know we need to follow up"). */
+const WAIT = "#fbbf24";
 const fmt = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/New_York" }) : "");
 const outline = "bg-transparent border-white/20 text-white/85 hover:bg-white/10 hover:text-white";
 const docPath = (folderId: string, fileName: string) => `grants/${folderId}/${Date.now()}_${fileName.replace(/[^\w.-]+/g, "_").slice(0, 80)}`;
@@ -180,7 +182,7 @@ export default function GrantLifecycle({ folder, draftFolder, items, docs, repor
               <li key={s.key} className="flex items-center gap-2">
                 <span
                   className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-semibold ${declined ? "border-red-400/40 text-red-300" : here ? "text-black" : done ? "border-white/20 text-white/80" : "border-white/10 text-white/35"}`}
-                  style={here && !declined ? { backgroundColor: GC_BLUE, borderColor: GC_BLUE } : undefined}
+                  style={here && !declined ? { backgroundColor: status === "submitted" ? WAIT : GC_BLUE, borderColor: status === "submitted" ? WAIT : GC_BLUE } : undefined}
                 >
                   {declined ? <XCircle className="w-3.5 h-3.5" /> : done ? <Check className="w-3.5 h-3.5" /> : null}
                   {declined ? "Declined" : s.label}
@@ -194,7 +196,9 @@ export default function GrantLifecycle({ folder, draftFolder, items, docs, repor
         {/* What happened, with dates */}
         <div className="text-[12px] text-white/55 space-y-0.5">
           {folder.applied_from && <p><button type="button" className="text-sky-300 hover:text-sky-200 underline underline-offset-2" onClick={() => navigate(`/admin/finance/grant-coach/${folder.applied_from}`)}>Last year's folder</button></p>}
-          {folder.submitted_at && <p>Submitted {fmt(folder.submitted_at)}.</p>}
+          {folder.submitted_at && (status === "submitted"
+            ? <p className="font-semibold" style={{ color: WAIT }}>Submitted {fmt(folder.submitted_at)} · waiting on {folder.funder} — follow up, then mark it Awarded or Declined.</p>
+            : <p>Submitted {fmt(folder.submitted_at)}.</p>)}
           {status === "active" || status === "closed" ? (
             <p>Awarded {fmt(folder.decided_at)}{folder.amount_awarded != null ? ` · $${Number(folder.amount_awarded).toLocaleString()}` : ""}{folder.reporting_basis ? ` · reporting ${folder.reporting_basis === "as_written" ? "as written in the RFP" : "from the award letter"}` : ""}.</p>
           ) : null}
