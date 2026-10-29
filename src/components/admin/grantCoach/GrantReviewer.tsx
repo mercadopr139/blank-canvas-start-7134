@@ -266,6 +266,14 @@ export default function GrantReviewer({ folderId, folder, items, library, getFac
                   <p className="text-lg font-black text-emerald-300 inline-flex items-center gap-2"><PartyPopper className="w-5 h-5" /> All {criteria.length} settled. This one is ready.</p>
                   <p className="text-sm text-white/75 mt-1">Every criterion is fixed or going in as is. Print the copy, then submit on the portal.</p>
                 </div>
+                {/* The reviewer's last word stays readable after the last settle (Josh, 2026-10-29:
+                    "the message that talked about my next moves… is not viewable"). */}
+                {review.verdict?.trim() && (
+                  <div className="basis-full border-t border-emerald-400/20 pt-3">
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-emerald-300/80">The reviewer's last word</p>
+                    <p className="text-sm text-white/85 mt-0.5"><Refs text={review.verdict} live={live} onJump={onJump} /></p>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex flex-wrap items-center gap-4">
@@ -295,11 +303,19 @@ export default function GrantReviewer({ folderId, folder, items, library, getFac
                   return null;
                 }
                 if (d) {
+                  const inThread = threadCount(k);
                   return (
-                    <div key={c.name} className="rounded-xl border border-emerald-400/30 bg-emerald-400/[0.06] px-3 py-2 flex items-center gap-3">
-                      <Check className="w-4 h-4 text-emerald-300 shrink-0" />
-                      <p className="flex-1 text-[13px] text-emerald-200"><span className="font-semibold">{c.name}</span> · {c.score}/{c.max} · {d.status === "fixed" ? "fixed" : "submitting as is"}</p>
-                      <button type="button" onClick={() => void decide(c, null)} className="inline-flex items-center gap-1 text-[11px] text-white/50 hover:text-white"><Undo2 className="w-3.5 h-3.5" /> Reopen</button>
+                    <div key={c.name} className="rounded-xl border border-emerald-400/30 bg-emerald-400/[0.06] px-3 py-2 space-y-2">
+                      <div className="flex items-center gap-3">
+                        <Check className="w-4 h-4 text-emerald-300 shrink-0" />
+                        <p className="flex-1 text-[13px] text-emerald-200"><span className="font-semibold">{c.name}</span> · {c.score}/{c.max} · {d.status === "fixed" ? "fixed" : "submitting as is"}</p>
+                        {/* What was said under this criterion stays reachable once it is settled. */}
+                        {inThread > 0 && (
+                          <button type="button" onClick={() => setReplyTo((r) => (r === k ? null : k))} className="inline-flex items-center gap-1 text-[11px] font-semibold hover:underline underline-offset-2" style={{ color: GC_BLUE }}><MessageSquare className="w-3.5 h-3.5" /> {replyTo === k ? "Close" : `${inThread} in the thread`}</button>
+                        )}
+                        <button type="button" onClick={() => void decide(c, null)} className="inline-flex items-center gap-1 text-[11px] text-white/50 hover:text-white"><Undo2 className="w-3.5 h-3.5" /> Reopen</button>
+                      </div>
+                      {replyTo === k && <ReviewerChat {...chatProps} note={{ key: k, criterion: c.name, text: `${c.name} (${c.score}/${c.max}): ${c.why}${advice.length ? ` ADVICE: ${advice.map((a) => a.text).join(" | ")}` : ""}` }} />}
                     </div>
                   );
                 }
