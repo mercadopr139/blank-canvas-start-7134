@@ -76,6 +76,8 @@ interface Props {
   funderBrief: FunderBrief | null;
   /** Where the progress bar and the whole-application actions draw: the folder header (Josh, 2026-10-29). Unset, they sit above the screens. */
   actionsHost?: HTMLElement | null;
+  /** Past Applying (submitted, awarded, closed): the application is a record — no next screen, the reviewer folded to its score. */
+  submitted?: boolean;
 }
 
 /** Run jobs a few at a time. */
@@ -89,7 +91,7 @@ async function pool<T>(list: T[], n: number, job: (t: T) => Promise<void>) {
 const cleanName = (s: string) => s.replace(/[^\w.-]+/g, "_").slice(0, 60);
 const sectionTitle = (s: string) => s.replace(/^Portal · /, "");
 
-export default function GrantApplication({ folderId, folder, items, library, getFacts, userId, onPrint, printing, confirm, prompt, caseBrief, caseLockedAt, review, reviewedAt, funderBrief, actionsHost }: Props) {
+export default function GrantApplication({ folderId, folder, items, library, getFacts, userId, onPrint, printing, confirm, prompt, caseBrief, caseLockedAt, review, reviewedAt, funderBrief, actionsHost, submitted = false }: Props) {
   const caseLocked = !!caseBrief && !!caseLockedAt;
   const qc = useQueryClient();
   const refresh = useCallback(() => qc.invalidateQueries({ queryKey: ["grant-items", folderId] }), [qc, folderId]);
@@ -828,9 +830,9 @@ export default function GrantApplication({ folderId, folder, items, library, get
             );
           })}
 
-          {/* ── The next screen goes in right where you are working ── */}
-          {problemEl}
-          {tileEl}
+          {/* ── The next screen goes in right where you are working — until the grant is submitted ── */}
+          {!submitted && problemEl}
+          {!submitted && tileEl}
 
           {/* ── Before you submit: the reviewer ── */}
           <GrantReviewer
@@ -849,6 +851,7 @@ export default function GrantApplication({ folderId, folder, items, library, get
             onFix={async (it, w) => { try { await fixInChat(it, w); } catch (e) { toast.error(`Grant Coach: ${(e as Error).message}`); } }}
             userId={userId}
             onDraftToQuestion={postDraft}
+            submitted={submitted}
           />
         </>
       )}

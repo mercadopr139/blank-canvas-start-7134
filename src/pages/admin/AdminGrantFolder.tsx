@@ -577,6 +577,7 @@ const AdminGrantFolder = () => {
             reviewedAt={folder.reviewed_at ?? null}
             funderBrief={folder.funder_brief ?? null}
             actionsHost={actionsHost}
+            submitted={folder.status !== "applying"}
           />
           {(() => {
             const ours = docs.filter((d) => d.side === "ours");

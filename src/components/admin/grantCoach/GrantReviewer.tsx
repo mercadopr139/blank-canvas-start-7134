@@ -37,6 +37,8 @@ interface Props {
   /** Latest change to any answer, to tell a stale review from a current one. */
   lastChange: string | null;
   busy: boolean;
+  /** The grant went in: the review is a record — score and last word, nothing to run or ask. */
+  submitted?: boolean;
   /** Take Josh to a question on the page. */
   onJump: (id: string) => void;
   /** Draft it: the rewrite goes to the question's conversation as a draft card. */
@@ -83,9 +85,10 @@ function Refs({ text, live, onJump }: { text: string; live: AppItem[]; onJump: (
   );
 }
 
-export default function GrantReviewer({ folderId, folder, items, library, getFacts, caseBrief, review, reviewedAt, funderBrief, lastChange, busy, onJump, onFix, userId, onDraftToQuestion }: Props) {
+export default function GrantReviewer({ folderId, folder, items, library, getFacts, caseBrief, review, reviewedAt, funderBrief, lastChange, busy, onJump, onFix, userId, onDraftToQuestion, submitted = false }: Props) {
   const qc = useQueryClient();
   const [running, setRunning] = useState(false);
+  const [recordOpen, setRecordOpen] = useState(false);
   const [drafting, setDrafting] = useState<string | null>(null);
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [working, setWorking] = useState<string | null>(null);
@@ -205,6 +208,45 @@ export default function GrantReviewer({ folderId, folder, items, library, getFac
   ) : null;
 
   const chatProps = { folderId, folder, live, library, getFacts, caseBrief, funderBrief, review, userId, busy, onJump, onDraftToQuestion, onReviewChanged: refreshReview };
+
+  // Submitted (Josh, 2026-10-29): the reviewer's job is over. One folded line — the score, how many
+  // settled, when — and inside, read-only, the score and the last word: next year's head start.
+  if (submitted) {
+    if (!review) return null;
+    const when = reviewedAt ? new Date(reviewedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "America/New_York" }) : "";
+    return (
+      <GcCard
+        icon={<Gavel className="w-4 h-4" />}
+        title="The reviewer"
+        blurb={`${review.overall}/100 · ${settledCount} of ${criteria.length} settled${when ? ` · reviewed ${when}` : ""} · the record of the review before this went in`}
+        open={recordOpen}
+        onToggle={() => setRecordOpen((o) => !o)}
+      >
+        <div className="p-4 flex flex-wrap items-start gap-4">
+          <div className="w-20 h-20 rounded-full flex flex-col items-center justify-center border-4 shrink-0" style={{ borderColor: tone(review.overall) }}>
+            <span className="text-2xl font-black leading-none" style={{ color: tone(review.overall) }}>{review.overall}</span>
+            <span className="text-[10px] text-white/45">of 100</span>
+          </div>
+          <div className="flex-1 min-w-[220px] space-y-3">
+            {review.verdict?.trim() && (
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-white/50">The reviewer's last word</p>
+                <p className="text-sm text-white/85 mt-0.5"><Refs text={review.verdict} live={live} onJump={onJump} /></p>
+              </div>
+            )}
+            <ul className="space-y-1">
+              {criteria.map((c) => (
+                <li key={c.name} className="flex justify-between gap-3 text-[13px]">
+                  <span className="text-white/75">{c.name}</span>
+                  <span className="tabular-nums font-semibold shrink-0" style={{ color: tone(c.max ? Math.round((c.score / c.max) * 100) : 0) }}>{c.score}/{c.max}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </GcCard>
+    );
+  }
 
   return (
     <GcCard
