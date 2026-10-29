@@ -255,6 +255,9 @@ const Vision = () => {
                   <p className="text-base md:text-lg text-primary-foreground/75 leading-relaxed">
                     Owns the follow-through. Ensures every step — every test, every application, every deadline — is completed so the youth graduates ready to execute on their plan.
                   </p>
+                  <p className="mt-5 pt-5 border-t border-primary-foreground/10 text-sm md:text-base text-primary-foreground/60 leading-relaxed">
+                    A <strong className="text-primary-foreground">retired NYPD lieutenant</strong> with 21 years of service, and <strong className="text-primary-foreground">22 years teaching psychology</strong> as a college professor.
+                  </p>
                 </div>
               </div>
             </div>
