@@ -153,7 +153,6 @@ const AdminGrantFolder = () => {
   const refreshFolder = () => { qc.invalidateQueries({ queryKey: ["grant-folder", id] }); qc.invalidateQueries({ queryKey: ["grant-folders"] }); qc.invalidateQueries({ queryKey: ["grant-reports"] }); };
 
   const live = items.filter((i) => i.status !== "na");
-  const progress = { done: live.filter((i) => i.status === "done").length, total: live.length };
   /* ───── Grant Coach, the writer ─────
      A draft is built from three things the page gathers here: the About NLA
      library, the live numbers from the back end, and what is already written
@@ -166,6 +165,8 @@ const AdminGrantFolder = () => {
   });
   const { data: library = [] } = useQuery({ queryKey: ["grant-library"], queryFn: loadLibrary, staleTime: 5 * 60_000 });
   const [factsOpen, setFactsOpen] = useState(false);
+  /** The header's slot for the application's progress bar and actions (GrantApplication draws into it). */
+  const [actionsHost, setActionsHost] = useState<HTMLDivElement | null>(null);
   const [funderOpen, setFunderOpen] = useState<boolean | null>(null);
 
   const draftFolder = () => ({
@@ -369,7 +370,7 @@ const AdminGrantFolder = () => {
             )}
           </div>
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-3 text-sm">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 text-sm">
           <div className="rounded-lg bg-white/[0.04] p-3"><p className="text-[11px] text-white/40 uppercase tracking-wide">Requesting</p><p className="font-semibold"><Inline value={money(folder.amount_requested)} onSave={(v) => void patchFolder({ amount_requested: toMoney(v) })} title="The amount requested — click to edit" placeholder="—" /></p></div>
           <div className="rounded-lg bg-white/[0.04] p-3">
             <p className="text-[11px] text-white/40 uppercase tracking-wide">Grant period</p>
@@ -379,12 +380,9 @@ const AdminGrantFolder = () => {
               <Inline value={folder.period_end ?? ""} onSave={(v) => void patchFolder({ period_end: toYmd(v) })} title="End date — click to edit (YYYY-MM-DD)" placeholder="end" className="tabular-nums" />
             </p>
           </div>
-          <div className="rounded-lg bg-white/[0.04] p-3">
-            <p className="text-[11px] text-white/40 uppercase tracking-wide">Application</p>
-            <p className="font-semibold">{progress.done} of {progress.total} approved</p>
-            <div className="mt-1.5 h-1.5 rounded-full bg-white/10 overflow-hidden"><div className="h-full rounded-full" style={{ width: `${progress.total ? Math.round((progress.done / progress.total) * 100) : 0}%`, backgroundColor: GC_BLUE }} /></div>
-          </div>
         </div>
+        {/* The application's progress and its actions (View, Print, ⋯), drawn here by GrantApplication. */}
+        <div ref={setActionsHost} className="mt-3 rounded-lg bg-white/[0.04] p-3 empty:hidden" />
         <div className="mt-3 flex flex-wrap items-center gap-4">
           {folder.portal_url && (
             <a href={folder.portal_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm text-sky-300 hover:text-sky-200"><ExternalLink className="w-4 h-4" /> Open the funder's portal</a>
@@ -577,6 +575,7 @@ const AdminGrantFolder = () => {
             review={folder.review ?? null}
             reviewedAt={folder.reviewed_at ?? null}
             funderBrief={folder.funder_brief ?? null}
+            actionsHost={actionsHost}
           />
           {(() => {
             const ours = docs.filter((d) => d.side === "ours");

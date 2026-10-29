@@ -8,6 +8,7 @@
 // Josh, 2026-10-29). An approved answer that changes is "Changed · approve again".
 // Coach what to change. Anything it can't stand behind says "Needs you".
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -73,6 +74,8 @@ interface Props {
   reviewedAt: string | null;
   /** What the funder's own documents say: every answer is written to it. */
   funderBrief: FunderBrief | null;
+  /** Where the progress bar and the whole-application actions draw: the folder header (Josh, 2026-10-29). Unset, they sit above the screens. */
+  actionsHost?: HTMLElement | null;
 }
 
 /** Run jobs a few at a time. */
@@ -86,7 +89,7 @@ async function pool<T>(list: T[], n: number, job: (t: T) => Promise<void>) {
 const cleanName = (s: string) => s.replace(/[^\w.-]+/g, "_").slice(0, 60);
 const sectionTitle = (s: string) => s.replace(/^Portal · /, "");
 
-export default function GrantApplication({ folderId, folder, items, library, getFacts, userId, onPrint, printing, confirm, prompt, caseBrief, caseLockedAt, review, reviewedAt, funderBrief }: Props) {
+export default function GrantApplication({ folderId, folder, items, library, getFacts, userId, onPrint, printing, confirm, prompt, caseBrief, caseLockedAt, review, reviewedAt, funderBrief, actionsHost }: Props) {
   const caseLocked = !!caseBrief && !!caseLockedAt;
   const qc = useQueryClient();
   const refresh = useCallback(() => qc.invalidateQueries({ queryKey: ["grant-items", folderId] }), [qc, folderId]);
@@ -637,9 +640,10 @@ export default function GrantApplication({ folderId, folder, items, library, get
 
       {!empty && (
         <>
-          {/* ── Where it stands, and the few things to do with the whole application ── */}
-          <div className="sticky top-2 z-30 rounded-2xl border border-white/15 bg-[#141416]/95 backdrop-blur shadow-[0_0.3em_1.2em_rgba(0,0,0,0.55)]" style={{ borderTop: `3px solid ${GC_BLUE}` }}>
-          <div className="px-4 py-3 space-y-2">
+          {/* ── Where it stands, and the few things to do with the whole application.
+                Drawn in the folder header when it offers a place (Josh, 2026-10-29: "put it in the same section above"). ── */}
+          {(() => { const bar = (
+          <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex-1 min-w-[200px]">
                 <p className="font-semibold">{approvedCount} of {live.length} approved</p>
@@ -683,7 +687,9 @@ export default function GrantApplication({ folderId, folder, items, library, get
               </button>
             )}
           </div>
-          </div>
+          ); return actionsHost ? createPortal(bar, actionsHost) : (
+            <div className="sticky top-2 z-30 rounded-2xl border border-white/15 bg-[#141416]/95 backdrop-blur shadow-[0_0.3em_1.2em_rgba(0,0,0,0.55)] px-4 py-3" style={{ borderTop: `3px solid ${GC_BLUE}` }}>{bar}</div>
+          ); })()}
 
           {/* ── The questions, in portal order, newest screen last ── */}
           {sections.map((s) => {
