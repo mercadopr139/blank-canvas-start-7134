@@ -12,11 +12,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import GcCard, { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
+import { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
 import { GRANT_DOCUMENTS_BUCKET } from "@/lib/grantCoach/orgDocuments";
 import { officeText, readsAsText } from "@/lib/grantCoach/readOffice";
 import { planReporting, type DraftFolder, type FunderBrief } from "@/lib/grantCoach/writer";
-import { STATUS_LABEL, nextYearName, plusYear, saveReports, type FolderStatus, type GrantReport } from "@/lib/grantCoach/lifecycle";
+import { nextYearName, plusYear, saveReports, type FolderStatus, type GrantReport } from "@/lib/grantCoach/lifecycle";
 import type { ConfirmAsk, PromptAsk } from "@/components/admin/AskDialog";
 
 export interface LifecycleFolder {
@@ -165,14 +165,11 @@ export default function GrantLifecycle({ folder, draftFolder, items, docs, repor
 
   const at = STEPS.findIndex((s) => s.key === (status === "declined" ? "active" : status));
 
+  // A strip in the folder header, not its own card (Josh, 2026-10-29): the steps
+  // on the left, what happened under them, the one next action on the right.
   return (
-    <GcCard
-      icon={<Trophy className="w-4 h-4" />}
-      title="Where this grant stands"
-      blurb={STATUS_LABEL[status] ?? folder.status}
-      right={folder.applied_from ? <button type="button" className="text-[11px] text-sky-300 hover:text-sky-200" onClick={() => navigate(`/admin/finance/grant-coach/${folder.applied_from}`)}>Last year's folder</button> : undefined}
-    >
-      <div className="p-4 space-y-4">
+    <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+      <div className="flex-1 min-w-[260px] space-y-2">
         {/* The steps */}
         <ol className="flex flex-wrap items-center gap-2 text-[12px]">
           {STEPS.map((s, i) => {
@@ -196,6 +193,7 @@ export default function GrantLifecycle({ folder, draftFolder, items, docs, repor
 
         {/* What happened, with dates */}
         <div className="text-[12px] text-white/55 space-y-0.5">
+          {folder.applied_from && <p><button type="button" className="text-sky-300 hover:text-sky-200 underline underline-offset-2" onClick={() => navigate(`/admin/finance/grant-coach/${folder.applied_from}`)}>Last year's folder</button></p>}
           {folder.submitted_at && <p>Submitted {fmt(folder.submitted_at)}.</p>}
           {status === "active" || status === "closed" ? (
             <p>Awarded {fmt(folder.decided_at)}{folder.amount_awarded != null ? ` · $${Number(folder.amount_awarded).toLocaleString()}` : ""}{folder.reporting_basis ? ` · reporting ${folder.reporting_basis === "as_written" ? "as written in the RFP" : "from the award letter"}` : ""}.</p>
@@ -203,9 +201,10 @@ export default function GrantLifecycle({ folder, draftFolder, items, docs, repor
           {status === "declined" && <p>Declined {fmt(folder.decided_at)}.{folder.decline_reason ? ` They said: "${folder.decline_reason}"` : ""}</p>}
           {folder.closed_at && <p>Closed {fmt(folder.closed_at)}.</p>}
         </div>
+      </div>
 
-        {/* The one obvious next action */}
-        <div className="flex flex-wrap gap-2">
+      {/* The one obvious next action */}
+      <div className="flex flex-wrap gap-2">
           {status === "applying" && (
             <Button size="sm" className="font-bold text-black hover:brightness-110" style={{ backgroundColor: GC_BLUE }} disabled={busy != null} onClick={submit}>
               {busy === "submit" ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Send className="w-3.5 h-3.5 mr-1.5" />} Mark submitted
@@ -237,7 +236,6 @@ export default function GrantLifecycle({ folder, draftFolder, items, docs, repor
           {status === "declined" && (
             <Button size="sm" variant="ghost" className="text-white/45 hover:text-white hover:bg-white/10" disabled={busy != null} onClick={reopen}>Undo</Button>
           )}
-        </div>
       </div>
 
       <AwardDialog
@@ -249,7 +247,7 @@ export default function GrantLifecycle({ folder, draftFolder, items, docs, repor
         userId={userId}
         onDone={() => { setAwardOpen(false); onChanged(); qc.invalidateQueries({ queryKey: ["grant-reports", folder.id] }); }}
       />
-    </GcCard>
+    </div>
   );
 }
 

@@ -9,7 +9,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft, Loader2, Upload, Link2, ExternalLink, Trash2, CalendarClock,
   Sparkles, RefreshCw, FolderOpen,
@@ -26,9 +25,7 @@ import GcCard, { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
 import { useAsk } from "@/components/admin/AskDialog";
 import GrantLifecycle from "@/components/admin/grantCoach/GrantLifecycle";
 import GrantReporting from "@/components/admin/grantCoach/GrantReporting";
-import { FitCheckCard, BudgetCard } from "@/components/admin/grantCoach/FitAndBudget";
 import { loadReports } from "@/lib/grantCoach/lifecycle";
-import type { FitCheck, BudgetDraft } from "@/lib/grantCoach/writer";
 
 
 interface Folder {
@@ -40,7 +37,6 @@ interface Folder {
   funder_brief?: FunderBriefT | null; funder_brief_at?: string | null; funder_brief_docs?: string[];
   submitted_at?: string | null; decided_at?: string | null; closed_at?: string | null; decline_reason?: string | null;
   reporting_basis?: "as_written" | "changed" | null; applied_from?: string | null;
-  fit_check?: FitCheck | null; fit_checked_at?: string | null; budget?: BudgetDraft | null; budget_at?: string | null;
 }
 interface Doc {
   id: string; folder_id: string; side: "funder" | "ours"; title: string; storage_path: string | null; file_name: string | null;
@@ -334,9 +330,8 @@ const AdminGrantFolder = () => {
             <p className="text-sm text-white/60">Program: <Inline value={folder.program_name ?? ""} onSave={(v) => void patchFolder({ program_name: v || null })} title="The program this grant funds — click to edit" placeholder="program name" /></p>
           </div>
           <div className="text-right">
-            <span className="inline-block rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide bg-white/10 text-white/80">{folder.status}</span>
             {folder.due_at && (
-              <p className={`mt-2 text-sm inline-flex items-center gap-1.5 ${left != null && left <= 7 ? "text-amber-300" : "text-white/60"}`}>
+              <p className={`text-sm inline-flex items-center gap-1.5 ${left != null && left <= 7 ? "text-amber-300" : "text-white/60"}`}>
                 <CalendarClock className="w-4 h-4" /> Due {whenAt(folder.due_at)}{left != null && ` · ${left} day${left === 1 ? "" : "s"} left`}
               </p>
             )}
@@ -366,27 +361,21 @@ const AdminGrantFolder = () => {
             <Trash2 className="w-3.5 h-3.5" /> Remove this folder
           </button>
         </div>
-        <Textarea
-          key={folder.notes ?? ""}
-          defaultValue={folder.notes ?? ""}
-          onBlur={(e) => { const v = e.target.value.trim() || null; if (v !== (folder.notes ?? null)) void patchFolder({ notes: v }); }}
-          placeholder="Notes on this grant — who you spoke to, what they said, what to remember."
-          className="mt-4 bg-neutral-950 border-neutral-800 text-white text-sm"
-          rows={2}
-        />
+        {/* Where it stands — applying, submitted, awarded or declined, closed — and the one next action,
+            inside the header (Josh, 2026-10-29: its own card was one card too many). */}
+        <div className="mt-4 pt-4 border-t border-white/10">
+          <GrantLifecycle
+            folder={folder}
+            draftFolder={draftFolder}
+            items={items}
+            docs={docs}
+            reports={reports}
+            userId={user?.id ?? null}
+            ask={ask}
+            onChanged={refreshFolder}
+          />
+        </div>
       </div>
-
-      {/* Where it stands: submitted, awarded or declined, reporting, closed, apply again */}
-      <GrantLifecycle
-        folder={folder}
-        draftFolder={draftFolder}
-        items={items}
-        docs={docs}
-        reports={reports}
-        userId={user?.id ?? null}
-        ask={ask}
-        onChanged={refreshFolder}
-      />
       {(folder.status === "active" || folder.status === "closed") && (
         <GrantReporting
           folderId={id!}
@@ -398,12 +387,6 @@ const AdminGrantFolder = () => {
           userId={user?.id ?? null}
           ask={ask}
         />
-      )}
-      {folder.status === "applying" && (
-        <div className="grid gap-4 lg:grid-cols-2 items-start">
-          <FitCheckCard folderId={id!} draftFolder={draftFolder} funderBrief={folder.funder_brief ?? null} library={library} getFacts={async () => (facts.length ? facts : (await refetchFacts()).data ?? [])} saved={folder.fit_check ?? null} savedAt={folder.fit_checked_at ?? null} onChanged={refreshFolder} />
-          <BudgetCard folderId={id!} draftFolder={draftFolder} funderBrief={folder.funder_brief ?? null} library={library} getFacts={async () => (facts.length ? facts : (await refetchFacts()).data ?? [])} saved={folder.budget ?? null} savedAt={folder.budget_at ?? null} prompt={(a) => ask.prompt(a)} onChanged={refreshFolder} />
-        </div>
       )}
 
       <div className="space-y-6">
