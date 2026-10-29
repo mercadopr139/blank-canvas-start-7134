@@ -82,7 +82,7 @@ export default function FunderBrief({ folderId, folder, docs, brief, briefAt, br
   ) : null;
 
   return (
-    <div className="border-t border-white/10 pt-3 space-y-2.5">
+    <div className="py-3 space-y-2.5">
       <button type="button" onClick={toggle} aria-expanded={!hidden} className="w-full flex items-start gap-2 text-left">
         {hidden ? <ChevronRight className="w-4 h-4 mt-0.5 shrink-0 text-white/50" /> : <ChevronDown className="w-4 h-4 mt-0.5 shrink-0 text-white/50" />}
         <BookOpenCheck className="w-4 h-4 mt-0.5 shrink-0" style={{ color: GC_BLUE }} />

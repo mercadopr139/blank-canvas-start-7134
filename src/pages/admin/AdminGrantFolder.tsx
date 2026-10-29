@@ -2,7 +2,7 @@
 // (GrantApplication: paste the screens, approve or reject each answer), the
 // funder's documents and NLA's, and the facts of the grant (due date,
 // amount, period). See docs/grant-coach/README.md.
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, type ReactNode } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   ArrowLeft, Loader2, Upload, Link2, ExternalLink, Trash2, CalendarClock,
-  Sparkles, RefreshCw, FolderOpen, FileText, ChevronRight, ChevronDown,
+  Sparkles, RefreshCw, FileText, ChevronRight, ChevronDown,
 } from "lucide-react";
 import { buildAnswersPdf, answersPdfFileName, printableItems } from "@/lib/grantCoach/answersPdf";
 import { planMerge, mergePdfs, setWriterFolder } from "@/lib/grantCoach/attachments";
@@ -91,6 +91,26 @@ function Inline({ value, onSave, className = "", placeholder = "—", title = "C
     />
   );
 }
+/** A folded row in the folder header: chevron, icon, bold title, a grey line; the controls on the right stay out of the toggle. */
+function FoldRow({ icon, title, blurb, open, onToggle, right, children }: { icon: ReactNode; title: string; blurb: ReactNode; open: boolean; onToggle: () => void; right?: ReactNode; children?: ReactNode }) {
+  return (
+    <div className="py-3">
+      <div className="flex items-start gap-3">
+        <button type="button" onClick={onToggle} aria-expanded={open} className="flex-1 min-w-0 flex items-start gap-2 text-left">
+          {open ? <ChevronDown className="w-4 h-4 mt-0.5 shrink-0 text-white/50" /> : <ChevronRight className="w-4 h-4 mt-0.5 shrink-0 text-white/50" />}
+          <span className="mt-0.5 shrink-0" style={{ color: GC_BLUE }}>{icon}</span>
+          <span className="min-w-0">
+            <span className="block text-sm font-bold text-white">{title}</span>
+            <span className="block text-[11px] text-white/45">{blurb}</span>
+          </span>
+        </button>
+        {right && <div className="shrink-0 flex items-center gap-2">{right}</div>}
+      </div>
+      {open && <div className="mt-2 pl-6">{children}</div>}
+    </div>
+  );
+}
+
 const kb = (n: number | null) => (n == null ? "" : n > 1_000_000 ? `${(n / 1_000_000).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1000))} KB`);
 const docPath = (folderId: string, fileName: string) => `grants/${folderId}/${Date.now()}_${fileName.replace(/[^\w.-]+/g, "_").slice(0, 80)}`;
 
@@ -146,6 +166,7 @@ const AdminGrantFolder = () => {
   });
   const { data: library = [] } = useQuery({ queryKey: ["grant-library"], queryFn: loadLibrary, staleTime: 5 * 60_000 });
   const [factsOpen, setFactsOpen] = useState(false);
+  const [funderOpen, setFunderOpen] = useState<boolean | null>(null);
 
   const draftFolder = () => ({
     name: folder!.name, funder: folder!.funder, program_name: folder!.program_name, amount_requested: folder!.amount_requested,
@@ -386,42 +407,27 @@ const AdminGrantFolder = () => {
             onChanged={refreshFolder}
           />
         </div>
-      </div>
-      {(folder.status === "active" || folder.status === "closed") && (
-        <GrantReporting
-          folderId={id!}
-          draftFolder={draftFolder}
-          funderBrief={folder.funder_brief ?? null}
-          reports={reports}
-          promised={items.filter((i) => i.status === "done" && i.answer?.trim() && !["acknowledgment", "signature", "upload"].includes(i.kind)).map((i) => ({ label: i.label, answer: i.answer! }))}
-          library={library}
-          userId={user?.id ?? null}
-          ask={ask}
-        />
-      )}
 
-      <div className="space-y-6">
-        {/* The grant's documents, full width (Josh, 2026-10-29); the numbers under them. */}
-        <GcCard icon={<FolderOpen className="w-4 h-4" />} title="Grant/RFP Info Here" blurb="What the funder sent, and the rules Grant Coach read from it">
-          <div className="p-4 space-y-3">
+        {/* The setup of the folder: what the funder sent, the rules read from it, the numbers every answer uses.
+            Rows, not cards (Josh, 2026-10-29): the blue-band cards below are the application itself. */}
+        <div className="mt-4 border-t border-white/10 divide-y divide-white/10">
             {/* 1. What the funder sent: upload it here, see it here, and Grant Coach reads it into the rules below
                   (Josh, 2026-10-29: the files themselves, not a pop-up). The screenshots that built the application fold to one line. */}
             {(() => {
               const all = docs.filter((d) => d.side === "funder");
               const files = all.filter((d) => !isShot(d));
               const shots = all.filter(isShot);
+              const open = funderOpen ?? files.length === 0;
               return (
-                <div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <p className="flex-1 min-w-[160px] text-sm font-bold uppercase tracking-wide inline-flex items-center gap-2"><FileText className="w-4 h-4" style={{ color: GC_BLUE }} /> From the funder</p>
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={() => chooseFile("funder")} disabled={busy} className="font-bold" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}>
+                <FoldRow icon={<FileText className="w-4 h-4" />} title="From the funder" open={open} onToggle={() => setFunderOpen(!open)}
+                  blurb={files.length ? `${files.length} file${files.length === 1 ? "" : "s"}${shots.length ? ` · ${shots.length} portal screenshot${shots.length === 1 ? "" : "s"}` : ""} · the RFP, slides, budget template, rubric — Grant Coach reads each into the rules` : "Upload the RFP, the slides, the budget template, the rubric — Grant Coach reads each one into the rules"}
+                  right={<>
+                      <Button size="sm" onClick={() => chooseFile("funder")} disabled={busy} className="font-bold h-8" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}>
                         {busy ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Upload className="w-3.5 h-3.5 mr-1.5" />} Upload
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => { setSide("funder"); void link(); }} className="bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white"><Link2 className="w-3.5 h-3.5 mr-1.5" /> Link</Button>
-                    </div>
-                  </div>
-                  <ul className="divide-y divide-white/[0.06] mt-1">
+                      <Button size="sm" variant="outline" onClick={() => { setSide("funder"); void link(); }} className="h-8 bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white"><Link2 className="w-3.5 h-3.5 mr-1.5" /> Link</Button>
+                    </>}>
+                  <ul className="divide-y divide-white/[0.06]">
                     {files.map((d) => (
                   <li key={d.id} className="py-2 flex items-center gap-2">
                     <button type="button" onClick={() => void openDoc(d)} className="flex-1 min-w-0 text-left group">
@@ -453,14 +459,42 @@ const AdminGrantFolder = () => {
                       )}
                     </div>
                   )}
-                </div>
+                </FoldRow>
               );
             })()}
             {/* 2. The rules Grant Coach read from those documents. */}
             <FunderBrief folderId={id!} folder={draftFolder()} docs={docs} brief={folder.funder_brief ?? null} briefAt={folder.funder_brief_at ?? null} briefDocIds={folder.funder_brief_docs ?? []} />
-          </div>
-        </GcCard>
+            <FoldRow icon={<Sparkles className="w-4 h-4" />} title="The numbers Grant Coach uses" blurb={factsLoading ? "reading…" : `${facts.length} facts · program year ${factYearLabel()} · pulled live from the back end`} open={factsOpen} onToggle={() => setFactsOpen((o) => !o)}>
+              <p className="text-[12px] text-white/45 pb-2">Program year {factYearLabel()}, the last complete year, pulled live from the back end. Every number about NLA's youth in a draft comes from here, never from the website or the CPF proposal; the library supplies the story, not the statistics. Nothing is made up.</p>
+              <ul className="space-y-2">
+                {facts.map((f) => (
+                  <li key={f.key} className="text-[12px]">
+                    <span className="text-white/80">{f.label}:</span> <span className="text-white">{f.value}</span>
+                    <span className="block text-[11px] text-white/35">{f.period} · {f.source}</span>
+                  </li>
+                ))}
+                {!facts.length && !factsLoading && <li className="text-[12px] text-white/35">Nothing read yet.</li>}
+              </ul>
+              <Button size="sm" variant="outline" onClick={() => void refetchFacts()} disabled={factsLoading} className="mt-3 bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white">
+                <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${factsLoading ? "animate-spin" : ""}`} /> Refresh the numbers
+              </Button>
+            </FoldRow>
+        </div>
+      </div>
+      {(folder.status === "active" || folder.status === "closed") && (
+        <GrantReporting
+          folderId={id!}
+          draftFolder={draftFolder}
+          funderBrief={folder.funder_brief ?? null}
+          reports={reports}
+          promised={items.filter((i) => i.status === "done" && i.answer?.trim() && !["acknowledgment", "signature", "upload"].includes(i.kind)).map((i) => ({ label: i.label, answer: i.answer! }))}
+          library={library}
+          userId={user?.id ?? null}
+          ask={ask}
+        />
+      )}
 
+      <div className="space-y-6">
         <input ref={fileInput} type="file" className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f, chooseFor.current); e.target.value = ""; }} />
 
         {/* One list at a time, in a pop-up: upload, link, open, remove. Esc or the X closes it. */}
@@ -523,24 +557,6 @@ const AdminGrantFolder = () => {
             </div>
           </DialogContent>
         </Dialog>
-
-        <GcCard icon={<Sparkles className="w-4 h-4" />} title="The numbers Grant Coach uses" blurb={factsLoading ? "reading…" : `${facts.length} facts · program year ${factYearLabel()}`} open={factsOpen} onToggle={() => setFactsOpen((o) => !o)}>
-          <div className="px-4 pb-3">
-              <p className="text-[12px] text-white/45 py-2">Program year {factYearLabel()}, the last complete year, pulled live from the back end. Every number about NLA's youth in a draft comes from here, never from the website or the CPF proposal; the library supplies the story, not the statistics. Nothing is made up.</p>
-              <ul className="space-y-2">
-                {facts.map((f) => (
-                  <li key={f.key} className="text-[12px]">
-                    <span className="text-white/80">{f.label}:</span> <span className="text-white">{f.value}</span>
-                    <span className="block text-[11px] text-white/35">{f.period} · {f.source}</span>
-                  </li>
-                ))}
-                {!facts.length && !factsLoading && <li className="text-[12px] text-white/35">Nothing read yet.</li>}
-              </ul>
-              <Button size="sm" variant="outline" onClick={() => void refetchFacts()} disabled={factsLoading} className="mt-3 bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white">
-                <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${factsLoading ? "animate-spin" : ""}`} /> Refresh the numbers
-              </Button>
-          </div>
-        </GcCard>
 
         {/* The application, full width; under it the record of what went out with it (Josh, 2026-10-29:
             attachments only exist once you are deep in the application, so they live at the end). */}
