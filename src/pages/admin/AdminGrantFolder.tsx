@@ -115,8 +115,6 @@ function FoldRow({ icon, title, blurb, open, onToggle, right, children }: { icon
   );
 }
 
-/** A printed copy of the answers (Print files one each time). */
-const isPrint = (d: { title: string }) => /^Our answers, printed /.test(d.title);
 const kb = (n: number | null) => (n == null ? "" : n > 1_000_000 ? `${(n / 1_000_000).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1000))} KB`);
 const docPath = (folderId: string, fileName: string) => `grants/${folderId}/${Date.now()}_${fileName.replace(/[^\w.-]+/g, "_").slice(0, 80)}`;
 
@@ -275,22 +273,8 @@ const AdminGrantFolder = () => {
       const href = URL.createObjectURL(blob);
       const a = document.createElement("a"); a.href = href; a.download = name; a.click();
       setTimeout(() => URL.revokeObjectURL(href), 10_000);
-      const path = docPath(id!, name);
-      const { error } = await supabase.storage.from(GRANT_DOCUMENTS_BUCKET).upload(path, blob, { contentType: "application/pdf" });
-      if (error) throw error;
-      // The newest print is the record; the earlier copies go (Josh, 2026-10-29: "not sure why this is showing 13 attachments").
-      const old = docs.filter((d) => d.side === "ours" && isPrint(d));
-      if (old.length) {
-        await supabase.storage.from(GRANT_DOCUMENTS_BUCKET).remove(old.map((d) => d.storage_path!).filter(Boolean));
-        await supabase.from("grant_documents" as never).delete().in("id", old.map((d) => d.id));
-      }
-      const { error: e2 } = await supabase.from("grant_documents" as never).insert({
-        folder_id: id, side: "ours", title: `Our answers, printed ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/New_York" })}`,
-        storage_path: path, file_name: name, mime_type: "application/pdf", size_bytes: blob.size, uploaded_by: user?.id ?? null,
-      } as never);
-      if (e2) throw e2;
-      qc.invalidateQueries({ queryKey: ["grant-docs", id] });
-      toast.success(pdfs.length ? `Printed with ${pdfs.length} attached PDF${pdfs.length === 1 ? "" : "s"}. A copy is filed under our documents.` : "Answers printed. A copy is filed under our documents.");
+      // Downloaded, not filed: the folder keeps the attachments, not copies of the print (Josh, 2026-10-29).
+      toast.success(pdfs.length ? `Printed with ${pdfs.length} attached PDF${pdfs.length === 1 ? "" : "s"}.` : "Answers printed.");
     } catch (e) {
       toast.error(`Couldn't print: ${(e as Error).message}`);
     } finally {
@@ -382,12 +366,28 @@ const AdminGrantFolder = () => {
       .sort((a, b) => a.sort_order - b.sort_order)
       .map((i) => ({ item: i, doc: byId.get(i.attachment_id!)! }));
     const used = new Set(attached.map((a) => a.doc.id));
-    const prints = ours.filter(isPrint).sort((a, b) => (a.uploaded_at < b.uploaded_at ? 1 : -1));
-    const print = prints[0] ?? null;
     const award = ours.filter((d) => /^Award letter/.test(d.title));
-    const other = ours.filter((d) => !used.has(d.id) && !isPrint(d) && !award.includes(d));
-    return { attached, print, olderPrints: prints.slice(1), award, other };
+    const stray = ours.filter((d) => !used.has(d.id) && !award.includes(d));
+    return { attached, award, stray };
   })();
+  /** Files on the "ours" side that are attached to nothing — earlier versions, old prints — go, with their files. */
+  const clearStray = async () => {
+    const n = sent.stray.length;
+    if (!n) return;
+    const ok = await ask.confirm({
+      title: `Clear ${n} file${n === 1 ? "" : "s"} not attached to the application?`,
+      body: "Earlier versions you replaced and old printed copies. The six attached files, the questions and the answers are not touched. The files are deleted; this cannot be undone.",
+      confirmLabel: `Clear ${n} file${n === 1 ? "" : "s"}`,
+      danger: true,
+    });
+    if (!ok) return;
+    const paths = sent.stray.map((d) => d.storage_path).filter((p): p is string => !!p);
+    if (paths.length) await supabase.storage.from(GRANT_DOCUMENTS_BUCKET).remove(paths);
+    const { error } = await supabase.from("grant_documents" as never).delete().in("id", sent.stray.map((d) => d.id));
+    if (error) { toast.error(error.message); return; }
+    qc.invalidateQueries({ queryKey: ["grant-docs", id] });
+    toast.success(`${n} file${n === 1 ? "" : "s"} cleared.`);
+  };
 
   return (
     <div className="space-y-6 w-full max-w-5xl mx-auto px-4 lg:px-8">
@@ -549,7 +549,7 @@ const AdminGrantFolder = () => {
             <DialogHeader>
               <DialogTitle className="text-white">{side === "funder" ? "From the funder" : "Attachments NLA Sent"}</DialogTitle>
               <p className="text-[12px] text-white/50">
-                {side === "funder" ? "The RFP, guidelines, budget template, rubric, reporting rules — everything they sent." : "What went out with this application: every file attached to an upload question, the printed answers, the award letter. It fills itself."}
+                {side === "funder" ? "The RFP, guidelines, budget template, rubric, reporting rules — everything they sent." : "What went out with this application: the file attached to each upload question, in the portal's order. It fills itself."}
               </p>
             </DialogHeader>
             <div className="flex gap-2">
@@ -579,27 +579,17 @@ const AdminGrantFolder = () => {
                       {sent.attached.map(({ item, doc }, i) => row(doc, `${i + 1}. ${item.label}`, doc.title !== (doc.file_name ?? "").replace(/\.[^.]+$/, "") ? doc.title : undefined))}
                       {sent.attached.length === 0 && <li className="py-2 text-[12px] text-white/35">Nothing attached yet. Each upload question on the application takes a file.</li>}
                     </ul>
-                    {(sent.print || sent.award.length > 0) && (
+                    {sent.award.length > 0 && (
                       <>
-                        <p className="text-[11px] font-bold uppercase tracking-wide text-white/45 pt-3">The record</p>
-                        <ul className="divide-y divide-white/[0.06]">
-                          {sent.print && row(sent.print, sent.print.title, "the answers and the attachments in one PDF")}
-                          {sent.award.map((d) => row(d, d.title))}
-                        </ul>
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-white/45 pt-3">The award</p>
+                        <ul className="divide-y divide-white/[0.06]">{sent.award.map((d) => row(d, d.title))}</ul>
                       </>
                     )}
-                    {(sent.other.length > 0 || sent.olderPrints.length > 0) && (
-                      <div className="mt-3 border-t border-white/10 pt-2">
-                        <button type="button" onClick={() => setShowShots((o) => !o)} className="inline-flex items-center gap-1.5 text-[12px] text-white/50 hover:text-white">
-                          {showShots ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />} {sent.other.length + sent.olderPrints.length} not sent — earlier versions and older prints
-                        </button>
-                        {showShots && (
-                          <ul className="divide-y divide-white/[0.06] mt-1">
-                            {sent.other.map((d) => row(d, d.title, "uploaded here, attached to nothing"))}
-                            {sent.olderPrints.map((d) => row(d, d.title, "an earlier print"))}
-                          </ul>
-                        )}
-                      </div>
+                    {sent.stray.length > 0 && (
+                      <p className="mt-3 border-t border-white/10 pt-2 text-[12px] text-white/45">
+                        {sent.stray.length} file{sent.stray.length === 1 ? " is" : "s are"} here but attached to nothing (earlier versions, old prints).{" "}
+                        <button type="button" onClick={() => void clearStray()} className="text-red-300 hover:text-red-200 underline underline-offset-2">Clear {sent.stray.length === 1 ? "it" : "them"}</button>
+                      </p>
                     )}
                   </>
                 );
@@ -670,7 +660,7 @@ const AdminGrantFolder = () => {
           {(() => {
             const n = sent.attached.length;
             return (
-              <GcCard icon={<FileText className="w-4 h-4" />} title="Attachments NLA Sent" blurb={n ? `${n} attached to the application${sent.print ? " · the printed answers" : ""}${sent.other.length ? ` · ${sent.other.length} not sent` : ""}` : "Fills itself: every file attached to an upload question, the printed answers, the award letter"}
+              <GcCard icon={<FileText className="w-4 h-4" />} title="Attachments NLA Sent" blurb={n ? `${n} attached to the application — what went out with it` : "Fills itself: the file attached to each upload question"}
                 right={<Button size="sm" variant="outline" onClick={() => openDocs("ours")} className="bg-transparent border-white/20 text-white/85 hover:bg-white/10 hover:text-white h-8"><FileText className="w-3.5 h-3.5 mr-1.5" /> See the files</Button>} />
             );
           })()}
