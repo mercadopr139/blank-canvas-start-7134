@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Send, Gavel, ArrowDownCircle, Check, MessageSquare } from "lucide-react";
 import { GC_BLUE, GC_SHADE } from "@/components/admin/grantCoach/GcCard";
+import DraftDiff from "@/components/admin/grantCoach/DraftDiff";
 import { chatWithReviewer, reviewerMessages, type Review, type ReviewerMsg, type ReviewNote } from "@/lib/grantCoach/review";
 import type { CaseBrief, DraftFolder, LibraryEntry, FunderBrief } from "@/lib/grantCoach/writer";
 import type { Fact } from "@/lib/grantCoach/liveFacts";
@@ -167,7 +168,7 @@ export default function ReviewerChat({ folderId, folder, live, library, getFacts
                             </button>
                           )}
                         </div>
-                        <p className="px-3 py-2 text-sm text-white whitespace-pre-wrap leading-relaxed">{m.payload.draft}</p>
+                        <DraftDiff before={it?.answer} after={m.payload.draft} className="px-3 py-2 text-sm text-white whitespace-pre-wrap leading-relaxed" />
                       </div>
                     );
                   })()}

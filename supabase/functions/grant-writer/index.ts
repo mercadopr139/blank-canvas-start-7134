@@ -111,7 +111,7 @@ type Req = {
   /** Every call: what NLA is submitting with the answers — the attached files, read as written (2026-10-29). */
   attachments?: { label: string; title: string; text: string }[];
   /** review: memory (2026-10-29) — the last review, the questions changed since it, the notes Josh dismissed, and the focus. */
-  previousReview?: { overall: number; verdict: string; criteria: { name: string; score: number; max: number; why: string; advice?: { text: string; i: number[] }[] }[]; weakest?: { i: number; problem: string; fix: string }[]; contradictions?: string[]; wrong_numbers?: string[] } | null;
+  previousReview?: { overall: number; verdict: string; criteria: { name: string; score: number; max: number; why: string; advice?: { text: string; target?: number | null; i: number[] }[] }[]; weakest?: { i: number; problem: string; fix: string }[]; contradictions?: string[]; wrong_numbers?: string[] } | null;
   changedSince?: number[];
   dismissed?: string[];
   focus?: "must_fix" | "all";
@@ -713,8 +713,8 @@ Check: every criterion the funder scores; whether each answer answers exactly wh
         messages: [{ role: "user", content: context +
           `\n\nReturn ONLY JSON: {"overall":<0-100, your honest total>,"verdict":"<two sentences: would you fund it as written, and the one thing that would move the score most>",` +
           `"criteria":[{"name":"<the funder's criterion, exactly as the funder names it>","score":<points>,"max":<points available>,"why":"<one line: what earned or lost points, citing the answers as [i]>",` +
-          `"advice":[{"text":"<ONE short sentence Josh can act on: what to change and where, citing the question as [i] — e.g. 'In [32] state the total program cost as $794,427 and the $75,000 as the CSBG share'>","i":[<the question indexes this is about>]}]}] ` +
-          `(advice: zero to three lines per criterion, worst first; ${mustFix ? "ONLY what costs points or disqualifies — an empty list means nothing here costs points" : "what costs points first, then what a careful panel would also say"}; a contradiction between answers or a figure that does not match the record goes here, under the criterion it hurts, as one line naming both questions)}` }],
+          `"advice":[{"text":"<ONE short sentence Josh can act on: what to change in ONE question, citing it as [i] — e.g. 'In [32] state the total program cost as $794,427 and the $75,000 as the CSBG share'>","target":<the ONE question index whose answer changes>,"i":[<every question index the sentence cites>]}]}] ` +
+          `(advice: ONE LINE = ONE CHANGE IN ONE QUESTION — if two questions must change, write two lines; zero to three lines per criterion, worst first; ${mustFix ? "ONLY what costs points or disqualifies — an empty list means nothing here costs points" : "what costs points first, then what a careful panel would also say"}; a contradiction between answers or a figure that does not match the record goes here, under the criterion it hurts, as one line naming both questions)}` }],
         // Medium on the best model keeps a full-application read inside the function's time limit.
         ...thinking("medium"),
       });
@@ -725,10 +725,12 @@ Check: every criterion the funder scores; whether each answer answers exactly wh
       const criteria = (Array.isArray(parsed.criteria) ? parsed.criteria : []).map((c: any) => ({
         name: String(c.name ?? ""), score: Number(c.score ?? 0), max: Number(c.max ?? 0), why: String(c.why ?? ""),
         // deno-lint-ignore no-explicit-any
-        advice: (Array.isArray(c.advice) ? c.advice : []).map((a: any) => ({
-          text: String(a?.text ?? "").trim(),
-          i: Array.isArray(a?.i) ? a.i.map(Number).filter((n: number) => ids.has(n)) : [...String(a?.text ?? "").matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1])).filter((n) => ids.has(n)),
-        })).filter((a: { text: string }) => a.text).slice(0, mustFix ? 3 : 4),
+        advice: (Array.isArray(c.advice) ? c.advice : []).map((a: any) => {
+          const cited = [...String(a?.text ?? "").matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1])).filter((n) => ids.has(n));
+          const i = Array.isArray(a?.i) ? a.i.map(Number).filter((n: number) => ids.has(n)) : cited;
+          const target = ids.has(Number(a?.target)) ? Number(a.target) : (cited[0] ?? i[0] ?? null);
+          return { text: String(a?.text ?? "").trim(), target, i: i.length ? i : cited };
+        }).filter((a: { text: string }) => a.text).slice(0, mustFix ? 3 : 4),
       }));
       return json({
         review: {

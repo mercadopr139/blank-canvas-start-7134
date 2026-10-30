@@ -16,9 +16,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Loader2, Gavel, AlertTriangle, Check, Wand2, ArrowDownCircle, MessageSquare, Undo2, Eye, PartyPopper, Wrench, SendHorizontal } from "lucide-react";
+import { Loader2, Gavel, AlertTriangle, Check, Wand2, ArrowDownCircle, MessageSquare, Undo2, PartyPopper, Wrench, SendHorizontal, Printer } from "lucide-react";
 import GcCard, { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
-import { preSubmitChecks, reviewApplication, reviewerMessages, clarificationsOf, type Review, type ReviewNote, type ReviewFocus, type Criterion } from "@/lib/grantCoach/review";
+import { preSubmitChecks, reviewApplication, reviewerMessages, clarificationsOf, type Review, type ReviewNote, type ReviewFocus, type Criterion, type Advice } from "@/lib/grantCoach/review";
 import type { CaseBrief, DraftFolder, LibraryEntry, FunderBrief } from "@/lib/grantCoach/writer";
 import type { Fact } from "@/lib/grantCoach/liveFacts";
 import type { AppItem } from "@/components/admin/grantCoach/GrantApplication";
@@ -42,6 +42,9 @@ interface Props {
   /** Draft it: the rewrite goes to the question's conversation as a draft card. */
   onFix: (it: AppItem, w: { problem: string; fix: string; instruction: string }) => Promise<void>;
   userId: string | null;
+  /** Print the copy — the same Print as the application header, one click from the finish line. */
+  onPrint: () => void;
+  printing: boolean;
   /** The reviewer's conversation: a rewrite goes to that question as a draft card. */
   onDraftToQuestion: (it: AppItem, note: string, text: string, words: number) => Promise<void>;
 }
@@ -83,13 +86,12 @@ function Refs({ text, live, onJump }: { text: string; live: AppItem[]; onJump: (
   );
 }
 
-export default function GrantReviewer({ folderId, folder, items, library, getFacts, caseBrief, review, reviewedAt, funderBrief, lastChange, busy, onJump, onFix, userId, onDraftToQuestion }: Props) {
+export default function GrantReviewer({ folderId, folder, items, library, getFacts, caseBrief, review, reviewedAt, funderBrief, lastChange, busy, onJump, onFix, userId, onDraftToQuestion, onPrint, printing }: Props) {
   const qc = useQueryClient();
   const [running, setRunning] = useState(false);
   const [drafting, setDrafting] = useState<string | null>(null);
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [working, setWorking] = useState<string | null>(null);
-  const [showSettled, setShowSettled] = useState(false);
   const live = items.filter((i) => i.status !== "na");
   const checks = preSubmitChecks(live);
   const stale = !!review && !!reviewedAt && !!lastChange && lastChange > reviewedAt;
@@ -111,6 +113,14 @@ export default function GrantReviewer({ folderId, folder, items, library, getFac
   const setFocus = (v: ReviewFocus) => { setFocusState(v); try { localStorage.setItem(focusKey, v); } catch { /* private window */ } };
 
   const decisions = review?.decisions ?? {};
+  /** A line of advice Josh has handled: ticked by hand, or its questions changed since the review (2026-10-29: "lightly cross out so I can stay organized"). */
+  const adviceDone = review?.adviceDone ?? {};
+  const changedSinceReview = new Set(reviewedAt ? live.map((it, i) => (it.updated_at && it.updated_at > reviewedAt ? i + 1 : 0)).filter(Boolean) : []);
+  const isDone = (a: { text: string; i: number[] }) => adviceDone[a.text] ?? a.i.some((n) => changedSinceReview.has(n));
+  const toggleDone = async (a: { text: string; i: number[] }) => {
+    if (!review) return;
+    await saveReview({ ...review, adviceDone: { ...adviceDone, [a.text]: !isDone(a) } });
+  };
   const criteria = review?.criteria ?? [];
   const settledCount = criteria.filter((c) => decisions[c.name]).length;
   const allSettled = criteria.length > 0 && settledCount === criteria.length;
@@ -184,12 +194,16 @@ export default function GrantReviewer({ folderId, folder, items, library, getFac
     }
   };
 
-  /** Draft it: one line of advice becomes a draft card on the first question it cites. */
-  const draftIt = async (c: Criterion, a: { text: string; i: number[] }, key: string) => {
-    const it = a.i.map((n) => live[n - 1]).find(Boolean);
-    if (!it) { toast.error("That advice doesn't point at a question. Open the question yourself and ask Grant Coach there."); return; }
+  /** Draft it: one line of advice becomes a draft card on ONE question it names — the one Josh picks when it names several (2026-10-29: a draft sent to the first number landed on a one-word field). */
+  /** The one question a line of advice changes. */
+  const targetOf = (a: Advice): number | null => a.target ?? (a.text.match(/\[(\d+)\]/) ? Number(a.text.match(/\[(\d+)\]/)![1]) : a.i[0] ?? null);
+  const draftIt = async (c: Criterion, a: Advice, key: string) => {
+    const n = targetOf(a);
+    const it = n ? live[n - 1] : undefined;
+    if (!it || !n) { toast.error("That advice doesn't point at a question. Open the question yourself and ask Grant Coach there."); return; }
     setDrafting(key);
-    try { await onFix(it, { problem: `${c.name}: ${a.text}`, fix: a.text, instruction: a.text }); toast.success("The rewrite is in the question's conversation. Read it there; Use this puts it in the answer."); } finally { setDrafting(null); }
+    const only = a.i.length > 1 ? ` Change only [${n}] "${it.label}"; the other questions named are only context.` : "";
+    try { await onFix(it, { problem: `${c.name}: ${a.text}`, fix: a.text, instruction: a.text + only }); toast.success(`The rewrite for ${n} is in its conversation. Read it there; Use this puts it in the answer.`); } finally { setDrafting(null); }
   };
 
   // Each pre-submit item is a link to its question.
@@ -210,7 +224,7 @@ export default function GrantReviewer({ folderId, folder, items, library, getFac
     <GcCard
       icon={<Gavel className="w-4 h-4" />}
       title="The reviewer"
-      blurb={review ? `${review.overall}/100 · ${settledCount} of ${criteria.length} settled${stale ? " · answers changed since this review" : ""}` : "Read the application the way the funder's panel will, before you submit"}
+      blurb={review ? `${review.overall}/100 · ${settledCount} of ${criteria.length} settled${reviewedAt ? ` · reviewed ${new Date(reviewedAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" })}` : ""}${stale ? " · answers changed since" : ""}` : "Read the application the way the funder's panel will, before you submit"}
       right={
         <>
           <div className="hidden sm:flex rounded-md border overflow-hidden text-[11px] font-bold" style={{ borderColor: `${GC_BLUE}66` }} title="How much the reviewer flags">
@@ -220,7 +234,10 @@ export default function GrantReviewer({ folderId, folder, items, library, getFac
               </button>
             ))}
           </div>
-          <Button size="sm" onClick={() => void run()} disabled={running || busy || waitingForCase > 0 || !live.some((i) => i.answer?.trim())} title={waitingForCase ? "Answer the open questions first" : undefined} className="font-bold h-8" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}>
+          {review && (
+            <Button size="sm" variant="outline" onClick={() => void run(true)} disabled={running || busy} title="A fresh full read: every criterion open again" className="h-8 bg-transparent border-white/20 text-white/75 hover:bg-white/10 hover:text-white"><Undo2 className="w-4 h-4 mr-1.5" /> Start over</Button>
+          )}
+          <Button size="sm" onClick={() => void run()} disabled={running || busy || waitingForCase > 0 || !live.some((i) => i.answer?.trim())} title={waitingForCase ? "Review again re-reads only what you changed and keeps what you settled" : "Re-reads only what you changed and keeps what you settled"} className="font-bold h-8" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}>
             {running ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Gavel className="w-4 h-4 mr-1.5" />} {review ? "Review again" : "Review the application"}
           </Button>
         </>
@@ -264,7 +281,16 @@ export default function GrantReviewer({ folderId, folder, items, library, getFac
                 </div>
                 <div className="flex-1 min-w-[220px]">
                   <p className="text-lg font-black text-emerald-300 inline-flex items-center gap-2"><PartyPopper className="w-5 h-5" /> All {criteria.length} settled. This one is ready.</p>
-                  <p className="text-sm text-white/75 mt-1">Every criterion is fixed or going in as is. Print the copy, then submit on the portal.</p>
+                  <p className="text-sm text-white/75 mt-1">Every criterion is fixed or going in as is. What's left:</p>
+                  <ol className="mt-1.5 space-y-0.5 text-[13px] text-white/80 list-decimal list-inside">
+                    <li><span className="font-semibold text-white">Print</span> — one PDF with every answer and the attached files; a copy files under Ours.</li>
+                    <li><span className="font-semibold text-white">Fill the portal</span> — copy each answer from its row (or View application → Copy all); upload each attachment from the documents card.</li>
+                    <li><span className="font-semibold text-white">Submit on the portal.</span></li>
+                    <li><span className="font-semibold text-white">Mark submitted</span> in the card at the top of this folder, so the folder is the record.</li>
+                  </ol>
+                  <Button size="sm" onClick={onPrint} disabled={printing} className="mt-3 font-bold h-9" style={{ backgroundColor: "#34d399", color: "#0a0a0a" }}>
+                    {printing ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Printer className="w-4 h-4 mr-1.5" />} Print the copy
+                  </Button>
                 </div>
               </div>
             ) : (
@@ -291,9 +317,6 @@ export default function GrantReviewer({ folderId, folder, items, library, getFac
                 const d = decisions[c.name];
                 const k = criterionKey(n);
                 const advice = c.advice ?? [];
-                if (d && !showSettled) {
-                  return null;
-                }
                 if (d) {
                   return (
                     <div key={c.name} className="rounded-xl border border-emerald-400/30 bg-emerald-400/[0.06] px-3 py-2 flex items-center gap-3">
@@ -315,13 +338,15 @@ export default function GrantReviewer({ folderId, folder, items, library, getFac
                       <ul className="space-y-1.5">
                         {advice.map((a, j) => {
                           const key = `${k}:${j}`;
-                          const target = a.i.map((x) => live[x - 1]).find(Boolean);
+                          const tn = targetOf(a); const target = tn ? live[tn - 1] : undefined;
                           return (
-                            <li key={j} className="flex items-start gap-2 text-[13px] text-white/85">
-                              <span className="mt-[7px] w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: GC_BLUE }} />
-                              <span className="flex-1"><Refs text={a.text} live={live} onJump={onJump} /></span>
+                            <li key={j} className={`flex items-start gap-2 text-[13px] ${isDone(a) ? "text-white/40" : "text-white/85"}`}>
+                              <button type="button" onClick={() => void toggleDone(a)} title={isDone(a) ? "Handled — click to put it back" : "Click when you have handled this"} className="mt-[3px] w-4 h-4 rounded-full border shrink-0 inline-flex items-center justify-center" style={isDone(a) ? { borderColor: "#34d399", backgroundColor: "#34d39933" } : { borderColor: `${GC_BLUE}99` }}>
+                                {isDone(a) && <Check className="w-3 h-3 text-emerald-300" />}
+                              </button>
+                              <span className={`flex-1 ${isDone(a) ? "line-through decoration-white/30" : ""}`}><Refs text={a.text} live={live} onJump={onJump} /></span>
                               {isWorking && target && (
-                                <button type="button" onClick={() => void draftIt(c, a, key)} disabled={busy || drafting != null} className="shrink-0 inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-bold hover:bg-white/10 disabled:opacity-50" style={{ borderColor: `${GC_BLUE}88`, color: GC_BLUE }}>
+                                <button type="button" onClick={() => void draftIt(c, a, key)} disabled={busy || drafting != null} title={`Drafts the change in ${targetOf(a)}. ${target.label}`} className="shrink-0 inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-bold hover:bg-white/10 disabled:opacity-50" style={{ borderColor: `${GC_BLUE}88`, color: GC_BLUE }}>
                                   {drafting === key ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />} Draft it
                                 </button>
                               )}
@@ -351,9 +376,6 @@ export default function GrantReviewer({ folderId, folder, items, library, getFac
                 );
               })}
             </div>
-            {settledCount > 0 && (
-              <button type="button" onClick={() => setShowSettled((v) => !v)} className="inline-flex items-center gap-1.5 text-[11px] text-white/50 hover:text-white underline underline-offset-2"><Eye className="w-3.5 h-3.5" /> {showSettled ? "Hide the settled" : `Show the ${settledCount} settled`}</button>
-            )}
 
             {clarifications.length > 0 && (
               <div>
@@ -361,11 +383,6 @@ export default function GrantReviewer({ folderId, folder, items, library, getFac
                 <ul className="mt-0.5 space-y-0.5">{clarifications.map((c, i) => <li key={i} className="text-[12px] text-white/70">• {c}</li>)}</ul>
               </div>
             )}
-            <ReviewerChat {...chatProps} />
-            <p className="text-[11px] text-white/35">
-              Review again re-reads only the answers you changed and keeps what you settled; <button type="button" onClick={() => void run(true)} disabled={running || busy} className="underline underline-offset-2 text-white/55 hover:text-white">start the review over</button> for a fresh full read.
-              {" "}Reviewed {reviewedAt ? new Date(reviewedAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }) : ""}.
-            </p>
           </>
         )}
       </div>

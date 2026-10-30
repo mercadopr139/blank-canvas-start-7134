@@ -18,6 +18,7 @@ import type { Fact } from "@/lib/grantCoach/liveFacts";
 import type { StoryDraft } from "@/lib/grantCoach/stories";
 import { needsFrom } from "@/lib/grantCoach/answers";
 import NeedMarks from "@/components/admin/grantCoach/NeedMarks";
+import DraftDiff from "@/components/admin/grantCoach/DraftDiff";
 
 interface Msg { id: string; role: "user" | "coach"; content: string; payload: { story_draft?: StoryDraft; story_done?: boolean; /** A draft answer Grant Coach wrote; it goes to the box only when Josh clicks. */ draft?: string; draft_story_id?: string | null; draft_words?: number } | null }
 interface Q { id: string; section: string; label: string; detail: string | null; kind: string; answer: string | null; limit_kind?: "words" | "characters" | null; limit_value?: number | null; needs_case?: boolean }
@@ -190,7 +191,8 @@ Left out: ${left.join("; ")}` : "");
                       {needsFrom(m.payload.draft) && (
                         <p className="px-3 py-1.5 text-[12px] font-bold text-red-300 bg-red-500/10 border-b border-red-500/30">{needsFrom(m.payload.draft)}</p>
                       )}
-                      <p className="px-3 py-2 text-sm text-white whitespace-pre-wrap leading-relaxed">{m.payload.draft}</p>
+                      {/* The change against the answer as it stands: added words amber, removed words struck (Josh, 2026-10-29). */}
+                      <DraftDiff before={item.answer} after={m.payload.draft} className="px-3 py-2 text-sm text-white whitespace-pre-wrap leading-relaxed" />
                     </div>
                   )}
                   {m.payload?.story_draft && !m.payload.story_done && (

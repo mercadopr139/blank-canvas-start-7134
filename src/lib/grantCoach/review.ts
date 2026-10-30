@@ -14,7 +14,9 @@ import { approvedSnapshotForWriter } from "@/lib/grantCoach/snapshot";
 import { attachmentsForWriter } from "@/lib/grantCoach/attachments";
 
 /** One of the funder's scoring criteria: the points, why, and two or three short lines of advice, each citing its questions. */
-export interface Criterion { name: string; score: number; max: number; why: string; advice?: { text: string; i: number[] }[] }
+/** One line of advice: one change in one question (target); the sentence may cite others (i), which are chips. */
+export interface Advice { text: string; target?: number | null; i: number[] }
+export interface Criterion { name: string; score: number; max: number; why: string; advice?: Advice[] }
 export interface Review {
   overall: number; verdict: string;
   criteria: Criterion[];
@@ -24,6 +26,8 @@ export interface Review {
   withdrawn?: Record<string, { at: string; why: string }>;
   /** Josh's call on each criterion (2026-10-29): fixed, or submitting as is. Settled stays settled through Review again. */
   decisions?: Record<string, { status: "fixed" | "as_is"; at: string }>;
+  /** Advice lines Josh ticked as handled (or un-ticked), by the line's text (2026-10-29). */
+  adviceDone?: Record<string, boolean>;
   /** @deprecated the old per-note clears; kept so older saved reviews still parse. */
   cleared?: Record<string, { at: string }>;
 }

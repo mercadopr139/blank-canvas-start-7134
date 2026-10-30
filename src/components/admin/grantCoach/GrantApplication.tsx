@@ -828,6 +828,8 @@ export default function GrantApplication({ folderId, folder, items, library, get
 
           {/* ── Before you submit: the reviewer ── */}
           <GrantReviewer
+            onPrint={onPrint}
+            printing={printing}
             folderId={folderId}
             folder={folder}
             items={items}
