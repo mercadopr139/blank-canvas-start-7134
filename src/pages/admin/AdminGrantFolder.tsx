@@ -405,7 +405,7 @@ const AdminGrantFolder = () => {
             <a href={folder.portal_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm text-sky-300 hover:text-sky-200"><ExternalLink className="w-4 h-4" /> Open the funder's portal</a>
           )}
           {items.length > 0 && (
-            <button type="button" onClick={() => setNextOpen(true)} title="A second application to this funder for a different program, built from this one" className="inline-flex items-center gap-1.5 text-sm text-sky-300 hover:text-sky-200"><Layers className="w-4 h-4" /> Start the next one from this folder</button>
+            <button type="button" onClick={() => setNextOpen(true)} title="A second application to this funder for a different program, built from this one" className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-bold text-white hover:brightness-110" style={{ backgroundColor: "#bf0f3e" }}><Layers className="w-4 h-4" /> Start the next one from this folder</button>
           )}
           <button type="button" onClick={() => void removeFolder()} className="ml-auto inline-flex items-center gap-1.5 text-[12px] text-white/40 hover:text-red-300">
             <Trash2 className="w-3.5 h-3.5" /> Remove this folder
