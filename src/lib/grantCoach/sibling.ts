@@ -1,4 +1,5 @@
-// A second application to the same funder in the same cycle (Josh, 2026-10-29).
+// Another application to the same funder in the same cycle (Josh, 2026-10-29;
+// a third one, 2026-10-30 — a folder sees every earlier application in its family).
 //
 // "Start the next one from this folder" builds grant #2 from grant #1 in one
 // click: the funder's files, the rules read from them, the numbers and the
@@ -143,13 +144,18 @@ export async function startNext(input: {
   stage(`Writing the case for ${next.program}…`);
   try {
     const waiting = live.filter((i) => i.needs_case).map((i) => ({ label: i.label, help: i.detail, kind: i.kind, limit_kind: i.limit_kind ?? null, limit_value: i.limit_value ?? null }));
+    // Every earlier application in the family (the source and whatever it was started from), so a third one is not called the second.
+    const family = (await loadFamily(source.id, newId)).filter((m) => m.id !== source.id);
+    const earlier = [
+      ...family.map((m) => `"${m.name}" (${programOf(m)})`),
+      `"${source.name}" (${firstProgram ?? source.case_brief?.program_name ?? "another program"}, asking for ${source.amount_requested != null ? `$${Number(source.amount_requested).toLocaleString()}` : "its own amount"})`,
+    ];
     const ask =
-      `This is NLA's SECOND application to ${source.funder} in the same cycle. The first, "${source.name}", proposes ${firstProgram ?? source.case_brief?.program_name ?? "another program"}` +
-      ` and asks for ${source.amount_requested != null ? `$${Number(source.amount_requested).toLocaleString()}` : "its own amount"}; it is already submitted and must not be repeated.` +
+      `This is NLA's application number ${earlier.length + 1} to ${source.funder} in the same cycle. The earlier one${earlier.length > 1 ? "s" : ""}, ${earlier.join(" and ")}, ${earlier.length > 1 ? "are" : "is"} already submitted and must not be repeated.` +
       ` This one funds ${next.program}${next.amount != null ? ` and asks for $${Number(next.amount).toLocaleString()}` : ""}.` +
       (next.different.trim() ? ` What is different about it, in Josh's words: ${next.different.trim()}` : "") +
-      ` Propose the case for THIS application now — same organization and the same facts, a different program with its own need, who is served, what the money pays for and outcomes;` +
-      ` nothing the money pays for here may also be paid for by the first application. Return it in "case".`;
+      ` Propose the case for THIS application now — same organization and the same facts, a different program (or service) with its own need, who is served, what the money pays for and outcomes;` +
+      ` nothing the money pays for here may also be paid for by an earlier application. Return it in "case".`;
     const reply = await strategyTurn({
       folder, library, facts, answered: [], waiting,
       messages: [{ role: "user", content: ask }],
@@ -198,27 +204,82 @@ export function overlapPercent(text: string | null | undefined, other: string | 
 /** Too close to the first application: a reader with both would notice. */
 export const TOO_CLOSE = 35;
 
-/** The first application, as the second one's page needs it: its name, program, and every answer by row id. */
-export interface SiblingContext { id: string; name: string; program: string | null; answers: Map<string, { label: string; answer: string | null }> }
+/** An earlier application in the family, as the writer reads it: its name, program and every answered question. */
+export interface SisterSummary { id: string; name: string; program: string | null; application: { label: string; answer: string }[] }
+/**
+ * The application this one was started from, as the page needs it: its name, program, and every answer by row id —
+ * plus `others`, every other earlier application in the same family (2026-10-30: a third application to the same
+ * funder draws on both the first and the second).
+ */
+export interface SiblingContext { id: string; name: string; program: string | null; answers: Map<string, { label: string; answer: string | null }>; others: SisterSummary[] }
 
-export async function loadSibling(folderId: string): Promise<SiblingContext | null> {
+type FolderLite = { id: string; name: string; program_name: string | null; case_brief: CaseBrief | null; sibling_of: string | null; created_at: string };
+const programOf = (f: FolderLite) => f.program_name ?? f.case_brief?.program_name ?? null;
+
+/**
+ * The family of a folder: walk up `sibling_of` to the root, then every folder started from any member.
+ * Returned oldest first, without `selfId`.
+ */
+export async function loadFamily(folderId: string, selfId?: string | null): Promise<FolderLite[]> {
+  const sel = "id, name, program_name, case_brief, sibling_of, created_at";
+  const seen = new Map<string, FolderLite>();
+  // Up to the root.
+  let cur: string | null = folderId;
+  for (let hops = 0; cur && hops < 8 && !seen.has(cur); hops++) {
+    const { data } = await supabase.from("grant_folders" as never).select(sel).eq("id", cur).maybeSingle();
+    const row = data as unknown as FolderLite | null;
+    if (!row) break;
+    seen.set(row.id, row);
+    cur = row.sibling_of;
+  }
+  // Down from every member.
+  let frontier = [...seen.keys()];
+  for (let hops = 0; frontier.length && hops < 8; hops++) {
+    const { data } = await supabase.from("grant_folders" as never).select(sel).in("sibling_of", frontier);
+    const rows = ((data ?? []) as unknown as FolderLite[]).filter((r) => !seen.has(r.id));
+    rows.forEach((r) => seen.set(r.id, r));
+    frontier = rows.map((r) => r.id);
+  }
+  return [...seen.values()].filter((r) => r.id !== selfId).sort((a, b) => a.created_at.localeCompare(b.created_at));
+}
+
+const answersOf = async (folderId: string) => {
+  const { data: rows } = await supabase.from("grant_checklist_items" as never).select("id, label, answer").eq("folder_id", folderId).order("sort_order");
+  return (rows ?? []) as unknown as { id: string; label: string; answer: string | null }[];
+};
+
+export async function loadSibling(folderId: string, selfId?: string | null): Promise<SiblingContext | null> {
   const { data: f, error } = await supabase.from("grant_folders" as never).select("id, name, program_name, case_brief").eq("id", folderId).maybeSingle();
   if (error || !f) return null;
   const folder = f as unknown as { id: string; name: string; program_name: string | null; case_brief: CaseBrief | null };
-  const { data: rows } = await supabase.from("grant_checklist_items" as never).select("id, label, answer").eq("folder_id", folderId);
   const answers = new Map<string, { label: string; answer: string | null }>();
-  for (const r of (rows ?? []) as unknown as { id: string; label: string; answer: string | null }[]) answers.set(r.id, { label: r.label, answer: r.answer });
-  return { id: folder.id, name: folder.name, program: folder.program_name ?? folder.case_brief?.program_name ?? null, answers };
+  for (const r of await answersOf(folderId)) answers.set(r.id, { label: r.label, answer: r.answer });
+  // The rest of the family: every earlier application other than this one and the one it was started from.
+  const others: SisterSummary[] = [];
+  for (const m of (await loadFamily(folderId, selfId)).filter((m) => m.id !== folderId)) {
+    const rows = await answersOf(m.id);
+    const application = rows.filter((r) => r.answer?.trim()).map((r) => ({ label: r.label, answer: r.answer!.trim() }));
+    if (application.length) others.push({ id: m.id, name: m.name, program: programOf(m), application });
+  }
+  return { id: folder.id, name: folder.name, program: folder.program_name ?? folder.case_brief?.program_name ?? null, answers, others };
 }
+
+/** "the first, X, and the second, Y" — the earlier applications named for an instruction. */
+export const earlierApplications = (sib: Pick<SiblingContext, "name" | "program" | "others">) =>
+  [...sib.others.map((o) => `"${o.name}" (${o.program ?? "another program"})`), `"${sib.name}" (${sib.program ?? "another program"})`].join(" and ");
 
 /** The writer's instruction for a rewritten answer: context, never a template. */
 export const rewriteInstruction = (sib: SiblingContext, thisProgram: string | null, previous: string) =>
-  `THIS IS NLA'S SECOND APPLICATION TO THE SAME FUNDER IN THE SAME CYCLE. The first, "${sib.name}", proposes ${sib.program ?? "another program"} and is already submitted. ` +
-  `This one proposes ${thisProgram ?? "a different program"}. The first application answered this question as follows — CONTEXT ONLY, NEVER A TEMPLATE:\n«${previous.trim()}»\n` +
+  `THIS IS ANOTHER APPLICATION BY NLA TO THE SAME FUNDER IN THE SAME CYCLE. The earlier one${sib.others.length ? "s" : ""}, ${earlierApplications(sib)}, ${sib.others.length ? "are" : "is"} already submitted. ` +
+  `This one proposes ${thisProgram ?? "a different program"}. The application "${sib.name}" answered this question as follows — CONTEXT ONLY, NEVER A TEMPLATE:\n«${previous.trim()}»\n` +
   `Write this answer FRESH for ${thisProgram ?? "this program"}: the same facts, names, dates and figures from the Vault and the live numbers (they must agree across both applications), ` +
-  `but new sentences in a new order, led by what matters to ${thisProgram ?? "this program"}. Do not reuse the first application's sentences or its openings; a reader with both in front of them must see two distinct applications from one consistent organization. ` +
+  `but new sentences in a new order, led by what matters to ${thisProgram ?? "this program"}. Do not reuse the earlier applications' sentences or their openings; a reader with all of them in front of them must see distinct applications from one consistent organization. ` +
   `Where the question is about the organization rather than the program, keep every fact identical and change only the prose.`;
 
 /** The sister application as the writer receives it: every answered question, label and answer (2026-10-30). */
 export const siblingForWriter = (sib: SiblingContext | null | undefined) =>
-  sib ? { name: sib.name, program: sib.program, application: [...sib.answers.values()].filter((a) => a.answer?.trim()).map((a) => ({ label: a.label, answer: a.answer!.trim() })) } : undefined;
+  sib ? {
+    name: sib.name, program: sib.program,
+    application: [...sib.answers.values()].filter((a) => a.answer?.trim()).map((a) => ({ label: a.label, answer: a.answer!.trim() })),
+    others: sib.others.length ? sib.others.map((o) => ({ name: o.name, program: o.program, application: o.application })) : undefined,
+  } : undefined;

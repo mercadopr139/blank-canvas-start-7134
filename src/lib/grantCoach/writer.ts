@@ -93,7 +93,7 @@ export interface DraftRequest {
   /** chat: the other questions on the same screen, numbered from 1, which Grant Coach fills only when asked. */
   siblings?: { i: number; label: string; help: string | null; kind: string; answer: string | null; limit_kind?: string | null; limit_value?: number | null }[];
   /** The sister application to the same funder this cycle (2026-10-30): its questions and answers, for the chat and the writer to draw on when asked. */
-  sibling?: { name: string; program: string | null; application: { label: string; answer: string }[] } | null;
+  sibling?: { name: string; program: string | null; application: { label: string; answer: string }[]; others?: { name: string; program: string | null; application: { label: string; answer: string }[] }[] } | null;
 }
 
 export interface DraftResult {

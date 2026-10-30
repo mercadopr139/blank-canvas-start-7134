@@ -40,7 +40,7 @@ interface Folder {
   funder_brief?: FunderBriefT | null; funder_brief_at?: string | null; funder_brief_docs?: string[];
   submitted_at?: string | null; decided_at?: string | null; closed_at?: string | null; decline_reason?: string | null;
   reporting_basis?: "as_written" | "changed" | null; applied_from?: string | null;
-  /** A second application to the same funder in the same cycle: the folder this one was started from (2026-10-29). */
+  /** Another application to the same funder in the same cycle: the folder this one was started from (2026-10-29). */
   sibling_of?: string | null;
 }
 interface Doc {
@@ -156,7 +156,7 @@ const AdminGrantFolder = () => {
   const { data: reports = [] } = useQuery({ queryKey: ["grant-reports", id], enabled: !!id, queryFn: () => loadReports(id!) });
   /* The sister application (Josh, 2026-10-29): the folder this one was started from — its answers are the
      context every rewrite is checked against — and the folders started from this one. */
-  const { data: sibling = null } = useQuery({ queryKey: ["grant-sibling", folder?.sibling_of], enabled: !!folder?.sibling_of, queryFn: () => loadSibling(folder!.sibling_of!) });
+  const { data: sibling = null } = useQuery({ queryKey: ["grant-sibling", folder?.sibling_of, id], enabled: !!folder?.sibling_of, queryFn: () => loadSibling(folder!.sibling_of!, id) });
   const { data: nextOnes = [] } = useQuery({
     queryKey: ["grant-next-ones", id], enabled: !!id,
     queryFn: async () => {
@@ -429,7 +429,7 @@ const AdminGrantFolder = () => {
             <a href={folder.portal_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm text-sky-300 hover:text-sky-200"><ExternalLink className="w-4 h-4" /> Open the funder's portal</a>
           )}
           {items.length > 0 && (
-            <button type="button" onClick={() => setNextOpen(true)} title="A second application to this funder for a different program, built from this one" className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-bold text-white hover:brightness-110" style={{ backgroundColor: "#bf0f3e" }}><Layers className="w-4 h-4" /> Start the next one from this folder</button>
+            <button type="button" onClick={() => setNextOpen(true)} title="Another application to this funder for a different program, built from this one" className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-bold text-white hover:brightness-110" style={{ backgroundColor: "#bf0f3e" }}><Layers className="w-4 h-4" /> Start the next one from this folder</button>
           )}
           <button type="button" onClick={() => void removeFolder()} className="ml-auto inline-flex items-center gap-1.5 text-[12px] text-white/40 hover:text-red-300">
             <Trash2 className="w-3.5 h-3.5" /> Remove this folder

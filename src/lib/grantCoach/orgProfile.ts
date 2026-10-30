@@ -80,7 +80,7 @@ const WRITING_EXAMPLES = `No Limits Academy – CSBG Program Narrative
 
 Organizational Overview: No Limits Academy (NLA) is a 501(c)(3) youth development organization founded in 2020 in Rio Grande, New Jersey. NLA operates a 14,000 sq. ft. facility that provides year-round academic support, boxing and fitness training, behavioral health services, nutrition, transportation, and mentoring at no cost to youth or their families. Serving over 500 youth per year, NLA has become a trusted partner for schools, families, and agencies throughout Cape May County. Local school districts regularly refer students for academic, behavioral, and social support, demonstrating the organization's strong reputation and community impact.
 
-Program Approach: NLA operates five days per week from 3:00 PM to 8:30 PM, creating a structured, holistic after-school environment. Youth arrive through district transportation, parent drop-offs, or NLA's two 15-passenger vans operated by trained CDL drivers. Upon arrival, youth receive healthy snacks, complete homework in the Learning Center with support from certified teachers, and then participate in fitness, boxing, and recreational activities.
+Program Approach: NLA operates five days per week from 3:00 PM to 8:30 PM, creating a structured, holistic after-school environment. Youth arrive through district transportation, parent drop-offs, or NLA's own fleet of four vehicles — a 22-seat mini bus, two 15-passenger vans and a mini van — driven by five CDL-licensed drivers. Upon arrival, youth receive healthy snacks, complete homework in the Learning Center with support from certified teachers, and then participate in fitness, boxing, and recreational activities.
 Daily programming includes:
 - Academic Tutoring & Homework Support delivered by certified NJ educators
 - Boxing & Fitness Training led by former professional boxer and educator Josh Mercado
@@ -106,7 +106,7 @@ Organizational Capacity & Key Personnel: NLA has the staffing, infrastructure, a
 - Josh Mercado, Program Director – Former professional boxer, national collegiate champion, and certified educator with extensive experience in youth development, school-based intervention, and program leadership.
 - Chrissy Casiello, Program Coordinator – Full-time staff overseeing daily supervision, academic programming, scheduling, logistics, and youth services.
 - Certified Teachers – Deliver academic support in core subjects.
-- CDL Drivers – Provide safe transportation for scholarship youth throughout the county.
+- Five CDL Drivers (three year-round, two summer) – Provide safe transportation for scholarship youth throughout the county, with annual driver development courses.
 - Behavioral Health Partners – Licensed counselors providing on-site services.
 - Administrative Support Staff & CPA Services – Ensure compliance, financial management, and reporting.
 NLA has demonstrated the ability to manage complex operations, deliver multi-component youth programs, maintain accurate documentation, and meet all grant reporting and accountability requirements.
@@ -288,6 +288,23 @@ const FACILITY =
   "information board ($25,000), exterior beautification ($15,000), and Upper Cuts, a mentorship-based workforce-development " +
   "barbershop teaching entrepreneurship, customer service and financial responsibility ($30,000).";
 
+/** The fleet, the drivers and who rides (Josh's facts, 2026-10-30). Rider counts and poverty shares come from the Transport Intelligence live fact, never from here. */
+const FLEET =
+  "NLA owns and operates its own fleet of four vehicles, 59 seats in all: a 22-seat mini bus, two 15-passenger vans and a 7-seat mini van. Every ride is free. " +
+  "Safety is NLA's highest priority on the road: five CDL-licensed drivers take the wheel, three year-round and two for the summer season, and each completes annual driver development courses so they are prepared to keep youth safe on every trip. " +
+  "The fleet's standing routes run year-round to Woodbine and Wildwood, two of New Jersey's most economically distressed municipalities, so that a youth there can count on a seat every night the gym is open. " +
+  "The routes are fixed; the reach is not. When a family anywhere in Cape May County has no way to get a child to the gym, NLA sends a vehicle on a need basis, as it does for every excursion, competition and family night. " +
+  "If the barrier is the ride, NLA removes the ride as the barrier.";
+
+/** The Transportation section of the board-approved 2026 operating budget, line for line (Josh's PDF, 2026-10-30). */
+const TRANSPORT_BUDGET =
+  "Transportation, 2026 board-approved operating budget (NLA 2026 Operating Budget, Draft 3, approved by the Board of Trustees). Budgeted expenses, not actuals.\n" +
+  "Personnel: CDL Driver 1 — $11,050; CDL Driver 2 — $11,050; CDL Driver 3 — $11,050; CDL Summer Drivers (2) — $4,000.\n" +
+  "Vehicle: Program Vehicle Operating Allocation (A) — $6,146.64; Program Vehicle Operating Allocation (B) — $6,730.92; Support Vehicle — in-kind; Auto Insurance — $22,000; Fuel/Tolls — $10,400; Vehicle Maintenance & Operations — $5,000.\n" +
+  "Other: CDL Certification & Renewal Fees — $1,750; Driver Safety Training — in-kind.\n" +
+  "Transportation subtotal: $89,177.56 of $794,426.82 total operating expenses.\n" +
+  "Not transportation: Educational Excursions travel (bus rental/air fare, $13,000) and lodging ($6,000) sit under Adventure-Based Learning; Vehicle Operating Expense/Mileage under Administration is in-kind.";
+
 const OUTCOMES =
   "NLA keeps attendance for every program through kiosk check-ins, so youth served are counted unduplicated and " +
   "retention is measured night by night. The back end also records meals served, rides provided, Juniors Aftercare " +
@@ -321,6 +338,7 @@ export const ORG_SECTIONS: OrgSection[] = [
       { key: "programs", label: "Programs and Services · the list", gist: "Every program and service NLA runs, one per line.", kind: "list", required: true, seed: PROGRAMS },
       { key: "offer_top5", label: "The Five Things NLA Offers", gist: "The spine of every brief program summary, in the website's order.", kind: "list", required: true, seed: OFFER_TOP5, help: "The spine of every brief program summary — a funding purpose, an overview, \"describe your program\". Grant Coach writes them in this order with the strongest live number behind each. Reorder or reword here and every draft follows." },
       { key: "schedule", label: "Hours and Calendar", gist: "The hours by season; year-round, never a 10-month program.", kind: "long", required: true, seed: SCHEDULE, help: "The hours by season. Never \"a 10-month after-school program\": NLA is year-round." },
+      { key: "fleet", label: "The Fleet, Drivers and Who Rides", gist: "Four vehicles, 59 seats, five CDL drivers with annual safety courses; Woodbine and Wildwood are the standing routes, everywhere else on a need basis.", kind: "long", required: true, seed: FLEET, help: "Josh's facts, 2026-10-30. The fleet and the drivers are stated here only; who rode, how many rides and the poverty share come from the Transport Intelligence live fact. Standing routes are Woodbine and Wildwood; rides anywhere else are on a need basis, never described as fixed routes." },
       { key: "outcomes", label: "Outcomes and How We Measure", gist: "What the back end records and how youth served, retention and the disadvantaged share are counted.", kind: "long", required: true, seed: OUTCOMES, help: "What is measured and how. Drafts cite this when a funder asks for outcome measures and data tools." },
     ],
   },
@@ -364,7 +382,7 @@ export const ORG_SECTIONS: OrgSection[] = [
       { key: "finance_contact_phone", label: "Finance contact — phone", kind: "short" },
       { key: "signer_name", label: "Authorized signer — name and title", kind: "short", required: true, seed: "Josh Mercado, Program Director", help: "Who signs applications and agreements." },
       { key: "board", label: "Board of Directors", kind: "list", required: true, help: "One per line: name, role on the board, affiliation." },
-      { key: "staffing", label: "Staffing", gist: "Two full-time staff, the part-time coaches, drivers, partners and CPA — said as efficiency.", kind: "long", required: true, seed: "No Limits Academy runs on two full-time employees — Josh Mercado, Program Director, and Chrissy Casiello, Program Coordinator — supported by part-time coaches, mentors and a volunteer network, on nearly $1 million in annual revenue. Josh leads programming and partnerships; Chrissy runs participant records, reporting, invoicing and day-to-day coordination. Every dollar funds youth, not overhead.", help: "Funders ask for staff roles, qualifications and supervision (O.C.E.A.N. narrative item 4). Two full-time staff on this revenue reads as efficiency — say it plainly. Add the coaches and volunteers by role." },
+      { key: "staffing", label: "Staffing", gist: "Two full-time staff, the part-time coaches, drivers, partners and CPA — said as efficiency.", kind: "long", required: true, seed: "No Limits Academy runs on two full-time employees — Josh Mercado, Program Director, and Chrissy Casiello, Program Coordinator — supported by part-time coaches, five CDL-licensed drivers (three year-round, two summer), mentors and a volunteer network, on nearly $1 million in annual revenue. Josh leads programming and partnerships; Chrissy runs participant records, reporting, invoicing and day-to-day coordination. Every dollar funds youth, not overhead.", help: "Funders ask for staff roles, qualifications and supervision (O.C.E.A.N. narrative item 4). Two full-time staff on this revenue reads as efficiency — say it plainly. Add the coaches and volunteers by role." },
       { key: "staff_bios", label: "Staff Bios", gist: "A short paragraph each for the people funders will see named.", kind: "long", help: "A short paragraph each for Josh, Chrissy and the coaches funders will see named. Edit names and details here; the writer names roles exactly as written.", seed: "Josh Mercado, Program Director — former professional boxer, national collegiate champion and certified educator; leads programming, coaching and partnerships.\n\nChrissy Casiello, Program Coordinator — a former police detective; runs participant records, eligibility files, reporting, invoicing and day-to-day coordination. (Chrissy is not the Accountability Coach.)\n\nThe Launch Pad Pathway Coach — 42 years of business leadership across national beverage and food-service brands; has hired and developed 388 employees; helps each youth discover their strengths and choose their Pad.\n\nThe Launch Pad Accountability Coach — a retired NYPD lieutenant with 21 years of service and 22 years teaching psychology as a college professor; owns the follow-through so every test, application and deadline is completed." },
       { key: "partners", label: "Partners · who and what", gist: "Every partner and what each does with NLA, one per line.", kind: "list", required: true, seed: PARTNERS, help: "Funders ask about coordination and duplicated services; name who NLA works with and on what." },
       { key: "law_enforcement", label: "Law Enforcement Partners", kind: "long", gist: "Every department and what it does with NLA: Gym Buddies, Gloves Up for the Blue, Shop with a Cop, referrals, the Meal Train, the letters. Josh (2026-10-28): never undersell these.", help: "Name them by department. A funder asking about coordination, mentors, referrals or safety should read this list." },
@@ -387,6 +405,7 @@ export const ORG_SECTIONS: OrgSection[] = [
       { key: "audit_status", label: "Audit or financial review", kind: "short", help: "Most recent audited statements or financial review, and the year." },
       { key: "form_990_year", label: "Most recent Form 990 — tax year", kind: "short", required: true },
       { key: "financial_position", label: "Financial Position · from the latest audit and 990", kind: "long", gist: "Revenue, surplus, cash, net assets, debt, the program share of spending and the audit opinion — the capacity answer, in one place.", help: "Refresh each year when the audit and the 990 arrive. Figures are from the audited statements unless the line says the 990." },
+      { key: "transport_budget", label: "Transportation Budget · 2026, board-approved", kind: "long", gist: "The Transportation section of the 2026 operating budget, line for line: $89,177.56 of $794,426.82.", seed: TRANSPORT_BUDGET, help: "From the board-approved 2026 operating budget PDF (2026-10-30). Grant Coach quotes these lines as they are and never asks for more than the subtotal on a transportation application. Replace when the 2027 budget is approved." },
     ],
   },
   {

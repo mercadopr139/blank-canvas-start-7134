@@ -83,7 +83,7 @@ export async function reviewApplication(req: {
   /** Memory (2026-10-29): the last review, which answers changed since it, what Josh dismissed, and how much to flag. */
   previousReview?: Review | null; changedSince?: number[]; dismissed?: string[]; focus?: ReviewFocus;
   /** The sister application to the same funder in the same cycle (2026-10-29): read side by side for copied prose and double-funded lines. */
-  sibling?: { name: string; program: string | null; application: { label: string; answer: string }[] };
+  sibling?: { name: string; program: string | null; application: { label: string; answer: string }[]; others?: { name: string; program: string | null; application: { label: string; answer: string }[] }[] };
   application: { i: number; section: string; label: string; help: string | null; kind: string; required: boolean; answer: string | null; limit_kind?: string | null; limit_value?: number | null }[];
 }): Promise<Review> {
   const [snapshot, attachments] = await Promise.all([approvedSnapshotForWriter(), attachmentsForWriter()]);

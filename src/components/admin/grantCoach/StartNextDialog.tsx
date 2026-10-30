@@ -77,7 +77,7 @@ export default function StartNextDialog({ open, onOpenChange, source, docs, item
         <DialogHeader>
           <DialogTitle className="inline-flex items-center gap-2"><Layers className="w-4 h-4" style={{ color: GC_BLUE }} /> Start the next one from this folder</DialogTitle>
           <DialogDescription className="text-white/55">
-            A second application to {source.funder} for a different program. The funder's files and rules come across; every question comes across. The facts stay as they are; every written answer is written again, fresh, for the new program — the first application is context, never a template.
+            Another application to {source.funder} for a different program or service. The funder's files and rules come across; every question comes across. The facts stay as they are; every written answer is written again, fresh, for the new program — the first application is context, never a template.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
