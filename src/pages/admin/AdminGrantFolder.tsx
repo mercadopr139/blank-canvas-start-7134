@@ -115,6 +115,8 @@ function FoldRow({ icon, title, blurb, open, onToggle, right, children }: { icon
   );
 }
 
+/** A printed copy of the answers (Print files one each time). */
+const isPrint = (d: { title: string }) => /^Our answers, printed /.test(d.title);
 const kb = (n: number | null) => (n == null ? "" : n > 1_000_000 ? `${(n / 1_000_000).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1000))} KB`);
 const docPath = (folderId: string, fileName: string) => `grants/${folderId}/${Date.now()}_${fileName.replace(/[^\w.-]+/g, "_").slice(0, 80)}`;
 
@@ -276,6 +278,12 @@ const AdminGrantFolder = () => {
       const path = docPath(id!, name);
       const { error } = await supabase.storage.from(GRANT_DOCUMENTS_BUCKET).upload(path, blob, { contentType: "application/pdf" });
       if (error) throw error;
+      // The newest print is the record; the earlier copies go (Josh, 2026-10-29: "not sure why this is showing 13 attachments").
+      const old = docs.filter((d) => d.side === "ours" && isPrint(d));
+      if (old.length) {
+        await supabase.storage.from(GRANT_DOCUMENTS_BUCKET).remove(old.map((d) => d.storage_path!).filter(Boolean));
+        await supabase.from("grant_documents" as never).delete().in("id", old.map((d) => d.id));
+      }
       const { error: e2 } = await supabase.from("grant_documents" as never).insert({
         folder_id: id, side: "ours", title: `Our answers, printed ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/New_York" })}`,
         storage_path: path, file_name: name, mime_type: "application/pdf", size_bytes: blob.size, uploaded_by: user?.id ?? null,
@@ -364,6 +372,22 @@ const AdminGrantFolder = () => {
   if (!folder) return <p className="text-white/50">That folder isn't here. <button className="underline" onClick={() => navigate("/admin/finance/grant-coach")}>Back to Grant Coach</button></p>;
 
   const left = folder.due_at ? daysLeft(folder.due_at) : null;
+  /* What NLA sent (Josh, 2026-10-29: the list should match the six attachments, not every file ever filed):
+     the file on each upload question, in portal order; the latest printed answers; the award letter; and,
+     folded, files uploaded here that are not attached to anything (earlier versions, replaced). */
+  const sent = (() => {
+    const ours = docs.filter((d) => d.side === "ours");
+    const byId = new Map(ours.map((d) => [d.id, d]));
+    const attached = items.filter((i) => i.kind === "upload" && i.status !== "na" && i.attachment_id && byId.has(i.attachment_id))
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((i) => ({ item: i, doc: byId.get(i.attachment_id!)! }));
+    const used = new Set(attached.map((a) => a.doc.id));
+    const prints = ours.filter(isPrint).sort((a, b) => (a.uploaded_at < b.uploaded_at ? 1 : -1));
+    const print = prints[0] ?? null;
+    const award = ours.filter((d) => /^Award letter/.test(d.title));
+    const other = ours.filter((d) => !used.has(d.id) && !isPrint(d) && !award.includes(d));
+    return { attached, print, olderPrints: prints.slice(1), award, other };
+  })();
 
   return (
     <div className="space-y-6 w-full max-w-5xl mx-auto px-4 lg:px-8">
@@ -539,6 +563,46 @@ const AdminGrantFolder = () => {
                 const all = docs.filter((d) => d.side === side);
                 const files = side === "funder" ? all.filter((d) => !isShot(d)) : all;
                 const shots = side === "funder" ? all.filter(isShot) : [];
+                const row = (d: Doc, title: string, sub?: string) => (
+                  <li key={d.id} className="py-2 flex items-center gap-2">
+                    <button type="button" onClick={() => void openDoc(d)} className="flex-1 min-w-0 text-left">
+                      <p className="text-sm truncate">{title}</p>
+                      <p className="text-[11px] text-white/40">{sub ? `${sub} · ` : ""}{d.link_url ? "Link" : d.file_name}{d.size_bytes ? ` · ${kb(d.size_bytes)}` : ""} · {whenOn(d.uploaded_at)}</p>
+                    </button>
+                    <button type="button" onClick={() => void removeDoc(d)} className="text-white/30 hover:text-red-400 p-1" aria-label={`Remove ${d.title}`}><Trash2 className="w-4 h-4" /></button>
+                  </li>
+                );
+                if (side === "ours") return (
+                  <>
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-white/45 pt-1">Attached to the application · {sent.attached.length}</p>
+                    <ul className="divide-y divide-white/[0.06]">
+                      {sent.attached.map(({ item, doc }, i) => row(doc, `${i + 1}. ${item.label}`, doc.title !== (doc.file_name ?? "").replace(/\.[^.]+$/, "") ? doc.title : undefined))}
+                      {sent.attached.length === 0 && <li className="py-2 text-[12px] text-white/35">Nothing attached yet. Each upload question on the application takes a file.</li>}
+                    </ul>
+                    {(sent.print || sent.award.length > 0) && (
+                      <>
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-white/45 pt-3">The record</p>
+                        <ul className="divide-y divide-white/[0.06]">
+                          {sent.print && row(sent.print, sent.print.title, "the answers and the attachments in one PDF")}
+                          {sent.award.map((d) => row(d, d.title))}
+                        </ul>
+                      </>
+                    )}
+                    {(sent.other.length > 0 || sent.olderPrints.length > 0) && (
+                      <div className="mt-3 border-t border-white/10 pt-2">
+                        <button type="button" onClick={() => setShowShots((o) => !o)} className="inline-flex items-center gap-1.5 text-[12px] text-white/50 hover:text-white">
+                          {showShots ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />} {sent.other.length + sent.olderPrints.length} not sent — earlier versions and older prints
+                        </button>
+                        {showShots && (
+                          <ul className="divide-y divide-white/[0.06] mt-1">
+                            {sent.other.map((d) => row(d, d.title, "uploaded here, attached to nothing"))}
+                            {sent.olderPrints.map((d) => row(d, d.title, "an earlier print"))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+                  </>
+                );
                 return (
                   <>
                     <ul className="divide-y divide-white/[0.06]">
@@ -604,9 +668,9 @@ const AdminGrantFolder = () => {
             sibling={sibling}
           />
           {(() => {
-            const ours = docs.filter((d) => d.side === "ours");
+            const n = sent.attached.length;
             return (
-              <GcCard icon={<FileText className="w-4 h-4" />} title="Attachments NLA Sent" blurb={ours.length ? `${ours.length} file${ours.length === 1 ? "" : "s"} · every file attached to an upload question, the printed answers, the award letter` : "Fills itself: every file attached to an upload question, the printed answers, the award letter"}
+              <GcCard icon={<FileText className="w-4 h-4" />} title="Attachments NLA Sent" blurb={n ? `${n} attached to the application${sent.print ? " · the printed answers" : ""}${sent.other.length ? ` · ${sent.other.length} not sent` : ""}` : "Fills itself: every file attached to an upload question, the printed answers, the award letter"}
                 right={<Button size="sm" variant="outline" onClick={() => openDocs("ours")} className="bg-transparent border-white/20 text-white/85 hover:bg-white/10 hover:text-white h-8"><FileText className="w-3.5 h-3.5 mr-1.5" /> See the files</Button>} />
             );
           })()}
