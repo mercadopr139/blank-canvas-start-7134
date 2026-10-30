@@ -21,6 +21,8 @@ export interface ConfirmAsk {
   cancelLabel?: string;
   /** A red confirm button, for removals. */
   danger?: boolean;
+  /** The word that must be typed, exactly, before the confirm button works — for deletions that cannot be undone. */
+  typeToConfirm?: string;
 }
 
 export interface PromptField {
@@ -46,7 +48,8 @@ export const useAsk = () => {
   const [values, setValues] = useState<Record<string, string>>({});
   const firstInput = useRef<HTMLInputElement>(null);
 
-  const confirm = useCallback((ask: ConfirmAsk) => new Promise<boolean>((resolve) => setPending({ kind: "confirm", ask, resolve })), []);
+  const [typed, setTyped] = useState("");
+  const confirm = useCallback((ask: ConfirmAsk) => new Promise<boolean>((resolve) => { setTyped(""); setPending({ kind: "confirm", ask, resolve }); }), []);
   const prompt = useCallback((ask: PromptAsk) => new Promise<Record<string, string> | null>((resolve) => {
     setValues(Object.fromEntries(ask.fields.map((f) => [f.key, f.defaultValue ?? ""])));
     setPending({ kind: "prompt", ask, resolve });
@@ -60,10 +63,12 @@ export const useAsk = () => {
   };
 
   const missing = pending?.kind === "prompt" ? pending.ask.fields.some((f) => f.required !== false && !(values[f.key] ?? "").trim()) : false;
+  const gateWord = pending?.kind === "confirm" ? pending.ask.typeToConfirm : undefined;
+  const gated = !!gateWord && typed !== gateWord;
 
   const dialog = (
     <Dialog open={!!pending} onOpenChange={(open) => { if (!open) close(null); }}>
-      <DialogContent className="bg-[#1a1a2e] border-white/10 text-white" onOpenAutoFocus={(e) => { if (pending?.kind === "prompt") { e.preventDefault(); firstInput.current?.focus(); } }}>
+      <DialogContent className="bg-[#1a1a2e] border-white/10 text-white" onOpenAutoFocus={(e) => { if (pending?.kind === "prompt" || gateWord) { e.preventDefault(); firstInput.current?.focus(); } }}>
         <DialogHeader>
           <DialogTitle>{pending?.ask.title}</DialogTitle>
           {pending?.ask.body && <DialogDescription className="text-white/60">{pending.ask.body}</DialogDescription>}
@@ -88,13 +93,19 @@ export const useAsk = () => {
             ))}
           </form>
         )}
+        {gateWord && (
+          <form onSubmit={(e) => { e.preventDefault(); if (!gated) close(true); }}>
+            <label className="text-sm text-white/60" htmlFor="ask-gate">Type <span className="font-bold text-red-300 tracking-wide">{gateWord}</span> to continue</label>
+            <Input id="ask-gate" ref={firstInput} value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" spellCheck={false} placeholder={gateWord} className="mt-1 bg-white/10 border-white/20 text-white tracking-wide" />
+          </form>
+        )}
         <DialogFooter>
           <Button variant="outline" onClick={() => close(null)} className="border-white/20 text-white bg-transparent hover:bg-white/10 hover:text-white">
             {pending?.kind === "confirm" ? (pending.ask.cancelLabel ?? "Cancel") : "Cancel"}
           </Button>
           <Button
             onClick={() => close(pending?.kind === "confirm" ? true : values)}
-            disabled={missing}
+            disabled={missing || gated}
             className={pending?.kind === "confirm" && pending.ask.danger ? "bg-red-600 hover:bg-red-700 text-white" : "text-white hover:opacity-90"}
             style={pending?.kind === "confirm" && pending.ask.danger ? undefined : { backgroundColor: NLA_RED }}
           >

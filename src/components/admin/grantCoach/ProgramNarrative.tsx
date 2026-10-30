@@ -25,6 +25,7 @@ import { downloadNarrativePdf, narrativeText } from "@/lib/grantCoach/narrativeP
 import type { AppItem } from "@/components/admin/grantCoach/GrantApplication";
 import type { Fact } from "@/lib/grantCoach/liveFacts";
 import type { PromptAsk } from "@/components/admin/AskDialog";
+import { rewriteInstruction, type SiblingContext } from "@/lib/grantCoach/sibling";
 
 const outline = "bg-transparent border-white/20 text-white/85 hover:bg-white/10 hover:text-white";
 
@@ -54,7 +55,9 @@ export function NarrativeBlurb({ items }: { items: AppItem[] }) {
   );
 }
 
-export default function NarrativeTools({ folder, items, library, getFacts, funderBrief, caseBrief, prompt, onChanged }: {
+export default function NarrativeTools({ folder, items, library, getFacts, funderBrief, caseBrief, prompt, onChanged, sibling = null }: {
+  /** The sister application (2026-10-29): its seven sections are context for the rewrite, never a template. */
+  sibling?: SiblingContext | null;
   folder: DraftFolder;
   items: AppItem[];
   library: LibraryEntry[];
@@ -89,7 +92,13 @@ export default function NarrativeTools({ folder, items, library, getFacts, funde
       const answered = items.filter((i) => i.answer?.trim() && i.section !== NARRATIVE_SECTION).map((i) => ({ section: i.section, label: i.label, answer: i.answer!.trim() }));
       const out = await draftWithGrantCoach({
         mode: "narrative", folder, library, facts, answered, funderBrief, caseBrief,
-        instruction: got.instruction?.trim() || undefined,
+        instruction: [
+          (() => {
+            const prev = sibling ? rows.map((r) => (r.rewrite_from ? sibling.answers.get(r.rewrite_from)?.answer?.trim() : null)).filter(Boolean) : [];
+            return prev.length ? rewriteInstruction(sibling!, folder.program_name, prev.map((p, i) => `${i + 1}. ${p}`).join("\n\n")) : null;
+          })(),
+          got.instruction?.trim() || null,
+        ].filter(Boolean).join("\n\n") || undefined,
         narrativeItems: rows.map((r) => ({ id: r.id, section: r.section, label: r.label, detail: r.detail, kind: r.kind, answer: r.answer, limit_kind: r.limit_kind, limit_value: r.limit_value })),
       });
       const sections = out.sections ?? [];

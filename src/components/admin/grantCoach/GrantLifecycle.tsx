@@ -12,11 +12,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import GcCard, { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
+import { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
 import { GRANT_DOCUMENTS_BUCKET } from "@/lib/grantCoach/orgDocuments";
 import { officeText, readsAsText } from "@/lib/grantCoach/readOffice";
 import { planReporting, type DraftFolder, type FunderBrief } from "@/lib/grantCoach/writer";
-import { STATUS_LABEL, nextYearName, plusYear, saveReports, type FolderStatus, type GrantReport } from "@/lib/grantCoach/lifecycle";
+import { nextYearName, plusYear, saveReports, type FolderStatus, type GrantReport } from "@/lib/grantCoach/lifecycle";
 import type { ConfirmAsk, PromptAsk } from "@/components/admin/AskDialog";
 
 export interface LifecycleFolder {
@@ -37,6 +37,8 @@ const STEPS: { key: FolderStatus; label: string }[] = [
   { key: "closed", label: "Closed" },
 ];
 
+/** Submitted is the waiting state: amber, the colour that means "needs you" across Grant Coach (Josh, 2026-10-29: "let the user know we need to follow up"). */
+const WAIT = "#fbbf24";
 const fmt = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/New_York" }) : "");
 const outline = "bg-transparent border-white/20 text-white/85 hover:bg-white/10 hover:text-white";
 const docPath = (folderId: string, fileName: string) => `grants/${folderId}/${Date.now()}_${fileName.replace(/[^\w.-]+/g, "_").slice(0, 80)}`;
@@ -56,7 +58,7 @@ async function awardPayload(docs: LifecycleDoc[]) {
   return out;
 }
 
-export default function GrantLifecycle({ folder, draftFolder, items, docs, reports, userId, ask, onChanged }: {
+export default function GrantLifecycle({ folder, draftFolder, items, docs, reports, userId, ask, onChanged, related = [] }: {
   folder: LifecycleFolder;
   draftFolder: () => DraftFolder;
   items: Item[];
@@ -65,6 +67,8 @@ export default function GrantLifecycle({ folder, draftFolder, items, docs, repor
   userId: string | null;
   ask: { confirm: (a: ConfirmAsk) => Promise<boolean>; prompt: (a: PromptAsk) => Promise<Record<string, string> | null> };
   onChanged: () => void;
+  /** Sister applications (2026-10-29): the folder this one was started from, and the ones started from it. */
+  related?: { id: string; name: string; program: string | null; relation: "from" | "next" }[];
 }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -165,14 +169,11 @@ export default function GrantLifecycle({ folder, draftFolder, items, docs, repor
 
   const at = STEPS.findIndex((s) => s.key === (status === "declined" ? "active" : status));
 
+  // A strip in the folder header, not its own card (Josh, 2026-10-29): the steps
+  // on the left, what happened under them, the one next action on the right.
   return (
-    <GcCard
-      icon={<Trophy className="w-4 h-4" />}
-      title="Where this grant stands"
-      blurb={STATUS_LABEL[status] ?? folder.status}
-      right={folder.applied_from ? <button type="button" className="text-[11px] text-sky-300 hover:text-sky-200" onClick={() => navigate(`/admin/finance/grant-coach/${folder.applied_from}`)}>Last year's folder</button> : undefined}
-    >
-      <div className="p-4 space-y-4">
+    <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+      <div className="flex-1 min-w-[260px] space-y-2">
         {/* The steps */}
         <ol className="flex flex-wrap items-center gap-2 text-[12px]">
           {STEPS.map((s, i) => {
@@ -183,7 +184,7 @@ export default function GrantLifecycle({ folder, draftFolder, items, docs, repor
               <li key={s.key} className="flex items-center gap-2">
                 <span
                   className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-semibold ${declined ? "border-red-400/40 text-red-300" : here ? "text-black" : done ? "border-white/20 text-white/80" : "border-white/10 text-white/35"}`}
-                  style={here && !declined ? { backgroundColor: GC_BLUE, borderColor: GC_BLUE } : undefined}
+                  style={here && !declined ? { backgroundColor: status === "submitted" ? WAIT : GC_BLUE, borderColor: status === "submitted" ? WAIT : GC_BLUE } : undefined}
                 >
                   {declined ? <XCircle className="w-3.5 h-3.5" /> : done ? <Check className="w-3.5 h-3.5" /> : null}
                   {declined ? "Declined" : s.label}
@@ -196,16 +197,27 @@ export default function GrantLifecycle({ folder, draftFolder, items, docs, repor
 
         {/* What happened, with dates */}
         <div className="text-[12px] text-white/55 space-y-0.5">
-          {folder.submitted_at && <p>Submitted {fmt(folder.submitted_at)}.</p>}
+          {folder.applied_from && <p><button type="button" className="text-sky-300 hover:text-sky-200 underline underline-offset-2" onClick={() => navigate(`/admin/finance/grant-coach/${folder.applied_from}`)}>Last year's folder</button></p>}
+          {related.map((r) => (
+            <p key={r.id}>
+              {r.relation === "from" ? "Written alongside " : "The next one: "}
+              <button type="button" className="text-sky-300 hover:text-sky-200 underline underline-offset-2" onClick={() => navigate(`/admin/finance/grant-coach/${r.id}`)}>{r.name}</button>
+              {r.program ? ` (${r.program})` : ""}{r.relation === "from" ? " — same funder, same cycle; every answer here is checked against it." : ""}
+            </p>
+          ))}
+          {folder.submitted_at && (status === "submitted"
+            ? <p className="font-semibold" style={{ color: WAIT }}>Submitted {fmt(folder.submitted_at)} · waiting on {folder.funder} — follow up, then mark it Awarded or Declined.</p>
+            : <p>Submitted {fmt(folder.submitted_at)}.</p>)}
           {status === "active" || status === "closed" ? (
             <p>Awarded {fmt(folder.decided_at)}{folder.amount_awarded != null ? ` · $${Number(folder.amount_awarded).toLocaleString()}` : ""}{folder.reporting_basis ? ` · reporting ${folder.reporting_basis === "as_written" ? "as written in the RFP" : "from the award letter"}` : ""}.</p>
           ) : null}
           {status === "declined" && <p>Declined {fmt(folder.decided_at)}.{folder.decline_reason ? ` They said: "${folder.decline_reason}"` : ""}</p>}
           {folder.closed_at && <p>Closed {fmt(folder.closed_at)}.</p>}
         </div>
+      </div>
 
-        {/* The one obvious next action */}
-        <div className="flex flex-wrap gap-2">
+      {/* The one obvious next action */}
+      <div className="flex flex-wrap gap-2">
           {status === "applying" && (
             <Button size="sm" className="font-bold text-black hover:brightness-110" style={{ backgroundColor: GC_BLUE }} disabled={busy != null} onClick={submit}>
               {busy === "submit" ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Send className="w-3.5 h-3.5 mr-1.5" />} Mark submitted
@@ -237,7 +249,6 @@ export default function GrantLifecycle({ folder, draftFolder, items, docs, repor
           {status === "declined" && (
             <Button size="sm" variant="ghost" className="text-white/45 hover:text-white hover:bg-white/10" disabled={busy != null} onClick={reopen}>Undo</Button>
           )}
-        </div>
       </div>
 
       <AwardDialog
@@ -249,7 +260,7 @@ export default function GrantLifecycle({ folder, draftFolder, items, docs, repor
         userId={userId}
         onDone={() => { setAwardOpen(false); onChanged(); qc.invalidateQueries({ queryKey: ["grant-reports", folder.id] }); }}
       />
-    </GcCard>
+    </div>
   );
 }
 
