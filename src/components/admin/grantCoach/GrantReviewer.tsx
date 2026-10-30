@@ -63,7 +63,8 @@ function ReplyThread({ note, open, count, onToggle, chat }: { note: ReviewNote; 
   );
 }
 
-const tone = (pct: number) => (pct >= 85 ? "#34d399" : pct >= 70 ? GC_BLUE : pct >= 55 ? "#fcd34d" : "#fca5a5");
+/** The score as a share of the points: green best, yellow second, blue third, red bad (Josh, 2026-10-29). */
+const tone = (pct: number) => (pct >= 85 ? "#34d399" : pct >= 70 ? "#fcd34d" : pct >= 55 ? GC_BLUE : "#fca5a5");
 const criterionKey = (n: number) => `k:${n}`;
 
 /** The reviewer writes "[45]" for the 45th question. Each one becomes a chip that names the question and takes you to it. */
