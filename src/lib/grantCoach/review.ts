@@ -28,6 +28,8 @@ export interface Review {
   decisions?: Record<string, { status: "fixed" | "as_is"; at: string }>;
   /** Advice lines Josh ticked as handled (or un-ticked), by the line's text (2026-10-29). */
   adviceDone?: Record<string, boolean>;
+  /** Advice lines Josh ruled not applicable (2026-10-30), by the line's text: when, and his reason. The criterion was re-scored without them. */
+  adviceRejected?: Record<string, { at: string; reason: string }>;
   /** @deprecated the old per-note clears; kept so older saved reviews still parse. */
   cleared?: Record<string, { at: string }>;
 }
@@ -119,4 +121,20 @@ export async function chatWithReviewer(req: {
     clarification: (data.clarification ?? null) as string | null,
     revised: (data.revised ?? null) as { criterion: string; score: number; overall: number } | null,
   };
+}
+
+/** Not applicable (2026-10-30): the reviewer re-scores one criterion without one line of advice, and records Josh's reason. */
+export async function rejectAdvice(req: {
+  folder: DraftFolder; library: LibraryEntry[]; facts: Fact[]; funderBrief?: FunderBrief | null; review: Review; clarifications?: string[];
+  reject: { criterion: string; advice: string; reason: string };
+  application: { i: number; section: string; label: string; help: string | null; kind: string; required: boolean; answer: string | null; limit_kind?: string | null; limit_value?: number | null }[];
+}): Promise<{ revised: { criterion: string; score: number; overall: number; why: string }; clarification: string | null }> {
+  const { data, error } = await supabase.functions.invoke("grant-writer", { body: { mode: "review_reject", answered: [], caseBrief: null, ...req, siteText: SITE_TEXT } });
+  if (error) {
+    let reason = error.message;
+    try { const res = (error as { context?: Response }).context; const said = res ? await res.clone().json() : null; if (said?.error) reason = said.error; } catch { /* generic */ }
+    throw new Error(reason);
+  }
+  if (data?.error) throw new Error(data.error);
+  return { revised: data.revised, clarification: (data.clarification ?? null) as string | null };
 }

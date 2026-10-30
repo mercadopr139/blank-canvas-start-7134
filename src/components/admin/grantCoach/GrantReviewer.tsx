@@ -16,9 +16,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Loader2, Gavel, AlertTriangle, Check, Wand2, ArrowDownCircle, MessageSquare, Undo2, PartyPopper, Wrench, SendHorizontal, Printer } from "lucide-react";
+import { Loader2, Gavel, AlertTriangle, Check, Wand2, ArrowDownCircle, MessageSquare, Undo2, PartyPopper, Wrench, SendHorizontal, Printer, Ban } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import GcCard, { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
-import { preSubmitChecks, reviewApplication, reviewerMessages, clarificationsOf, type Review, type ReviewNote, type ReviewFocus, type Criterion, type Advice } from "@/lib/grantCoach/review";
+import { preSubmitChecks, reviewApplication, rejectAdvice, reviewerMessages, clarificationsOf, type Review, type ReviewNote, type ReviewFocus, type Criterion, type Advice } from "@/lib/grantCoach/review";
 import type { CaseBrief, DraftFolder, LibraryEntry, FunderBrief } from "@/lib/grantCoach/writer";
 import type { Fact } from "@/lib/grantCoach/liveFacts";
 import type { AppItem } from "@/components/admin/grantCoach/GrantApplication";
@@ -128,6 +129,39 @@ export default function GrantReviewer({ folderId, folder, items, library, getFac
     if (!review) return;
     await saveReview({ ...review, adviceDone: { ...adviceDone, [a.text]: !isDone(a) } });
   };
+  /** Not applicable (2026-10-30): which line is being rejected, the reason typed, and the call in flight. */
+  const rejected = review?.adviceRejected ?? {};
+  const [rejecting, setRejecting] = useState<string | null>(null);
+  const [reason, setReason] = useState("");
+  const [rejectBusy, setRejectBusy] = useState(false);
+  const notApplicable = async (c: Criterion, a: Advice) => {
+    if (!review) return;
+    setRejectBusy(true);
+    try {
+      const res = await rejectAdvice({
+        folder, library, facts: await getFacts(), funderBrief, review, clarifications,
+        reject: { criterion: c.name, advice: a.text, reason: reason.trim() },
+        application: live.map((it, i) => ({ i: i + 1, section: it.section, label: it.label, help: it.detail, kind: it.kind, required: it.required, answer: it.answer, limit_kind: it.limit_kind, limit_value: it.limit_value })),
+      });
+      const criteria = review.criteria.map((x) => (x.name === res.revised.criterion ? { ...x, score: res.revised.score, why: res.revised.why } : x));
+      const next: Review = { ...review, criteria, overall: res.revised.overall, adviceRejected: { ...rejected, [a.text]: { at: new Date().toISOString(), reason: reason.trim() } } };
+      if (res.clarification) {
+        await supabase.from("grant_messages" as never).insert({ folder_id: folderId, item_id: null, role: "user", content: res.clarification, payload: { scope: "review", clarification: true }, created_by: userId } as never);
+        qc.invalidateQueries({ queryKey: ["grant-reviewer-chat", folderId] });
+      }
+      if (await saveReview(next)) toast.success(`Not applicable. ${c.name} is now ${res.revised.score}/${c.max}; the score is ${res.revised.overall}/100.`);
+      setRejecting(null); setReason("");
+    } catch (e) {
+      toast.error(`The reviewer: ${(e as Error).message}`);
+    } finally {
+      setRejectBusy(false);
+    }
+  };
+  const putBack = async (a: Advice) => {
+    if (!review) return;
+    const next = { ...rejected }; delete next[a.text];
+    if (await saveReview({ ...review, adviceRejected: next })) toast("Put back. The score refreshes on Review again.");
+  };
   const criteria = review?.criteria ?? [];
   const settledCount = criteria.filter((c) => decisions[c.name]).length;
   const allSettled = criteria.length > 0 && settledCount === criteria.length;
@@ -158,7 +192,7 @@ export default function GrantReviewer({ folderId, folder, items, library, getFac
       const oldShape = !!review && !review.criteria.some((c) => c.advice);
       const prev = !fresh && review && !oldShape ? review : null;
       // What Josh settled "as is" is not raised again: its advice goes to the reviewer as dismissed.
-      const dismissed = prev ? prev.criteria.filter((c) => prev.decisions?.[c.name]?.status === "as_is").flatMap((c) => (c.advice ?? []).map((a) => a.text)) : [];
+      const dismissed = prev ? [...prev.criteria.filter((c) => prev.decisions?.[c.name]?.status === "as_is").flatMap((c) => (c.advice ?? []).map((a) => a.text)), ...Object.keys(prev.adviceRejected ?? {})] : [];
       let r: Review;
       if (prev && changedSince.length === 0) {
         r = prev; // Nothing changed: the review stands. No AI, no churn.
@@ -176,8 +210,9 @@ export default function GrantReviewer({ folderId, folder, items, library, getFac
           const cites = (a: { i: number[] }) => a.i.some((n) => changed.has(n));
           const merged = fromAi.criteria.map((c) => {
             const old = prev.criteria.find((o) => o.name === c.name);
-            const keep = (old?.advice ?? []).filter((a) => !cites(a));
-            const fresh = (c.advice ?? []).filter((a) => cites(a) || !old);
+            const gone = new Set(Object.keys(prev.adviceRejected ?? {}));
+            const keep = (old?.advice ?? []).filter((a) => !cites(a) && !gone.has(a.text));
+            const fresh = (c.advice ?? []).filter((a) => (cites(a) || !old) && !gone.has(a.text));
             return { ...c, advice: [...keep, ...fresh].slice(0, 4) };
           });
           // Settled stays settled; a "fixed" criterion whose questions changed reopens only if new advice arrived.
@@ -188,7 +223,7 @@ export default function GrantReviewer({ folderId, folder, items, library, getFac
             if (d.status === "as_is") kept[name] = d;
             else if (!(c.advice ?? []).some((a) => cites(a))) kept[name] = d;
           }
-          r = { ...fromAi, criteria: merged, decisions: kept, withdrawn: prev.withdrawn ?? {} };
+          r = { ...fromAi, criteria: merged, decisions: kept, withdrawn: prev.withdrawn ?? {}, adviceRejected: prev.adviceRejected ?? {} };
         } else {
           r = { ...fromAi, decisions: {}, withdrawn: {} };
         }
@@ -403,17 +438,38 @@ export default function GrantReviewer({ folderId, folder, items, library, getFac
                           const key = `${k}:${j}`;
                           const tn = targetOf(a); const target = tn ? live[tn - 1] : undefined;
                           return (
+                            rejected[a.text] ? (
+                              <li key={j} className="flex items-start gap-2 text-[13px] text-white/40">
+                                <Ban className="mt-[3px] w-4 h-4 shrink-0 text-white/30" />
+                                <span className="flex-1">
+                                  <span className="line-through decoration-white/30"><Refs text={a.text} live={live} onJump={onJump} /></span>
+                                  <span className="block mt-0.5 text-[11px] text-emerald-300/80">Not applicable{rejected[a.text].reason ? ` · ${rejected[a.text].reason}` : ""} · <button type="button" onClick={() => void putBack(a)} className="underline underline-offset-2 text-white/50 hover:text-white">Put it back</button></span>
+                                </span>
+                              </li>
+                            ) : (
                             <li key={j} className={`flex items-start gap-2 text-[13px] ${isDone(a) ? "text-white/40" : "text-white/85"}`}>
                               <button type="button" onClick={() => void toggleDone(a)} title={isDone(a) ? "Handled — click to put it back" : "Click when you have handled this"} className="mt-[3px] w-4 h-4 rounded-full border shrink-0 inline-flex items-center justify-center" style={isDone(a) ? { borderColor: "#34d399", backgroundColor: "#34d39933" } : { borderColor: `${GC_BLUE}99` }}>
                                 {isDone(a) && <Check className="w-3 h-3 text-emerald-300" />}
                               </button>
-                              <span className={`flex-1 ${isDone(a) ? "line-through decoration-white/30" : ""}`}><Refs text={a.text} live={live} onJump={onJump} /></span>
+                              <span className={`flex-1 ${isDone(a) ? "line-through decoration-white/30" : ""}`}>
+                                <Refs text={a.text} live={live} onJump={onJump} />
+                                {rejecting === key ? (
+                                  <span className="mt-1.5 flex flex-wrap items-center gap-2">
+                                    <Input value={reason} onChange={(e) => setReason(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !rejectBusy) void notApplicable(c, a); if (e.key === "Escape") { setRejecting(null); setReason(""); } }} autoFocus disabled={rejectBusy} placeholder="Why it doesn't apply (remembered for every later review)" className="h-8 flex-1 min-w-[220px] bg-neutral-950 border-white/15 text-white text-[12px]" />
+                                    <Button size="sm" onClick={() => void notApplicable(c, a)} disabled={rejectBusy} className="h-8 font-bold" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}>{rejectBusy ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Ban className="w-3.5 h-3.5 mr-1.5" />} {rejectBusy ? "Re-scoring…" : "Confirm · re-score"}</Button>
+                                    <button type="button" onClick={() => { setRejecting(null); setReason(""); }} disabled={rejectBusy} className="text-[11px] text-white/50 hover:text-white">Cancel</button>
+                                  </span>
+                                ) : !isDone(a) && (
+                                  <button type="button" onClick={() => { setRejecting(key); setReason(""); }} title="Not applicable: the reviewer re-scores this criterion without this note, and remembers why" className="ml-2 inline-flex items-center gap-1 text-[11px] text-white/40 hover:text-white align-baseline"><Ban className="w-3 h-3" /> Not applicable</button>
+                                )}
+                              </span>
                               {isWorking && target && (
                                 <button type="button" onClick={() => void draftIt(c, a, key)} disabled={busy || drafting != null} title={`Drafts the change in ${targetOf(a)}. ${target.label}`} className="shrink-0 inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-bold hover:bg-white/10 disabled:opacity-50" style={{ borderColor: `${GC_BLUE}88`, color: GC_BLUE }}>
                                   {drafting === key ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />} Draft it
                                 </button>
                               )}
                             </li>
+                            )
                           );
                         })}
                       </ul>

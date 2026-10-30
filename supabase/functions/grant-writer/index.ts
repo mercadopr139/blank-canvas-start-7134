@@ -107,7 +107,7 @@ async function createBest(anthropic: Anthropic, params: Record<string, any>) {
   throw lastError ?? new Error("No model answered.");
 }
 type Req = {
-  mode: "item" | "narrative" | "chat" | "read_screens" | "classify" | "strategy" | "story" | "review" | "review_chat" | "read_document" | "funder_brief" | "snapshot" | "reporting_plan" | "report" | "fit" | "budget" | "learn";
+  mode: "item" | "narrative" | "chat" | "read_screens" | "classify" | "strategy" | "story" | "review" | "review_chat" | "review_reject" | "read_document" | "funder_brief" | "snapshot" | "reporting_plan" | "report" | "fit" | "budget" | "learn";
   /** Every call: what NLA is submitting with the answers — the attached files, read as written (2026-10-29). */
   attachments?: { label: string; title: string; text: string }[];
   /** review: memory (2026-10-29) — the last review, the questions changed since it, the notes Josh dismissed, and the focus. */
@@ -115,6 +115,8 @@ type Req = {
   changedSince?: number[];
   dismissed?: string[];
   focus?: "must_fix" | "all";
+  /** review_reject: the line of advice Josh ruled not applicable, and why. */
+  reject?: { criterion: string; advice: string; reason: string } | null;
   /** review_chat: a Reply thread under ONE note of the review. */
   note?: { key: string; text: string; criterion?: string } | null;
   /** review / review_chat: facts Josh settled with the reviewer in earlier threads — true, and never raised again. */
@@ -752,6 +754,35 @@ Check: every criterion the funder scores; whether each answer answers exactly wh
           model: (response as { model?: string }).model ?? null,
         },
       });
+    }
+
+    // ── Not applicable (Josh, 2026-10-30): re-score one criterion without one line of advice ──
+    if (body.mode === "review_reject") {
+      const r = body.review, rj = body.reject;
+      if (!r || !rj?.criterion || !rj.advice) return json({ error: "Nothing to re-score." }, 400);
+      const c = (r.criteria ?? []).find((x) => x.name === rj.criterion);
+      if (!c) return json({ error: "That criterion isn't in the review any more." }, 400);
+      const app = Array.isArray(body.application) ? body.application : [];
+      const listed = app.map((q) => `[${q.i}] ${q.label}\n${q.answer?.trim() ? q.answer.trim() : "(NOT ANSWERED)"}`).join("\n\n");
+      const response = await createBest(anthropic, {
+        max_tokens: 1500,
+        system: systemFor(body.folder, body.funderBrief) + `
+
+YOU ARE THE REVIEWER, RE-SCORING ONE CRITERION
+Josh has ruled one line of your advice NOT APPLICABLE and given his reason. Treat his reason as a true fact about NLA and this application. Re-score ONLY the criterion named, as if that one line of advice did not exist; every other line of advice under it still counts. Never move the score more than that one note was worth. Then write ONE sentence, in the third person, that records his reason as a standing fact for every later review (e.g. "In this application the Non-Battle Team and the Battle Team are ages 14–19; the sister application's 11–19 predates the age change").
+Return ONLY JSON: {"score":<the criterion's new points, at most its max>,"why":"<one line: what earns the points now>","clarification":"<the one sentence>"}`,
+        messages: [{ role: "user", content:
+          block("THE CRITERION", `${c.name}: ${c.score}/${c.max} — ${c.why}${(c.advice ?? []).length ? `\nAdvice under it:\n${c.advice!.map((a) => "- " + a.text).join("\n")}` : ""}`) +
+          block("THE LINE JOSH RULED NOT APPLICABLE", rj.advice) +
+          block("JOSH'S REASON", rj.reason || "(no reason given — the note is simply not applicable to this application)") +
+          (Array.isArray(body.clarifications) && body.clarifications.length ? block("EARLIER CLARIFICATIONS (true)", body.clarifications.map((x) => "- " + x).join("\n")) : "") +
+          block("THE APPLICATION", listed) }],
+        ...thinking("medium"),
+      });
+      const parsed = extractJson(textOf(response as never));
+      const score = Math.max(0, Math.min(Number(c.max), Number(parsed.score ?? c.score)));
+      const overall = Math.max(0, Math.min(100, Number(r.overall) - Number(c.score) + score));
+      return json({ revised: { criterion: c.name, score, overall, why: String(parsed.why ?? c.why) }, clarification: typeof parsed.clarification === "string" ? parsed.clarification.trim() : null });
     }
 
     // ── Talk to the reviewer: questions, pushback, and "write it" (Josh, 2026-10-29) ──
