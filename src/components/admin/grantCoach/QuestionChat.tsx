@@ -199,7 +199,7 @@ Left out: ${left.join("; ")}` : "");
       )}
       {(msgs.length > 0 || thinking) && (
         <div ref={listRef} className="relative max-h-[420px] overflow-y-auto p-3 space-y-2.5">
-          {msgs.map((m) => (
+          {msgs.map((m, mi) => (
             <div key={m.id} data-msg className={m.role === "user" ? "flex justify-end" : "space-y-2"}>
               {m.role === "user" ? (
                 <p className="max-w-[85%] rounded-xl px-3 py-1.5 text-sm text-white whitespace-pre-wrap border" style={{ backgroundColor: `${GC_BLUE}2e`, borderColor: `${GC_BLUE}55` }}>{m.content}</p>
@@ -227,17 +227,21 @@ Left out: ${left.join("; ")}` : "");
                       )}
                       {/* The change against the answer as it stands: added words amber, removed words struck (Josh, 2026-10-29). */}
                       {(() => {
-                        // Unused: what Use this would change in the answer. Used: what Josh changed since (the answer against the draft).
+                        // Used: what Josh changed since (the answer against the draft). Unused: what changed from the
+                        // previous draft card — the text a requested change was applied to (Josh, 2026-10-30) — or,
+                        // when there is no earlier card, what Use this would change in the answer box.
                         const current = draft.trim() || item.answer || "";
+                        const prevDraft = [...msgs.slice(0, mi)].reverse().find((x) => x.payload?.draft)?.payload?.draft ?? "";
                         const used = !!m.payload!.used && current.trim() !== m.payload!.draft!.trim();
-                        const before = used ? m.payload!.draft! : current;
+                        const before = used ? m.payload!.draft! : prevDraft || current;
                         const after = used ? current : m.payload!.draft!;
+                        const vsPrev = !used && !!prevDraft;
                         const differsNow = before.replace(/\s+/g, " ").trim() !== after.replace(/\s+/g, " ").trim();
                         return (
                           <>
                             {differsNow && before.trim() && (
                               <p className="px-3 pt-1.5 text-[10px] text-white/40">
-                                {used ? <><mark className="rounded-sm px-0.5 bg-amber-400/35 text-amber-50">amber</mark> = what you added since · <del className="text-white/35">struck</del> = what you removed</> : <><mark className="rounded-sm px-0.5 bg-amber-400/35 text-amber-50">amber</mark> = what this draft adds to your answer · <del className="text-white/35">struck</del> = what it removes</>}
+                                {used ? <><mark className="rounded-sm px-0.5 bg-amber-400/35 text-amber-50">amber</mark> = what you added since · <del className="text-white/35">struck</del> = what you removed</> : vsPrev ? <><mark className="rounded-sm px-0.5 bg-amber-400/35 text-amber-50">amber</mark> = what changed from the previous draft · <del className="text-white/35">struck</del> = what came out</> : <><mark className="rounded-sm px-0.5 bg-amber-400/35 text-amber-50">amber</mark> = what this draft adds to your answer · <del className="text-white/35">struck</del> = what it removes</>}
                               </p>
                             )}
                             <DraftDiff before={before} after={after} className="px-3 py-2 text-sm text-white whitespace-pre-wrap leading-relaxed" />
