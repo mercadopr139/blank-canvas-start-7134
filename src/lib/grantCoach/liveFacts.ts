@@ -472,7 +472,10 @@ export async function gatherLiveFacts(today = new Date(), period?: { from: strin
             `These are the RIDERS' figures; NLA's overall race, sex, single-parent and district figures are different facts and must not be mixed with these.`,
           period: year.label, source: "the Transport Intelligence page (riders matched to registration forms: age, sex, race, school district, single-parent households)",
         });
-      } catch { /* the rider-list figures below still stand */ }
+      } catch (e) {
+        // The rider-list figures below still stand; the failure is written down so it shows on the numbers card instead of vanishing.
+        facts.push({ key: "riders.demographics", label: "Who rides NLA's vans — the riders' own demographics by pick-up zone", value: `unavailable (${(e as Error).message})`, period: year.label, source: "the Transport Intelligence page" });
+      }
       facts.push({
         key: "riders.profile", label: "Who rides NLA's vans",
         value: vans
