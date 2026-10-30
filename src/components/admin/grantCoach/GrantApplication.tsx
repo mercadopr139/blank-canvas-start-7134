@@ -1039,7 +1039,7 @@ function QuestionRow({ item, number, pastFunder, twin, storyTitle, focused, forc
   };
   const approveNext = async () => {
     const text = draft.trim();
-    if (!text) return;
+    if (!text || saving) return; // one approve at a time; the button stays enabled so the first click counts
     setSaving(true);
     try {
       const coachWrote = !!fromCoach && fromCoach.text.trim() === text;
@@ -1110,13 +1110,13 @@ function QuestionRow({ item, number, pastFunder, twin, storyTitle, focused, forc
                 autoFocus={open}
               />
               <div className="flex flex-wrap items-center gap-2">
-                <Button size="sm" onClick={() => void approveNext()} disabled={saving || busy || !draft.trim() || (approved && !changed)} className="bg-emerald-700 hover:bg-emerald-600 text-white">
+                <Button size="sm" onMouseDown={(e) => e.preventDefault()} onClick={() => void approveNext()} disabled={busy || !draft.trim() || (approved && !changed)} className="bg-emerald-700 hover:bg-emerald-600 text-white">
                   {saving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Check className="w-4 h-4 mr-1.5" />} {approved && !changed ? "Approved" : "Approve and next"}
                 </Button>
                 {vaultField && (
-                  <Button size="sm" onClick={() => void saveToVault()} disabled={saving || !draft.trim()} title="Every grant from now on starts from the Vault" className="bg-transparent border border-white/20 text-white/85 hover:bg-white/10"><Vault className="w-4 h-4 mr-1.5" /> Save to the Vault</Button>
+                  <Button size="sm" onMouseDown={(e) => e.preventDefault()} onClick={() => void saveToVault()} disabled={!draft.trim()} title="Every grant from now on starts from the Vault" className="bg-transparent border border-white/20 text-white/85 hover:bg-white/10"><Vault className="w-4 h-4 mr-1.5" /> Save to the Vault</Button>
                 )}
-                {!typeIn && <Button size="sm" variant="outline" onClick={close} className="bg-transparent border-white/20 text-white/70 hover:bg-white/10 hover:text-white">Close</Button>}
+                {!typeIn && <Button size="sm" variant="outline" onMouseDown={(e) => e.preventDefault()} onClick={close} className="bg-transparent border-white/20 text-white/70 hover:bg-white/10 hover:text-white">Close</Button>}
                 <span className="text-[11px] text-white/35">{saving ? "Saving…" : "Saves as you go"}</span>
                 {item.limit_value && <span className={`ml-auto text-[11px] tabular-nums ${over ? "text-amber-300" : "text-white/40"}`}>{count.toLocaleString()} / {item.limit_value.toLocaleString()} {item.limit_kind}</span>}
               </div>
