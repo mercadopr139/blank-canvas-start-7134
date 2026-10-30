@@ -160,6 +160,8 @@ type Req = {
   siblings?: { i: number; label: string; help: string | null; kind: string; answer: string | null; limit_kind?: string | null; limit_value?: number | null }[];
   /** review: the whole application in portal order, as it will be submitted. */
   application?: { i: number; section: string; label: string; help: string | null; kind: string; required: boolean; answer: string | null; limit_kind?: string | null; limit_value?: number | null }[];
+  /** review: NLA's other application to the same funder in the same cycle (2026-10-29) — read side by side. */
+  sibling?: { name: string; program: string | null; application: { label: string; answer: string }[] } | null;
   /** story: Josh's own words, to be written up. */
   raw?: string;
   /** item / strategy: the case Josh locked — every story answer is written from it. */
@@ -701,6 +703,8 @@ Deno.serve(async (req) => {
         (Array.isArray(body.dismissed) && body.dismissed.length ? block("NOTES JOSH DISMISSED (he read each and decided it is not an issue — never raise these again, nor the same point in other words)", body.dismissed.map((c) => "- " + c).join("\n")) : "") +
         (body.previousReview ? block("YOUR PREVIOUS REVIEW (your last read of this application — start from it; see the consistency rule)",
           `Score ${body.previousReview.overall}/100. ${body.previousReview.verdict}\n\nCriteria:\n${(body.previousReview.criteria ?? []).map((c) => `- ${c.name}: ${c.score}/${c.max} — ${c.why}${(c.advice ?? []).length ? `\n    advice: ${c.advice!.map((a) => a.text).join(" | ")}` : ""}`).join("\n")}\n\nWhere it lost the most points:\n${(body.previousReview.weakest ?? []).map((w) => `- [${w.i}] ${w.problem} FIX: ${w.fix}`).join("\n")}${body.previousReview.contradictions?.length ? `\n\nAnswers that disagreed:\n${body.previousReview.contradictions.map((c) => "- " + c).join("\n")}` : ""}${body.previousReview.wrong_numbers?.length ? `\n\nNumbers that didn't match:\n${body.previousReview.wrong_numbers.map((c) => "- " + c).join("\n")}` : ""}\n\nANSWERS CHANGED SINCE THAT REVIEW: ${(body.changedSince ?? []).length ? body.changedSince!.map((i) => `[${i}]`).join(", ") : "none"}`) : "") +
+        (body.sibling?.application?.length ? block(`THE SISTER APPLICATION — NLA's other application to this same funder in this same cycle ("${body.sibling.name}"${body.sibling.program ? ", for " + body.sibling.program : ""}), already submitted. The panel will read the two side by side. The FACTS must agree across both (the organization, its numbers, its people); the PROSE must not repeat. Under the relevant criterion, add advice citing the question for: any answer here that reads as copied from it (the same sentences, the same openings, the same order); any cost or line item funded in both (double-funding); anything that makes the two read as one program split in two to double the ask`,
+          body.sibling.application.map((q) => `${q.label}\n${q.answer}`).join("\n\n")) : "") +
         block("THE APPLICATION, AS IT WILL BE SUBMITTED", listed);
       const mustFix = body.focus !== "all";
       const response = await createBest(anthropic, {

@@ -58,7 +58,7 @@ async function awardPayload(docs: LifecycleDoc[]) {
   return out;
 }
 
-export default function GrantLifecycle({ folder, draftFolder, items, docs, reports, userId, ask, onChanged }: {
+export default function GrantLifecycle({ folder, draftFolder, items, docs, reports, userId, ask, onChanged, related = [] }: {
   folder: LifecycleFolder;
   draftFolder: () => DraftFolder;
   items: Item[];
@@ -67,6 +67,8 @@ export default function GrantLifecycle({ folder, draftFolder, items, docs, repor
   userId: string | null;
   ask: { confirm: (a: ConfirmAsk) => Promise<boolean>; prompt: (a: PromptAsk) => Promise<Record<string, string> | null> };
   onChanged: () => void;
+  /** Sister applications (2026-10-29): the folder this one was started from, and the ones started from it. */
+  related?: { id: string; name: string; program: string | null; relation: "from" | "next" }[];
 }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -196,6 +198,13 @@ export default function GrantLifecycle({ folder, draftFolder, items, docs, repor
         {/* What happened, with dates */}
         <div className="text-[12px] text-white/55 space-y-0.5">
           {folder.applied_from && <p><button type="button" className="text-sky-300 hover:text-sky-200 underline underline-offset-2" onClick={() => navigate(`/admin/finance/grant-coach/${folder.applied_from}`)}>Last year's folder</button></p>}
+          {related.map((r) => (
+            <p key={r.id}>
+              {r.relation === "from" ? "Written alongside " : "The next one: "}
+              <button type="button" className="text-sky-300 hover:text-sky-200 underline underline-offset-2" onClick={() => navigate(`/admin/finance/grant-coach/${r.id}`)}>{r.name}</button>
+              {r.program ? ` (${r.program})` : ""}{r.relation === "from" ? " — same funder, same cycle; every answer here is checked against it." : ""}
+            </p>
+          ))}
           {folder.submitted_at && (status === "submitted"
             ? <p className="font-semibold" style={{ color: WAIT }}>Submitted {fmt(folder.submitted_at)} · waiting on {folder.funder} — follow up, then mark it Awarded or Declined.</p>
             : <p>Submitted {fmt(folder.submitted_at)}.</p>)}

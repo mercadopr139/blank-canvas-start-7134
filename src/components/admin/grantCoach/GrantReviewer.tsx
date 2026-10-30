@@ -23,6 +23,7 @@ import type { CaseBrief, DraftFolder, LibraryEntry, FunderBrief } from "@/lib/gr
 import type { Fact } from "@/lib/grantCoach/liveFacts";
 import type { AppItem } from "@/components/admin/grantCoach/GrantApplication";
 import ReviewerChat from "@/components/admin/grantCoach/ReviewerChat";
+import type { SiblingContext } from "@/lib/grantCoach/sibling";
 
 interface Props {
   folderId: string;
@@ -39,6 +40,8 @@ interface Props {
   busy: boolean;
   /** The grant went in: the review is a record — score and last word, nothing to run or ask. */
   submitted?: boolean;
+  /** The sister application (2026-10-29): the reviewer reads the two as the panel will, side by side. */
+  sibling?: SiblingContext | null;
   /** Take Josh to a question on the page. */
   onJump: (id: string) => void;
   /** Draft it: the rewrite goes to the question's conversation as a draft card. */
@@ -85,7 +88,7 @@ function Refs({ text, live, onJump }: { text: string; live: AppItem[]; onJump: (
   );
 }
 
-export default function GrantReviewer({ folderId, folder, items, library, getFacts, caseBrief, review, reviewedAt, funderBrief, lastChange, busy, onJump, onFix, userId, onDraftToQuestion, submitted = false }: Props) {
+export default function GrantReviewer({ folderId, folder, items, library, getFacts, caseBrief, review, reviewedAt, funderBrief, lastChange, busy, onJump, onFix, userId, onDraftToQuestion, submitted = false, sibling = null }: Props) {
   const qc = useQueryClient();
   const [running, setRunning] = useState(false);
   const [recordOpen, setRecordOpen] = useState(false);
@@ -153,6 +156,7 @@ export default function GrantReviewer({ folderId, folder, items, library, getFac
         const fromAi = await reviewApplication({
           folder, library, facts: await getFacts(), caseBrief, funderBrief, clarifications,
           previousReview: prev, changedSince, dismissed, focus,
+          sibling: sibling ? { name: sibling.name, program: sibling.program, application: [...sibling.answers.values()].filter((a) => a.answer?.trim()).map((a) => ({ label: a.label, answer: a.answer!.trim() })) } : undefined,
           application: live.map((it, i) => ({ i: i + 1, section: it.section, label: it.label, help: it.detail, kind: it.kind, required: it.required, answer: it.answer, limit_kind: it.limit_kind, limit_value: it.limit_value })),
         });
         if (prev) {

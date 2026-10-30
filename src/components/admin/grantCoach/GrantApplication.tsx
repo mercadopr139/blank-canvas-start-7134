@@ -40,6 +40,7 @@ import { readDocxText } from "@/lib/grantCoach/readDocx";
 import GcCard, { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
 import { loadMemory, remember, forget, shouldRemember, type MemoryRow } from "@/lib/grantCoach/memory";
 import { isEdit, loadRules, addRules } from "@/lib/grantCoach/corrections";
+import { overlapPercent, rewriteInstruction, TOO_CLOSE, type SiblingContext } from "@/lib/grantCoach/sibling";
 import { learnFromEdit } from "@/lib/grantCoach/writer";
 
 /** The kinds the database accepts (grant_checklist_items_kind_check). Anything else the reader says is saved as a plain field. */
@@ -53,6 +54,8 @@ export interface AppItem {
   status: "todo" | "in_progress" | "done" | "na"; answer: string | null; sort_order: number;
   limit_kind?: "words" | "characters" | null; limit_value?: number | null; source_path?: string | null; pasted_at?: string | null;
   attachment_id?: string | null; vault_key?: string | null; vault_part?: string | null; answer_source?: "vault" | "coach" | "you" | "portal" | "memory" | null; memory_id?: string | null; needs_case?: boolean; story_id?: string | null; score_note?: string | null; updated_at?: string; left_out?: string[]; needs?: string | null;
+  /** The sister application's row this one is rewritten from (2026-10-29). */
+  rewrite_from?: string | null;
 }
 
 interface Props {
@@ -78,6 +81,8 @@ interface Props {
   actionsHost?: HTMLElement | null;
   /** Past Applying (submitted, awarded, closed): the application is a record — no next screen, the reviewer folded to its score. */
   submitted?: boolean;
+  /** The sister application this folder was started from (2026-10-29): its answers are context for every rewrite, and what the sameness check reads against. */
+  sibling?: SiblingContext | null;
 }
 
 /** Run jobs a few at a time. */
@@ -91,7 +96,7 @@ async function pool<T>(list: T[], n: number, job: (t: T) => Promise<void>) {
 const cleanName = (s: string) => s.replace(/[^\w.-]+/g, "_").slice(0, 60);
 const sectionTitle = (s: string) => s.replace(/^Portal · /, "");
 
-export default function GrantApplication({ folderId, folder, items, library, getFacts, userId, onPrint, printing, confirm, prompt, caseBrief, caseLockedAt, review, reviewedAt, funderBrief, actionsHost, submitted = false }: Props) {
+export default function GrantApplication({ folderId, folder, items, library, getFacts, userId, onPrint, printing, confirm, prompt, caseBrief, caseLockedAt, review, reviewedAt, funderBrief, actionsHost, submitted = false, sibling = null }: Props) {
   const caseLocked = !!caseBrief && !!caseLockedAt;
   const qc = useQueryClient();
   const refresh = useCallback(() => qc.invalidateQueries({ queryKey: ["grant-items", folderId] }), [qc, folderId]);
@@ -166,8 +171,11 @@ export default function GrantApplication({ folderId, folder, items, library, get
       const fromPast = past
         ? `This question was answered and approved for ${past.funder ?? "an earlier grant"}. Keep what is true and strong; adapt it to this funder's question and limit; refresh any number from the live numbers.`
         : undefined;
+      // The sister application's answer: context, never a template — same facts, new sentences (Josh, 2026-10-29).
+      const twin = sibling && it.rewrite_from ? sibling.answers.get(it.rewrite_from)?.answer?.trim() : null;
+      const fromTwin = twin ? rewriteInstruction(sibling!, folder.program_name, twin) : undefined;
       const res = await draftWithGrantCoach({
-        mode: "item", folder, library, facts, answered: answered(), instruction: [fromPast, instruction].filter(Boolean).join(" ") || undefined,
+        mode: "item", folder, library, facts, answered: answered(), instruction: [fromPast, fromTwin, instruction].filter(Boolean).join("\n\n") || undefined,
         caseBrief: it.needs_case ? (useCase ?? caseBrief) : null,
         funderBrief,
         // Stories only where an answer tells NLA's story; never one already told in this application.
@@ -182,7 +190,7 @@ export default function GrantApplication({ folderId, folder, items, library, get
       setWriting((w) => { const n = new Set(w); n.delete(it.id); return n; });
       refresh();
     }
-  }, [folder, library, patch, refresh, caseBrief, stories, funderBrief]);
+  }, [folder, library, patch, refresh, caseBrief, stories, funderBrief, sibling]);
 
   /** Match rows to the Vault, fill what the Vault holds, and write everything else. */
   const answerRows = useCallback(async (rows: AppItem[]) => {
@@ -238,7 +246,7 @@ export default function GrantApplication({ folderId, folder, items, library, get
           : { vault_key: key, vault_part: part, answer: null, needs: `Not in your Grant Vault yet (${label}). Type it below; it saves to the Vault for every grant after this.`, answer_source: "vault", status: "todo" });
       } else {
         const needsCase = !!r.needs_case || m?.needs_case === true;
-        const past = m?.memory_id ? memoryById.get(m.memory_id) : undefined;
+        const past = m?.memory_id && !(sibling && r.rewrite_from && !isFactRow(r)) ? memoryById.get(m.memory_id) : undefined;
         if (needsCase && !caseLocked) {
           // A story question: it waits for the strategy session, and nothing is written yet.
           await patch(r.id, { needs_case: true, status: "todo", needs: null });
@@ -270,7 +278,7 @@ export default function GrantApplication({ folderId, folder, items, library, get
       await pool(toWrite, WRITERS_AT_ONCE, async ({ row, past }) => { try { await writeOne(row, facts, undefined, past); } catch { failed += 1; } });
       if (failed) toast.error(`${failed} answer${failed === 1 ? "" : "s"} didn't come back. Use "Answer the rest" to try again.`);
     }
-  }, [docsOnFile, vault, patch, refresh, getFacts, writeOne, qc, userId, memory, memoryById, folderId, caseLocked]);
+  }, [docsOnFile, vault, patch, refresh, getFacts, writeOne, qc, userId, memory, memoryById, folderId, caseLocked, sibling]);
 
   /** Everything that came in from the tile: files and/or text. */
   /** A read that found nothing, or failed: it stays in the tile until it is tried again or dismissed. */
@@ -443,6 +451,20 @@ export default function GrantApplication({ folderId, folder, items, library, get
   const answerTheRest = async () => {
     try { await answerRows(waiting); } catch (e) { toast.error(`Grant Coach: ${(e as Error).message}`); } finally { setStage(null); refresh(); }
   };
+  /* A folder just started from its sister lands with its written answers empty: Grant Coach starts on them
+     by itself, once, so Josh arrives to drafts landing — not to a button (2026-10-29). */
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (autoStarted.current || !sibling || busy || !items.length) return;
+    const fresh = items.filter((i) => i.rewrite_from && !i.answer?.trim() && i.kind !== "upload" && i.status === "todo");
+    const begun = items.some((i) => i.answer_source === "coach");
+    autoStarted.current = true;
+    if (!fresh.length || begun) return;
+    void (async () => {
+      try { await answerRows(waiting); } catch (e) { toast.error(`Grant Coach: ${(e as Error).message}`); } finally { setStage(null); refresh(); }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once, when the folder's rows first arrive
+  }, [sibling, items, busy]);
   const startOver = async () => {
     if (!(await confirm({ title: "Start over?", body: `Every one of the ${live.length} questions and answers in this application comes off, approved or not. The Grant Vault, the documents and the screenshots stay. This cannot be undone.`, confirmLabel: "Clear the application", danger: true, typeToConfirm: "DELETE" }))) return;
     const { error } = await supabase.from("grant_checklist_items" as never).delete().eq("folder_id", folderId);
@@ -709,7 +731,7 @@ export default function GrantApplication({ folderId, folder, items, library, get
               blurb={narrative ? <NarrativeBlurb items={items} /> : `${rows.length} question${rows.length === 1 ? "" : "s"} · ${done} approved`}
               right={
                 <>
-                  {narrative && <NarrativeTools folder={folder} items={items} library={library} getFacts={getFacts} funderBrief={funderBrief} caseBrief={caseBrief} prompt={prompt} onChanged={refresh} />}
+                  {narrative && <NarrativeTools folder={folder} items={items} library={library} getFacts={getFacts} funderBrief={funderBrief} caseBrief={caseBrief} prompt={prompt} onChanged={refresh} sibling={sibling} />}
                   {all && <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-emerald-300"><Check className="w-4 h-4" /> All approved</span>}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -731,6 +753,10 @@ export default function GrantApplication({ folderId, folder, items, library, get
                     item={r}
                     number={numberOf.get(r.id)}
                     pastFunder={r.memory_id ? memoryById.get(r.memory_id)?.funder ?? null : null}
+                    twin={(() => {
+                      const prev = sibling && r.rewrite_from ? sibling.answers.get(r.rewrite_from)?.answer?.trim() : null;
+                      return prev ? { program: sibling!.program, pct: overlapPercent(r.answer, prev) } : null;
+                    })()}
                     focused={focusId === r.id}
                     forceOpen={openId === r.id}
                     onClosed={() => setOpenId((o) => (o === r.id ? null : o))}
@@ -852,6 +878,7 @@ export default function GrantApplication({ folderId, folder, items, library, get
             userId={userId}
             onDraftToQuestion={postDraft}
             submitted={submitted}
+            sibling={sibling}
           />
         </>
       )}
@@ -889,8 +916,10 @@ export default function GrantApplication({ folderId, folder, items, library, get
 }
 
 /* ───── One question ───── */
-function QuestionRow({ item, number, pastFunder, storyTitle, focused, forceOpen, onClosed, onApproveNext, renderChat, writing, busy, onApprove, onUnapprove, onCopy, onRemove, onSave, onRegenerate, onClear, folderId, userId, folderDocs, attachment, onAttach }: {
+function QuestionRow({ item, number, pastFunder, twin, storyTitle, focused, forceOpen, onClosed, onApproveNext, renderChat, writing, busy, onApprove, onUnapprove, onCopy, onRemove, onSave, onRegenerate, onClear, folderId, userId, folderDocs, attachment, onAttach }: {
   item: AppItem; number?: number; pastFunder?: string | null; storyTitle?: string | null; focused?: boolean; writing: boolean; busy: boolean;
+  /** The sister application answered this too: which program it was for, and how much of this answer still matches it (2026-10-29). */
+  twin?: { program: string | null; pct: number } | null;
   folderId: string; userId: string | null; folderDocs: FolderDoc[]; attachment: FolderDoc | null; onAttach: (doc: FolderDoc) => Promise<void>;
   forceOpen?: boolean; onClosed?: () => void;
   onApproveNext: (answer: string, source: "coach" | "you", storyId: string | null, before: string | null) => Promise<void>;
@@ -1096,6 +1125,20 @@ function QuestionRow({ item, number, pastFunder, storyTitle, focused, forceOpen,
             <p className="mt-1 text-sm text-white/35 italic">{item.needs_case ? "Not answered yet. Click Answer to work it out with Grant Coach." : "No answer yet."}</p>
           )}
 
+          {/* The sameness check (Josh, 2026-10-29: "I want it to look like a fresh version"): a fact is expected to match; prose is not. */}
+          {twin && !writing && !hasAnswer && (
+            <p className="mt-1.5 text-[12px] text-amber-300 inline-flex items-start gap-1.5"><AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" /> Written for {twin.program ?? "the first application"} the first time · Grant Coach writes it fresh for this one.</p>
+          )}
+          {twin && !writing && hasAnswer && !fact && (
+            twin.pct < TOO_CLOSE ? (
+              <p className="mt-1.5 text-[12px] text-emerald-300/80 inline-flex items-center gap-1.5"><Check className="w-3.5 h-3.5" /> {twin.pct}% matches the {twin.program ?? "first"} application · reads fresh</p>
+            ) : (
+              <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                <p className="text-[12px] text-amber-300 inline-flex items-start gap-1.5"><AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" /> <span><span className="font-semibold">{twin.pct}% matches the {twin.program ?? "first"} application</span> — too close; a reader with both would notice.</span></p>
+                <Button size="sm" variant="outline" disabled={busy} onClick={() => void onRegenerate("Too close to the first application: write it again with new sentences in a new order, the same facts, led by what matters to this program.")} className="h-7 bg-transparent border-white/20 text-white/85 hover:bg-white/10 hover:text-white"><RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Rewrite fresh</Button>
+              </div>
+            )
+          )}
           {(item.left_out?.length ?? 0) > 0 && hasAnswer && !writing && !approved && (
             <p className="mt-2 text-[12px] text-amber-300 inline-flex items-start gap-1.5"><AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" /> <span><span className="font-semibold">Left out: </span>{item.left_out!.join("; ")}. Open it and ask Grant Coach to work any of these in.</span></p>
           )}

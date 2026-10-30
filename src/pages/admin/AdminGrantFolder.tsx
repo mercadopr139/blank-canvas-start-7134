@@ -12,8 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   ArrowLeft, Loader2, Upload, Link2, ExternalLink, Trash2, CalendarClock,
-  Sparkles, RefreshCw, FileText, ChevronRight, ChevronDown,
+  Sparkles, RefreshCw, FileText, ChevronRight, ChevronDown, Layers,
 } from "lucide-react";
+import StartNextDialog from "@/components/admin/grantCoach/StartNextDialog";
+import { loadSibling } from "@/lib/grantCoach/sibling";
 import { buildAnswersPdf, answersPdfFileName, printableItems } from "@/lib/grantCoach/answersPdf";
 import { planMerge, mergePdfs, setWriterFolder } from "@/lib/grantCoach/attachments";
 import { GRANT_DOCUMENTS_BUCKET } from "@/lib/grantCoach/orgDocuments";
@@ -38,6 +40,8 @@ interface Folder {
   funder_brief?: FunderBriefT | null; funder_brief_at?: string | null; funder_brief_docs?: string[];
   submitted_at?: string | null; decided_at?: string | null; closed_at?: string | null; decline_reason?: string | null;
   reporting_basis?: "as_written" | "changed" | null; applied_from?: string | null;
+  /** A second application to the same funder in the same cycle: the folder this one was started from (2026-10-29). */
+  sibling_of?: string | null;
 }
 interface Doc {
   id: string; folder_id: string; side: "funder" | "ours"; title: string; storage_path: string | null; file_name: string | null;
@@ -150,6 +154,18 @@ const AdminGrantFolder = () => {
   });
 
   const { data: reports = [] } = useQuery({ queryKey: ["grant-reports", id], enabled: !!id, queryFn: () => loadReports(id!) });
+  /* The sister application (Josh, 2026-10-29): the folder this one was started from — its answers are the
+     context every rewrite is checked against — and the folders started from this one. */
+  const { data: sibling = null } = useQuery({ queryKey: ["grant-sibling", folder?.sibling_of], enabled: !!folder?.sibling_of, queryFn: () => loadSibling(folder!.sibling_of!) });
+  const { data: nextOnes = [] } = useQuery({
+    queryKey: ["grant-next-ones", id], enabled: !!id,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("grant_folders" as never).select("id, name, program_name").eq("sibling_of", id!).order("created_at");
+      if (error) throw error;
+      return (data ?? []) as unknown as { id: string; name: string; program_name: string | null }[];
+    },
+  });
+  const [nextOpen, setNextOpen] = useState(false);
   const refreshFolder = () => { qc.invalidateQueries({ queryKey: ["grant-folder", id] }); qc.invalidateQueries({ queryKey: ["grant-folders"] }); qc.invalidateQueries({ queryKey: ["grant-reports"] }); };
 
   const live = items.filter((i) => i.status !== "na");
@@ -388,6 +404,9 @@ const AdminGrantFolder = () => {
           {folder.portal_url && (
             <a href={folder.portal_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm text-sky-300 hover:text-sky-200"><ExternalLink className="w-4 h-4" /> Open the funder's portal</a>
           )}
+          {items.length > 0 && (
+            <button type="button" onClick={() => setNextOpen(true)} title="A second application to this funder for a different program, built from this one" className="inline-flex items-center gap-1.5 text-sm text-sky-300 hover:text-sky-200"><Layers className="w-4 h-4" /> Start the next one from this folder</button>
+          )}
           <button type="button" onClick={() => void removeFolder()} className="ml-auto inline-flex items-center gap-1.5 text-[12px] text-white/40 hover:text-red-300">
             <Trash2 className="w-3.5 h-3.5" /> Remove this folder
           </button>
@@ -404,6 +423,10 @@ const AdminGrantFolder = () => {
             userId={user?.id ?? null}
             ask={ask}
             onChanged={refreshFolder}
+            related={[
+              ...(sibling ? [{ id: sibling.id, name: sibling.name, program: sibling.program, relation: "from" as const }] : []),
+              ...nextOnes.map((n) => ({ id: n.id, name: n.name, program: n.program_name, relation: "next" as const })),
+            ]}
           />
         </div>
 
@@ -578,6 +601,7 @@ const AdminGrantFolder = () => {
             funderBrief={folder.funder_brief ?? null}
             actionsHost={actionsHost}
             submitted={folder.status !== "applying"}
+            sibling={sibling}
           />
           {(() => {
             const ours = docs.filter((d) => d.side === "ours");
@@ -590,6 +614,9 @@ const AdminGrantFolder = () => {
 
       </div>
       {dialog}
+      {nextOpen && (
+        <StartNextDialog open={nextOpen} onOpenChange={setNextOpen} source={folder} docs={docs} items={items} library={library} getFacts={async () => (facts.length ? facts : (await refetchFacts()).data ?? [])} userId={user?.id ?? null} />
+      )}
     </div>
   );
 };
