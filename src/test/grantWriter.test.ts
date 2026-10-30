@@ -64,12 +64,14 @@ describe("the summaries behind the live numbers", () => {
   });
 
   it("groups districts the way a funder reads them", () => {
-    expect(districtGroup("Lower Cape May Regional")).toBe("Lower Township");
-    expect(districtGroup("Lower Township")).toBe("Lower Township");
+    // Grouped and named as the By School District chart does (Josh, 2026-10-30: the writer said 19% where the chart says 20%).
+    expect(districtGroup("Lower Cape May Regional")).toBe("Lower Cape May");
+    expect(districtGroup("Lower Township")).toBe("Lower Cape May");
+    expect(districtGroup("Cape May City")).toBe("Lower Cape May");
     expect(districtGroup("Dennis Township")).toBe("Middle Township");
-    expect(districtGroup("Cape May City")).toBe("Cape May / West Cape May");
     expect(districtGroup("Wildwood")).toBe("Wildwood");
-    expect(districtGroup(null)).toBe("Not given");
+    expect(districtGroup("Wildwood Crest")).toBe("Wildwood");
+    expect(districtGroup(null)).toBe("Homeschool / Other");
   });
 
   it("a mistyped birth date cannot move the ages", () => {

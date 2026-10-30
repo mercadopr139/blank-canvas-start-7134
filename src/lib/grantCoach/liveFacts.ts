@@ -12,6 +12,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getCurrentAttendanceYear, programYearRange, shortProgramYear } from "@/lib/programYear";
 import { buildIntelligence } from "@/lib/transportIntelligence";
+import { groupOf, GROUP_LABEL } from "@/lib/districtGroups";
 import { isBelowPoverty } from "@/lib/demographics";
 
 export interface Fact {
@@ -77,18 +78,13 @@ export const isSingleParent = (r: { family_structure: string | null }) =>
   r.family_structure === "Mom Only" || r.family_structure === "Dad Only" || r.family_structure === "Single Parent Household";
 
 /**
- * Districts as a funder reads them. Families pick "Lower Cape May Regional"
- * for younger kids too, so it and "Lower Township" are one place; the two
- * Cape May districts likewise. Same grouping as the 2026 CPF proposal.
+ * Districts exactly as the By School District chart groups and names them
+ * (src/lib/districtGroups.ts): Lower Cape May = Cape May, West Cape May and
+ * Lower Township; Middle includes Dennis; Wildwood includes the Crest and
+ * North Wildwood. One grouping, so Grant Coach and the chart never disagree
+ * (Josh, 2026-10-30: "I see 20% for Lower, not 19!").
  */
-export const districtGroup = (d: string | null | undefined) => {
-  const k = (d ?? "").trim();
-  if (k === "Lower Cape May Regional" || k === "Lower Township") return "Lower Township";
-  // Dennis Township youth go on to Middle Township High School; counted with Middle (Josh, 2026-10-24).
-  if (k === "Dennis Township") return "Middle Township";
-  if (k === "Cape May City" || k === "West Cape May") return "Cape May / West Cape May";
-  return k || "Not given";
-};
+export const districtGroup = (d: string | null | undefined) => GROUP_LABEL[groupOf(d)].name;
 
 /** One person per youth (re-registrations collapse), then the shares funders ask for. */
 export const summarizeRegistrations = (rows: RegRow[], asOf = new Date()) => {
@@ -478,7 +474,7 @@ export async function gatherLiveFacts(today = new Date(), period?: { from: strin
     if (s.ageMedian != null) facts.push({ key: "ages.current", label: "Ages", value: `median ${s.ageMedian}; ${s.ageInRange} of ${s.agesKnown} (${pct(s.ageInRange, s.agesKnown)}%) between 7 and 19`, period, source: `dates of birth, as of the end of the year` });
     facts.push({ key: "sex.current", label: "Sex", value: shareList(s.sex, s.youth), period, source: "registration forms" });
     facts.push({ key: "race.current", label: "Race / ethnicity", value: shareList(s.race, s.youth, 6), period, source: "registration forms" });
-    facts.push({ key: "districts.current", label: "School districts", value: shareList(s.districts, s.youth, 8), period, source: "registration forms; Lower Cape May Regional and Lower Township counted as one, as are the Cape May districts; Dennis Township counted with Middle Township" });
+    facts.push({ key: "districts.current", label: "School districts", value: shareList(s.districts, s.youth, 8), period, source: "registration forms, grouped and named as the By School District chart on the Youth Served page groups them (Lower Cape May = Cape May, West Cape May and Lower Township; Middle Township includes Dennis; Wildwood includes the Crest and North Wildwood)" });
   } catch (e) {
     facts.push({ key: "registered.current", label: "Registrations", value: `unavailable (${(e as Error).message})`, period: "the last complete program year", source: "youth_registrations" });
   }
