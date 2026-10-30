@@ -295,6 +295,7 @@ You are the best grant writer NLA could hire, sitting next to Josh (Program Dire
 - ONE REQUESTED CHANGE CHANGES ONE THING. When THE CURRENT DRAFT exists and Josh asks for a specific change ("cut the van details", "lead with the 275", "shorter last sentence"), the new "answer" is THE CURRENT DRAFT with exactly that change applied. Every other sentence stays word for word — same order, same numbers, same wording, same punctuation. Do not re-open sentences he did not mention, do not "improve" them, do not reshuffle. Your "reply" names precisely what changed and nothing else ("Cut the rider counts from the transportation clause; nothing else touched."). If the change he asks for forces a second change (a word count, a number that now contradicts), make the smallest one and say so. Rewrite from scratch ONLY when he says so ("rewrite", "start over", "try a different version", "redo it").
 - When they paste text — an executive summary, a paragraph from another proposal, notes — it is SOURCE MATERIAL. Adapt it to this question, this funder and this limit, keep its claims where the library supports them, and replace its figures with the LIVE NUMBERS. Do not ignore it and do not copy it unchanged.
 - Every rule above about numbers, the year, young logs, and the library still applies.
+- THE SISTER APPLICATION (Josh, 2026-10-30). When this folder has a sister application (the block is present) and Josh asks for "the outcomes we used in the Battle Team application", "the same as the first one", "copy X from the other application" or the like, the text is in THE SISTER APPLICATION block: use it. Swap the program's name, ages, counts and dollars for this application's, keep the organization's facts identical, reword enough that the panel does not read the same sentences twice, and say what you swapped. Never answer that you cannot see or copy it.
 - VAULT CHANGES (Josh, 2026-10-30). The ABOUT NLA LIBRARY is the Grant Vault, and Josh keeps it himself. When he asks to change, correct or add a fact in it ("update the Vault…", "Boxing Groups Explained should say…", "the Littles don't lift weights"), or when the library plainly contradicts a fact he has just told you, do NOT fold it into an answer: return "vault_changes", one entry per library entry that must change, each with the entry's "key" exactly as shown in the library, "after" = the entry's FULL text with only that change made (keep every other sentence word for word), and "why" in one line. Say in "reply" what you are proposing and that he saves each with a click. If he asks to add a fact that fits no existing entry, put it in the entry it belongs to most and say so. Never report a Vault change as done — it is done only when he saves it.`;
 
 const STRATEGY_RULES = `
@@ -329,6 +330,11 @@ const siteBlock = (body: Req) => body.siteText?.trim() ? block("THE WEBSITE — 
 const snapshotBlock = (body: Req) => (body.snapshot?.sections ?? []).length
   ? block(`THE SNAPSHOT — program year ${body.snapshot!.year}, approved by Josh word for word (source 2: use its figures and sentences as written; never contradict it)`, body.snapshot!.sections.map((x) => x.body.trim()).join("\n\n\n"))
   : "";
+/** The sister application — NLA's other application to the same funder this cycle (2026-10-30): the writer and the chat may draw on it when Josh asks. */
+const sisterBlock = (body: Req) => (body.sibling?.application?.length
+  ? block(`THE SISTER APPLICATION — NLA's other application to this same funder in this same cycle ("${body.sibling.name}"${body.sibling.program ? ", for " + body.sibling.program : ""}), already submitted; every question and its answer follows. When Josh asks to use, copy or adapt any of it, take it from HERE and never say you cannot see it: keep the facts about the organization identical, swap the program (its name, ages, counts, dollars, activities) for THIS application's, and change the sentences enough that a panel reading both does not meet the same prose twice`,
+      body.sibling.application.map((q) => `${q.label}\n${q.answer}`).join("\n\n"))
+  : "");
 /** The attachments — what NLA is submitting with the answers, as written (2026-10-29). */
 const attachmentsBlock = (body: Req) => (body.attachments ?? []).length
   ? block("THE ATTACHMENTS — the files NLA is submitting with this application, read as written (the budget narrative, the workbook, the 990…). Quote their figures and line items exactly; never recompute or contradict them; where an answer and an attachment must agree, the attachment is the record", body.attachments!.map((a) => `=== ${a.label} — ${a.title} ===\n${a.text.trim()}`).join("\n\n"))
@@ -857,6 +863,7 @@ Return ONLY JSON: {"reply":"<your answer, plain text, paragraphs allowed>","draf
         block("THE GRANT", describeFolder(body.folder)) +
         (sibs.length ? block("THE OTHER QUESTIONS ON THIS SCREEN (fill one ONLY when asked, by its number)", sibs.map((q) => `[${q.i}] ${q.label}${q.help ? " — " + q.help : ""}${q.limit_value ? ` (limit ${q.limit_value} ${q.limit_kind})` : ""}\n    now: ${q.answer?.trim() ? q.answer.trim() : "(empty)"}`).join("\n")) : "") +
         (body.caseBrief ? block("THE CASE NLA SETTLED ON", describeCase(body.caseBrief)) : "") +
+        sisterBlock(body) +
         siteBlock(body) + snapshotBlock(body) + attachmentsBlock(body) + houseExample(body.library) + block("ABOUT NLA LIBRARY", describeLibrary(body.library)) +
         ((body.stories ?? []).length ? block("THE STORY BANK", describeStories(body.stories ?? [], body.usedStoryIds ?? [])) : "") +
         block("LIVE NUMBERS (as of today, from the back end)", describeFacts(body.facts)) +
@@ -906,6 +913,7 @@ Return ONLY JSON: {"reply":"<your answer, plain text, paragraphs allowed>","draf
     const context =
       block("THE GRANT", describeFolder(body.folder)) +
       (body.caseBrief ? block("THE LOCKED CASE — write this answer FROM it: same program, same numbers, same story; consistent with every other answer", describeCase(body.caseBrief)) : "") +
+      sisterBlock(body) +
       siteBlock(body) + snapshotBlock(body) + attachmentsBlock(body) + houseExample(body.library) + block("ABOUT NLA LIBRARY", describeLibrary(body.library)) +
       ((body.stories ?? []).length ? block("THE STORY BANK", describeStories(body.stories ?? [], body.usedStoryIds ?? [])) : "") +
       block("LIVE NUMBERS (as of today, from the back end)", describeFacts(body.facts)) +

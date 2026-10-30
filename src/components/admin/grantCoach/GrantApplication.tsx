@@ -40,7 +40,7 @@ import { readDocxText } from "@/lib/grantCoach/readDocx";
 import GcCard, { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
 import { loadMemory, remember, forget, shouldRemember, type MemoryRow } from "@/lib/grantCoach/memory";
 import { isEdit, loadRules, addRules } from "@/lib/grantCoach/corrections";
-import { overlapPercent, rewriteInstruction, TOO_CLOSE, type SiblingContext } from "@/lib/grantCoach/sibling";
+import { overlapPercent, rewriteInstruction, siblingForWriter, TOO_CLOSE, type SiblingContext } from "@/lib/grantCoach/sibling";
 import { learnFromEdit } from "@/lib/grantCoach/writer";
 
 /** The kinds the database accepts (grant_checklist_items_kind_check). Anything else the reader says is saved as a plain field. */
@@ -176,6 +176,7 @@ export default function GrantApplication({ folderId, folder, items, library, get
       const fromTwin = twin ? rewriteInstruction(sibling!, folder.program_name, twin) : undefined;
       const res = await draftWithGrantCoach({
         mode: "item", folder, library, facts, answered: answered(), instruction: [fromPast, fromTwin, instruction].filter(Boolean).join("\n\n") || undefined,
+        sibling: siblingForWriter(sibling),
         caseBrief: it.needs_case ? (useCase ?? caseBrief) : null,
         funderBrief,
         // Stories only where an answer tells NLA's story; never one already told in this application.
@@ -561,6 +562,7 @@ export default function GrantApplication({ folderId, folder, items, library, get
       await say("user", `The reviewer: ${w.problem}\n\nFix: ${w.fix}`);
       const res = await draftWithGrantCoach({
         mode: "item", folder, library, facts: await getFacts(), answered: answered(), instruction: w.instruction || w.fix,
+        sibling: siblingForWriter(sibling),
         caseBrief: it.needs_case ? caseBrief : null, funderBrief,
         stories: it.kind === "narrative" || it.needs_case ? usableStories(stories) : [],
         usedStoryIds: itemsRef.current.filter((x) => x.id !== it.id && x.story_id).map((x) => x.story_id!),
@@ -767,6 +769,7 @@ export default function GrantApplication({ folderId, folder, items, library, get
                         item={r}
                         draft={draft}
                         siblings={rows.filter((x) => x.id !== r.id)}
+                        sibling={sibling}
                         folder={folder}
                         library={library}
                         getFacts={getFacts}

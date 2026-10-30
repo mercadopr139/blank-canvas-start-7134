@@ -17,6 +17,7 @@ import { draftWithGrantCoach, type DraftFolder, type LibraryEntry, type FunderBr
 import type { Fact } from "@/lib/grantCoach/liveFacts";
 import type { StoryDraft } from "@/lib/grantCoach/stories";
 import { needsFrom } from "@/lib/grantCoach/answers";
+import { siblingForWriter, type SiblingContext } from "@/lib/grantCoach/sibling";
 import NeedMarks from "@/components/admin/grantCoach/NeedMarks";
 import DraftDiff from "@/components/admin/grantCoach/DraftDiff";
 
@@ -32,6 +33,8 @@ interface Props {
   draft: string;
   /** The other questions on the same screen, which Grant Coach fills only when asked. */
   siblings: Q[];
+  /** The sister application to the same funder (2026-10-30): Grant Coach draws on it when asked. */
+  sibling?: SiblingContext | null;
   folder: DraftFolder;
   library: LibraryEntry[];
   getFacts: () => Promise<Fact[]>;
@@ -46,7 +49,7 @@ interface Props {
   onStartOver: () => Promise<void>;
 }
 
-export default function QuestionChat({ folderId, item, draft, siblings, folder, library, getFacts, answered, funderBrief, stories, usedStoryIds, userId, onAnswer, onFills, onStartOver }: Props) {
+export default function QuestionChat({ folderId, item, draft, siblings, sibling, folder, library, getFacts, answered, funderBrief, stories, usedStoryIds, userId, onAnswer, onFills, onStartOver }: Props) {
   const qc = useQueryClient();
   const key = ["grant-chat", item.id];
   const [line, setLine] = useState("");
@@ -102,6 +105,7 @@ export default function QuestionChat({ folderId, item, draft, siblings, folder, 
         item: { id: item.id, section: item.section, label: item.label, detail: item.detail, kind: item.kind, answer: draft.trim() || item.answer, limit_kind: item.limit_kind, limit_value: item.limit_value },
         messages: [...msgs.map((m) => ({ role: m.role, content: m.content })), { role: "user", content: said }],
         siblings: sibs,
+        sibling: siblingForWriter(sibling),
       });
       // Nothing left out silently: if the reply did not say it, the list is added to it.
       const left = res.left_out ?? [];

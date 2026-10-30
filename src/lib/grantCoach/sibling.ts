@@ -218,3 +218,7 @@ export const rewriteInstruction = (sib: SiblingContext, thisProgram: string | nu
   `Write this answer FRESH for ${thisProgram ?? "this program"}: the same facts, names, dates and figures from the Vault and the live numbers (they must agree across both applications), ` +
   `but new sentences in a new order, led by what matters to ${thisProgram ?? "this program"}. Do not reuse the first application's sentences or its openings; a reader with both in front of them must see two distinct applications from one consistent organization. ` +
   `Where the question is about the organization rather than the program, keep every fact identical and change only the prose.`;
+
+/** The sister application as the writer receives it: every answered question, label and answer (2026-10-30). */
+export const siblingForWriter = (sib: SiblingContext | null | undefined) =>
+  sib ? { name: sib.name, program: sib.program, application: [...sib.answers.values()].filter((a) => a.answer?.trim()).map((a) => ({ label: a.label, answer: a.answer!.trim() })) } : undefined;
