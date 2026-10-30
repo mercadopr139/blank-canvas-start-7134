@@ -22,9 +22,10 @@ export default function GrantPipeline({ folders }: { folders: PipelineFolder[] }
   const urgent = due.filter((d) => daysUntil(d.date, today) <= 14);
 
   const tile = (label: string, value: string, sub?: string) => (
-    <div className="rounded-xl bg-white/[0.04] border border-white/10 p-3">
+    <div className="rounded-xl bg-white/[0.04] border border-white/10 p-3 min-w-0">
       <p className="text-[11px] uppercase tracking-wide text-white/45">{label}</p>
-      <p className="text-xl font-black tabular-nums mt-0.5">{value}</p>
+      {/* A six-figure sum ("$200,000") steps down a size so it stays inside the tile (Josh, 2026-10-30). */}
+      <p className={`font-black tabular-nums mt-0.5 leading-tight ${value.length > 7 ? "text-base" : "text-xl"}`}>{value}</p>
       {sub && <p className="text-[11px] text-white/40">{sub}</p>}
     </div>
   );
