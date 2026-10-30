@@ -90,6 +90,12 @@ const ZoneColumn = ({ name, stats }: { name: ZoneKey; stats: ZoneStats }) => (
       <BreakdownRows title="Age" items={stats.age.map((a) => ({ label: `Age ${a.label}`, count: a.count }))} total={stats.uniqueYouth} />
       <BreakdownRows title="Gender" items={stats.gender} total={stats.uniqueYouth} />
       <BreakdownRows title="Race / Ethnicity" items={stats.race} total={stats.uniqueYouth} />
+      <BreakdownRows title="School District" items={stats.district} total={stats.uniqueYouth} />
+      <BreakdownRows
+        title="Household"
+        items={stats.assessedYouth > 0 ? [{ label: "Single-parent", count: stats.singleParentCount }, { label: "Two-parent / other", count: stats.assessedYouth - stats.singleParentCount }] : []}
+        total={stats.assessedYouth}
+      />
     </CardContent>
   </Card>
 );

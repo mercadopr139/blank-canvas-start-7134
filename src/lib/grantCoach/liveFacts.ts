@@ -11,7 +11,8 @@
 // picture of where NLA is; "so far this year" numbers in October would not.
 import { supabase } from "@/integrations/supabase/client";
 import { getCurrentAttendanceYear, programYearRange, shortProgramYear } from "@/lib/programYear";
-import { buildIntelligence } from "@/lib/transportIntelligence";
+import { buildIntelligence, type ZoneStats } from "@/lib/transportIntelligence";
+import { isSingleParent as isSingleParentShared } from "@/lib/demographics";
 import { groupOf, GROUP_LABEL } from "@/lib/districtGroups";
 import { isBelowPoverty } from "@/lib/demographics";
 
@@ -74,8 +75,7 @@ export interface RegRow {
  * "Mom Only", "Dad Only", or the backfill label "Single Parent Household".
  * Nothing else counts, not "Other" and not a bare number of adults.
  */
-export const isSingleParent = (r: { family_structure: string | null }) =>
-  r.family_structure === "Mom Only" || r.family_structure === "Dad Only" || r.family_structure === "Single Parent Household";
+export const isSingleParent = isSingleParentShared;
 
 /**
  * Districts exactly as the By School District chart groups and names them
@@ -254,6 +254,19 @@ export const mealEstimate = (rows: { date: string; count: number }[], today: str
 
 export interface Rider { first_name: string; last_name: string; date_of_birth: string | null; pickup_zone: string | null }
 const personKey = (first: string, last: string, dob: string | null) => `${first.trim().toLowerCase()}|${last.trim().toLowerCase()}|${dob ?? ""}`;
+
+/** One zone's riders in a sentence: ages, sex, race, school district and single-parent households, counts with the matched base (2026-10-30). */
+export const riderDemographics = (z: ZoneStats) => {
+  if (!z.assessedYouth) return `${z.uniqueYouth} riders, none matched to a registration form, so no demographics.`;
+  const list = (b: { label: string; count: number }[], top = 6) => b.slice(0, top).map((x) => `${x.label} ${x.count}`).join(", ") || "not recorded";
+  const ages = z.age.map((a) => Number(a.label)).filter((n) => !Number.isNaN(n));
+  const expanded = z.age.flatMap((a) => Array<number>(a.count).fill(Number(a.label))).sort((a, b) => a - b);
+  const median = expanded.length ? expanded[Math.floor((expanded.length - 1) / 2)] : null;
+  return `${z.assessedYouth} of ${z.uniqueYouth} riders matched to a registration form. ` +
+    (ages.length ? `Ages ${Math.min(...ages)}–${Math.max(...ages)}${median != null ? ` (median ${median})` : ""}. ` : "") +
+    `Sex: ${list(z.gender)}. Race/ethnicity: ${list(z.race)}. School district: ${list(z.district)}. ` +
+    `Single-parent households: ${z.singleParentCount} of ${z.assessedYouth} (${z.singleParentPct}%). Economically disadvantaged: ${z.povertyCount} of ${z.assessedYouth} (${z.povertyPct}%).`;
+};
 
 /** Who rides: ages and towns from the rider list; income from the matching registration form (name + date of birth). */
 export const riderProfile = (riders: Rider[], regs: (RegRow & { child_first_name: string; child_last_name: string })[], asOf: Date) => {
@@ -450,6 +463,15 @@ export async function gatherLiveFacts(today = new Date(), period?: { from: strin
           return `${name}: ${z.uniqueYouth} youth served, ${z.rides.toLocaleString()} rides on ${z.trips} trips, ${z.povertyPct}% economically disadvantaged (${z.povertyCount} of ${z.assessedYouth} matched to a registration)`;
         };
         vans = `Transport Intelligence, ${shortProgramYear(year.year)}: ${ti.Combined.uniqueYouth} youth served, ${ti.Combined.rides.toLocaleString()} rides on ${ti.Combined.trips} completed trips, ${ti.Combined.povertyPct}% economically disadvantaged (${ti.Combined.povertyCount} of ${ti.Combined.assessedYouth} matched). ${zone("Woodbine")}. ${zone("Wildwood")}. `;
+        // The riders' own demographics (Josh, 2026-10-30: "I want to use them there, not NLA general demographics"):
+        // the page's counts, zone by zone, with the matched base stated — never NLA's registered-youth figures.
+        facts.push({
+          key: "riders.demographics", label: "Who rides NLA's vans — the riders' own demographics by pick-up zone",
+          value: `Counts are riders matched by name to a registration form, as the Transport Intelligence page shows them (the driver app began in spring 2026). ` +
+            `ALL RIDERS: ${riderDemographics(ti.Combined)} WOODBINE: ${riderDemographics(ti.Woodbine)} WILDWOOD: ${riderDemographics(ti.Wildwood)} ` +
+            `These are the RIDERS' figures; NLA's overall race, sex, single-parent and district figures are different facts and must not be mixed with these.`,
+          period: year.label, source: "the Transport Intelligence page (riders matched to registration forms: age, sex, race, school district, single-parent households)",
+        });
       } catch { /* the rider-list figures below still stand */ }
       facts.push({
         key: "riders.profile", label: "Who rides NLA's vans",

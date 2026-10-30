@@ -81,3 +81,12 @@ export const isBelowPoverty = (reg: {
   !!reg &&
   (POVERTY_INCOMES.includes(reg.household_income_range ?? "") ||
     reg.free_or_reduced_lunch === "Yes");
+
+/**
+ * A single-parent household, from the family question on the registration form:
+ * "Mom Only", "Dad Only" or "Single Parent Household". Nothing else counts, not
+ * "Other" and not a bare number of adults. One rule for every screen and for
+ * Grant Coach (moved here from the grant live facts, 2026-10-30).
+ */
+export const isSingleParent = (r: { family_structure: string | null }) =>
+  r.family_structure === "Mom Only" || r.family_structure === "Dad Only" || r.family_structure === "Single Parent Household";

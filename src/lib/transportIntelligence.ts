@@ -6,7 +6,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfMonth, differenceInYears, parseISO } from "date-fns";
 import { getCurrentAttendanceYear, programYearRange, nextProgramYear } from "@/lib/programYear";
-import { isBelowPoverty } from "@/lib/demographics";
+import { isBelowPoverty, isSingleParent } from "@/lib/demographics";
+import { groupOf, GROUP_LABEL } from "@/lib/districtGroups";
 import { fetchAllRows } from "@/lib/fetchAllRows";
 
 /* ── zones ── */
@@ -34,6 +35,11 @@ export type ZoneStats = {
   age: Breakdown;
   gender: Breakdown;
   race: Breakdown;
+  /** School districts, grouped and named as the By School District chart (2026-10-30). */
+  district: Breakdown;
+  /** Riders from a single-parent household (Mom Only / Dad Only), of the assessed youth (2026-10-30). */
+  singleParentCount: number;
+  singleParentPct: string;
   povertyCount: number;
   povertyPct: string;
 };
@@ -123,7 +129,7 @@ export async function buildIntelligence(period: Period) {
   const regs = (await fetchAllRows((from, to) =>
     supabase
       .from("youth_registrations")
-      .select("child_first_name, child_last_name, child_date_of_birth, child_sex, child_race_ethnicity, household_income_range, free_or_reduced_lunch, program_year")
+      .select("child_first_name, child_last_name, child_date_of_birth, child_sex, child_race_ethnicity, household_income_range, free_or_reduced_lunch, program_year, family_structure, child_school_district")
       .range(from, to)
   )) as any[];
 
@@ -185,11 +191,12 @@ export async function buildIntelligence(period: Period) {
   type Acc = {
     trips: Set<string>; pickups: Set<string>; dropoffs: Set<string>; rides: number;
     youth: Set<string>; matched: Set<string>; drivers: Map<string, Set<string>>;
-    age: Record<string, number>; gender: Record<string, number>; race: Record<string, number>; poverty: Set<string>;
+    age: Record<string, number>; gender: Record<string, number>; race: Record<string, number>; district: Record<string, number>;
+    singleParent: Set<string>; poverty: Set<string>;
   };
   const mkAcc = (): Acc => ({
     trips: new Set(), pickups: new Set(), dropoffs: new Set(), rides: 0,
-    youth: new Set(), matched: new Set(), drivers: new Map(), age: {}, gender: {}, race: {}, poverty: new Set(),
+    youth: new Set(), matched: new Set(), drivers: new Map(), age: {}, gender: {}, race: {}, district: {}, singleParent: new Set(), poverty: new Set(),
   });
   const acc: Record<string, Acc> = { Woodbine: mkAcc(), Wildwood: mkAcc(), Combined: mkAcc() };
   const bump = (a: Acc, driver: string, runId: string, type: string) => {
@@ -233,6 +240,10 @@ export async function buildIntelligence(period: Period) {
     if (reg.child_sex) targets.forEach((a) => { a.gender[reg.child_sex] = (a.gender[reg.child_sex] || 0) + 1; });
     if (reg.child_race_ethnicity) targets.forEach((a) => { a.race[reg.child_race_ethnicity] = (a.race[reg.child_race_ethnicity] || 0) + 1; });
     if (isBelowPoverty(reg)) targets.forEach((a) => a.poverty.add(youthId));
+    if (isSingleParent(reg)) targets.forEach((a) => a.singleParent.add(youthId));
+    // The district, grouped exactly as the By School District chart groups it (Lower Cape May, not Lower Township alone).
+    const district = GROUP_LABEL[groupOf(reg.child_school_district)].name;
+    targets.forEach((a) => { a.district[district] = (a.district[district] || 0) + 1; });
   });
 
   const finalize = (a: Acc): ZoneStats => {
@@ -251,6 +262,9 @@ export async function buildIntelligence(period: Period) {
       age: sortBreakdown(a.age).sort((x, y) => Number(x.label) - Number(y.label)),
       gender: sortBreakdown(a.gender),
       race: sortBreakdown(a.race),
+      district: sortBreakdown(a.district),
+      singleParentCount: a.singleParent.size,
+      singleParentPct: assessedYouth > 0 ? ((a.singleParent.size / assessedYouth) * 100).toFixed(0) : "0",
       povertyCount: a.poverty.size,
       // Divide by ASSESSED youth (matched to a registration), matching the
       // printed report — not by all youth served, which would read low.
