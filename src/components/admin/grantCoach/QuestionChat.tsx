@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, Loader2, Send, Sparkles, Library, Vault } from "lucide-react";
+import { Check, Loader2, Send, Sparkles, Library, Vault, Pencil } from "lucide-react";
 import ResourcePanel from "@/components/admin/grantCoach/ResourcePanel";
 import { GC_BLUE, GC_SHADE } from "@/components/admin/grantCoach/GcCard";
 import { StoryDraftCard } from "@/components/admin/grantCoach/StoryBank";
@@ -23,7 +23,7 @@ import DraftDiff from "@/components/admin/grantCoach/DraftDiff";
 
 /** A Vault entry Grant Coach proposes to change (2026-10-30): the text as it stands, the new text, and whether Josh saved it. */
 export interface VaultChange { key: string; label: string; before: string; after: string; why: string; saved?: boolean }
-interface Msg { id: string; role: "user" | "coach"; content: string; payload: { story_draft?: StoryDraft; story_done?: boolean; /** A draft answer Grant Coach wrote; it goes to the box only when Josh clicks. */ draft?: string; draft_story_id?: string | null; draft_words?: number; /** Josh clicked Use this on it (2026-10-30): the card then shows his edits since. */ used?: boolean; vault_changes?: VaultChange[] } | null }
+interface Msg { id: string; role: "user" | "coach"; content: string; payload: { story_draft?: StoryDraft; story_done?: boolean; /** A draft answer Grant Coach wrote; it goes to the box only when Josh clicks. */ draft?: string; draft_story_id?: string | null; draft_words?: number; /** Josh clicked Use this on it (2026-10-30): the card then shows his edits since. */ used?: boolean; /** Grant Coach's original text, kept when Josh edits the card (2026-10-30), so his edits stay marked. */ draft_base?: string; vault_changes?: VaultChange[] } | null }
 interface Q { id: string; section: string; label: string; detail: string | null; kind: string; answer: string | null; limit_kind?: "words" | "characters" | null; limit_value?: number | null; needs_case?: boolean }
 
 interface Props {
@@ -56,6 +56,8 @@ export default function QuestionChat({ folderId, item, draft, siblings, sibling,
   const [thinking, setThinking] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [resources, setResources] = useState(false);
+  /** The draft card being edited in place, and its text as Josh types (2026-10-30). */
+  const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const startOver = async () => {
     const { error } = await supabase.from("grant_messages" as never).delete().eq("item_id", item.id);
@@ -156,6 +158,22 @@ Left out: ${left.join("; ")}` : "");
       qc.invalidateQueries({ queryKey: key });
     }
   };
+  /** Save an in-place edit of a draft card: the card keeps the edit and remembers the original; an answer box holding the old draft follows. */
+  const saveEdit = async (m: Msg) => {
+    if (!editing || editing.id !== m.id) return;
+    const text = editing.text.trim();
+    const original = m.payload!.draft!;
+    setEditing(null);
+    if (!text || text === original.trim()) return;
+    const inBox = draft.trim() === original.trim();
+    const payload = { ...(m.payload ?? {}), draft: text, draft_base: m.payload?.draft_base ?? original, draft_words: text.split(/\s+/).filter(Boolean).length };
+    if (!m.id.startsWith("tmp-")) {
+      const { error } = await supabase.from("grant_messages" as never).update({ payload } as never).eq("id", m.id);
+      if (error) { toast.error(`Couldn't save the edit: ${error.message}`); return; }
+      qc.invalidateQueries({ queryKey: key });
+    }
+    if (inBox || m.payload?.used) onAnswer(text, m.payload?.draft_story_id ?? null);
+  };
   const settle = async (m: Msg) => {
     await supabase.from("grant_messages" as never).update({ payload: { ...(m.payload ?? {}), story_done: true } } as never).eq("id", m.id);
     qc.invalidateQueries({ queryKey: key });
@@ -207,18 +225,35 @@ Left out: ${left.join("; ")}` : "");
                 <>
                   <p className="max-w-[92%] text-sm text-white/90 whitespace-pre-wrap leading-relaxed"><span className="font-bold mr-1.5" style={{ color: GC_BLUE }}>Grant Coach</span><NeedMarks text={m.content} /></p>
                   {m.payload?.draft && (
-                    <div className="max-w-[92%] rounded-lg border bg-black/40 overflow-hidden" style={{ borderColor: `${GC_BLUE}66` }}>
-                      <div className="px-3 py-1.5 border-b flex items-center justify-between gap-2" style={{ borderColor: `${GC_BLUE}33`, backgroundColor: `${GC_BLUE}14` }}>
+                    /* While Josh edits in place the header (with Save) stays pinned at the top of the chat as he scrolls
+                        (Josh, 2026-10-30: "otherwise I have to scroll all the way back up to save"); sticky needs the card
+                        not to clip, so overflow-hidden is dropped while editing. */
+                    <div className={`max-w-[92%] rounded-lg border bg-black/40 ${editing?.id === m.id ? "overflow-visible" : "overflow-hidden"}`} style={{ borderColor: `${GC_BLUE}66` }}>
+                      <div className={`px-3 py-1.5 border-b flex items-center justify-between gap-2 rounded-t-lg ${editing?.id === m.id ? "sticky top-0 z-10 shadow-[0_6px_14px_rgba(0,0,0,0.45)]" : ""}`} style={{ borderColor: `${GC_BLUE}33`, backgroundColor: editing?.id === m.id ? "#0d2b47" : `${GC_BLUE}14` }}>
                         <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: GC_BLUE }}>Draft{m.payload.draft_words ? ` · ${m.payload.draft_words} words` : ""}<span className="ml-2 font-semibold normal-case tracking-normal text-white/40">Use this puts it in your answer box below, where you edit</span></p>
-                        {draft.trim() === m.payload.draft.trim() ? (
-                          <p className="text-[11px] font-semibold text-emerald-300 inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" /> In the answer box</p>
-                        ) : m.payload.used ? (
-                          <p className="text-[11px] font-semibold text-emerald-300 inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Used · your edits since are marked</p>
-                        ) : (
-                          <button type="button" onClick={() => void takeDraft(m)} className="rounded-md px-2.5 py-1 text-[11px] font-bold text-white hover:opacity-90" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}>
-                            Use this
-                          </button>
-                        )}
+                        <div className="flex items-center gap-2 shrink-0">
+                          {editing?.id === m.id ? (
+                            <>
+                              <button type="button" onClick={() => setEditing(null)} className="rounded-md px-2 py-1 text-[11px] font-semibold text-white/60 hover:text-white hover:bg-white/10">Cancel</button>
+                              <button type="button" onClick={() => void saveEdit(m)} className="rounded-md px-2.5 py-1 text-[11px] font-bold hover:opacity-90" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}>Save</button>
+                            </>
+                          ) : (
+                            <>
+                              {!m.id.startsWith("tmp-") && (
+                                <button type="button" onClick={() => setEditing({ id: m.id, text: m.payload!.draft! })} title="Edit this draft here; your changes show in amber" className="rounded-md p-1 text-white/50 hover:text-white hover:bg-white/10"><Pencil className="w-3.5 h-3.5" /></button>
+                              )}
+                              {draft.trim() === m.payload.draft.trim() ? (
+                                <p className="text-[11px] font-semibold text-emerald-300 inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" /> In the answer box</p>
+                              ) : m.payload.used ? (
+                                <p className="text-[11px] font-semibold text-emerald-300 inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Used · your edits since are marked</p>
+                              ) : (
+                                <button type="button" onClick={() => void takeDraft(m)} className="rounded-md px-2.5 py-1 text-[11px] font-bold text-white hover:opacity-90" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}>
+                                  Use this
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </div>
                       {/* The draft is a text box, which cannot colour its own words — so the
                           [NEED] notes are called out in red above it (Josh, 2026-10-28). */}
@@ -227,24 +262,48 @@ Left out: ${left.join("; ")}` : "");
                       )}
                       {/* The change against the answer as it stands: added words amber, removed words struck (Josh, 2026-10-29). */}
                       {(() => {
-                        // Used: what Josh changed since (the answer against the draft). Unused: what changed from the
-                        // previous draft card — the text a requested change was applied to (Josh, 2026-10-30) — or,
+                        // One comparison, viewing or editing. Used: what Josh changed since (the answer against the
+                        // draft). Edited here: his edits against Grant Coach's original. Otherwise: what changed from
+                        // the previous draft card — the text a requested change was applied to (Josh, 2026-10-30) — or,
                         // when there is no earlier card, what Use this would change in the answer box.
+                        // While editing, the SAME baseline stays: the marks he was reading do not vanish, and his
+                        // keystrokes join them in amber as he types (Josh, 2026-10-30: "keep them visible while editing").
                         const current = draft.trim() || item.answer || "";
                         const prevDraft = [...msgs.slice(0, mi)].reverse().find((x) => x.payload?.draft)?.payload?.draft ?? "";
                         const used = !!m.payload!.used && current.trim() !== m.payload!.draft!.trim();
-                        const before = used ? m.payload!.draft! : prevDraft || current;
-                        const after = used ? current : m.payload!.draft!;
-                        const vsPrev = !used && !!prevDraft;
+                        const edited = !used && !!m.payload!.draft_base;
+                        const before = used ? m.payload!.draft! : edited ? m.payload!.draft_base! : prevDraft || current;
+                        const isEditing = editing?.id === m.id;
+                        const after = isEditing ? editing!.text : used ? current : m.payload!.draft!;
+                        const vsPrev = !used && !edited && !!prevDraft;
                         const differsNow = before.replace(/\s+/g, " ").trim() !== after.replace(/\s+/g, " ").trim();
+                        const legend = used ? <><mark className="rounded-sm px-0.5 bg-amber-400/35 text-amber-50">amber</mark> = what you added since · <del className="text-white/35">struck</del> = what you removed</>
+                          : edited ? <><mark className="rounded-sm px-0.5 bg-amber-400/35 text-amber-50">amber</mark> = your edits to Grant Coach's draft · <del className="text-white/35">struck</del> = what you took out</>
+                          : vsPrev ? <><mark className="rounded-sm px-0.5 bg-amber-400/35 text-amber-50">amber</mark> = what changed from the previous draft · <del className="text-white/35">struck</del> = what came out</>
+                          : <><mark className="rounded-sm px-0.5 bg-amber-400/35 text-amber-50">amber</mark> = what this draft adds to your answer · <del className="text-white/35">struck</del> = what it removes</>;
                         return (
                           <>
-                            {differsNow && before.trim() && (
-                              <p className="px-3 pt-1.5 text-[10px] text-white/40">
-                                {used ? <><mark className="rounded-sm px-0.5 bg-amber-400/35 text-amber-50">amber</mark> = what you added since · <del className="text-white/35">struck</del> = what you removed</> : vsPrev ? <><mark className="rounded-sm px-0.5 bg-amber-400/35 text-amber-50">amber</mark> = what changed from the previous draft · <del className="text-white/35">struck</del> = what came out</> : <><mark className="rounded-sm px-0.5 bg-amber-400/35 text-amber-50">amber</mark> = what this draft adds to your answer · <del className="text-white/35">struck</del> = what it removes</>}
-                              </p>
+                            {isEditing && (
+                              <Textarea
+                                value={editing!.text}
+                                onChange={(e) => setEditing({ id: m.id, text: e.target.value })}
+                                rows={Math.min(30, Math.max(6, editing!.text.split("\n").length + Math.ceil(editing!.text.length / 90)))}
+                                autoFocus
+                                className="rounded-none border-0 border-b bg-black/30 text-sm text-white leading-relaxed focus-visible:ring-0 focus-visible:ring-offset-0 resize-y"
+                                style={{ borderColor: `${GC_BLUE}33` }}
+                              />
                             )}
-                            <DraftDiff before={before} after={after} className="px-3 py-2 text-sm text-white whitespace-pre-wrap leading-relaxed" />
+                            {differsNow && before.trim() && (
+                              <p className="px-3 pt-1.5 text-[10px] text-white/40">{legend}{isEditing && <> · your edits join in as you type · Save keeps them on this card</>}</p>
+                            )}
+                            {/* Double-click the text to edit it here (Josh, 2026-10-30). */}
+                            <div
+                              onDoubleClick={() => { if (!isEditing && !m.id.startsWith("tmp-")) setEditing({ id: m.id, text: m.payload!.draft! }); }}
+                              title={isEditing ? undefined : "Double-click to edit this draft here"}
+                              className={isEditing ? "" : "cursor-text"}
+                            >
+                              <DraftDiff before={before} after={after} className="px-3 py-2 text-sm text-white whitespace-pre-wrap leading-relaxed" />
+                            </div>
                           </>
                         );
                       })()}
