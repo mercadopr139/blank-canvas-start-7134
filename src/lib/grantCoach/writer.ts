@@ -112,6 +112,8 @@ export interface DraftResult {
   left_out?: string[];
   /** chat: a story Josh just told, written up to save. */
   story_draft?: StoryDraft;
+  /** chat: Vault entries Grant Coach proposes to change (2026-10-30) — saved only when Josh clicks. */
+  vault_changes?: { key: string; after: string; why: string }[];
 }
 
 /** Read the questions off uploaded portal screenshots (storage paths, in order). */

@@ -73,7 +73,7 @@ export default function StartNextDialog({ open, onOpenChange, source, docs, item
   const busy = stage != null;
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!busy) onOpenChange(o); }}>
-      <DialogContent className="bg-[#141416] border-white/15 text-white max-w-lg">
+      <DialogContent className="bg-[#141416] border-white/15 text-white max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="inline-flex items-center gap-2"><Layers className="w-4 h-4" style={{ color: GC_BLUE }} /> Start the next one from this folder</DialogTitle>
           <DialogDescription className="text-white/55">
@@ -105,10 +105,12 @@ export default function StartNextDialog({ open, onOpenChange, source, docs, item
             <p><span className="text-white font-semibold">{rewritten}</span> written answer{rewritten === 1 ? "" : "s"} — rewritten by Grant Coach for the new program, each checked against the first application for sameness.</p>
             {uploads > 0 && <p><span className="text-white font-semibold">{uploads}</span> upload{uploads === 1 ? "" : "s"} — attached again, per grant.</p>}
           </div>
+          {/* The progress reads as its own line, not inside the button (2026-10-30: the button overflowed the dialog). */}
+          {busy && <p className="text-[12px] inline-flex items-center gap-2" style={{ color: GC_BLUE }}><Loader2 className="w-4 h-4 animate-spin shrink-0" /> <span className="min-w-0 break-words">{stage}</span></p>}
           <div className="flex justify-end gap-2 pt-1">
             <Button variant="ghost" className="text-white/60 hover:text-white hover:bg-white/10" onClick={() => onOpenChange(false)} disabled={busy}>Cancel</Button>
-            <Button className="font-bold text-black hover:brightness-110" style={{ backgroundColor: GC_BLUE }} onClick={() => void go()} disabled={busy}>
-              {busy ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {stage}</> : <><Layers className="w-4 h-4 mr-2" /> Create the next application</>}
+            <Button className="font-bold text-black hover:brightness-110 shrink-0" style={{ backgroundColor: GC_BLUE }} onClick={() => void go()} disabled={busy}>
+              {busy ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Working…</> : <><Layers className="w-4 h-4 mr-2" /> Create the next application</>}
             </Button>
           </div>
         </div>

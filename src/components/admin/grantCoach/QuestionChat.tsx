@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, Loader2, Send, Sparkles, Library } from "lucide-react";
+import { Check, Loader2, Send, Sparkles, Library, Vault } from "lucide-react";
 import ResourcePanel from "@/components/admin/grantCoach/ResourcePanel";
 import { GC_BLUE, GC_SHADE } from "@/components/admin/grantCoach/GcCard";
 import { StoryDraftCard } from "@/components/admin/grantCoach/StoryBank";
@@ -20,7 +20,9 @@ import { needsFrom } from "@/lib/grantCoach/answers";
 import NeedMarks from "@/components/admin/grantCoach/NeedMarks";
 import DraftDiff from "@/components/admin/grantCoach/DraftDiff";
 
-interface Msg { id: string; role: "user" | "coach"; content: string; payload: { story_draft?: StoryDraft; story_done?: boolean; /** A draft answer Grant Coach wrote; it goes to the box only when Josh clicks. */ draft?: string; draft_story_id?: string | null; draft_words?: number } | null }
+/** A Vault entry Grant Coach proposes to change (2026-10-30): the text as it stands, the new text, and whether Josh saved it. */
+export interface VaultChange { key: string; label: string; before: string; after: string; why: string; saved?: boolean }
+interface Msg { id: string; role: "user" | "coach"; content: string; payload: { story_draft?: StoryDraft; story_done?: boolean; /** A draft answer Grant Coach wrote; it goes to the box only when Josh clicks. */ draft?: string; draft_story_id?: string | null; draft_words?: number; vault_changes?: VaultChange[] } | null }
 interface Q { id: string; section: string; label: string; detail: string | null; kind: string; answer: string | null; limit_kind?: "words" | "characters" | null; limit_value?: number | null; needs_case?: boolean }
 
 interface Props {
@@ -107,9 +109,14 @@ export default function QuestionChat({ folderId, item, draft, siblings, folder, 
 
 Left out: ${left.join("; ")}` : "");
       // The draft stays in the chat until Josh says it is the answer.
+      const vaultChanges: VaultChange[] = (res.vault_changes ?? []).flatMap((v) => {
+        const entry = library.find((e) => e.key === v.key);
+        return entry ? [{ key: v.key, label: entry.label, before: entry.value, after: v.after, why: v.why }] : [];
+      });
       const payload: Msg["payload"] = {
         ...(res.story_draft ? { story_draft: res.story_draft } : {}),
         ...(res.answer ? { draft: res.answer, draft_story_id: res.story_id ?? null, draft_words: res.words } : {}),
+        ...(vaultChanges.length ? { vault_changes: vaultChanges } : {}),
       };
       await save("coach", reply, Object.keys(payload ?? {}).length ? payload : null);
       if (res.fills?.length) {
@@ -124,6 +131,19 @@ Left out: ${left.join("; ")}` : "");
     }
   };
 
+  /** Save a proposed Vault change: the field is written, every grant reads it from now on, the card says so. */
+  const saveVaultChange = async (m: Msg, idx: number) => {
+    const v = m.payload?.vault_changes?.[idx];
+    if (!v) return;
+    const { error } = await supabase.from("grant_org_fields" as never).upsert({ key: v.key, value: v.after, updated_at: new Date().toISOString(), updated_by: userId } as never, { onConflict: "key" } as never);
+    if (error) { toast.error(`Couldn't save to the Vault: ${error.message}`); return; }
+    const next = m.payload!.vault_changes!.map((x, k) => (k === idx ? { ...x, saved: true } : x));
+    await supabase.from("grant_messages" as never).update({ payload: { ...(m.payload ?? {}), vault_changes: next } } as never).eq("id", m.id);
+    qc.invalidateQueries({ queryKey: key });
+    qc.invalidateQueries({ queryKey: ["grant-vault-raw"] });
+    qc.invalidateQueries({ queryKey: ["grant-library"] });
+    toast.success(`Saved to the Vault: ${v.label}. Every grant from now on reads it.`);
+  };
   const settle = async (m: Msg) => {
     await supabase.from("grant_messages" as never).update({ payload: { ...(m.payload ?? {}), story_done: true } } as never).eq("id", m.id);
     qc.invalidateQueries({ queryKey: key });
@@ -195,6 +215,20 @@ Left out: ${left.join("; ")}` : "");
                       <DraftDiff before={item.answer} after={m.payload.draft} className="px-3 py-2 text-sm text-white whitespace-pre-wrap leading-relaxed" />
                     </div>
                   )}
+                  {m.payload?.vault_changes?.map((v, idx) => (
+                    <div key={v.key} className="max-w-[92%] rounded-lg border bg-black/40 overflow-hidden" style={{ borderColor: "#fbbf2466" }}>
+                      <div className="px-3 py-1.5 border-b flex items-center justify-between gap-2" style={{ borderColor: "#fbbf2433", backgroundColor: "#fbbf2414" }}>
+                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-300 inline-flex items-center gap-1.5"><Vault className="w-3.5 h-3.5" /> Vault change · {v.label}</p>
+                        {v.saved ? (
+                          <p className="text-[11px] font-semibold text-emerald-300 inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Saved · in the Vault</p>
+                        ) : (
+                          <button type="button" onClick={() => void saveVaultChange(m, idx)} className="rounded-md px-2.5 py-1 text-[11px] font-bold hover:opacity-90" style={{ backgroundColor: "#fbbf24", color: "#0a0a0a" }}>Save to the Vault</button>
+                        )}
+                      </div>
+                      {v.why && <p className="px-3 pt-2 text-[12px] text-white/55">{v.why}</p>}
+                      <DraftDiff before={v.before} after={v.after} className="px-3 py-2 text-sm text-white whitespace-pre-wrap leading-relaxed" />
+                    </div>
+                  ))}
                   {m.payload?.story_draft && !m.payload.story_done && (
                     <StoryDraftCard draft={m.payload.story_draft} folderId={folderId} onSaved={() => void settle(m)} onDismiss={() => void settle(m)} />
                   )}
