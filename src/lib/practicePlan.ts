@@ -371,6 +371,8 @@ export interface PracticeBlock {
    * one-off so the template sync leaves it alone instead of "correcting" it.
    */
   category_overridden?: boolean;
+  /** True = the lift plan's build made this column for the week (2026-11-02); a rebuild keeps its line current. */
+  from_lift?: boolean;
   detail: string | null;
   /**
    * True when a coach moved this night's workout away (or took it out of the

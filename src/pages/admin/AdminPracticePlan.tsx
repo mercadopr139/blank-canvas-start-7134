@@ -47,7 +47,7 @@ import BulletEditor from "@/components/practice/BulletEditor";
 import { SplitLanesEditor } from "@/components/practice/SplitLanes";
 import { hasLanes, isBibleStudyBlock, bibleStudyText, bibleStudySiblings, wrapupFor, planningWeekOf, type Wrapups } from "@/lib/practicePlan";
 import { templateSlotFor, standingDetailFor, effectiveDetail, detailToStore } from "@/lib/practicePlan";
-import { formatHours, type DayHours } from "@/lib/practicePlan";
+import { formatHours, isWeightsBlock, type DayHours } from "@/lib/practicePlan";
 import { usePracticeCategories } from "@/hooks/usePracticeCategories";
 
 const AdminPracticePlan = () => {
@@ -524,6 +524,20 @@ const AdminPracticePlan = () => {
   // the row the board counts down to and banners. Set here, on the day card,
   // because the planner is where you are standing when you plan the week.
   const weekDates = useMemo(() => [1, 2, 3, 4, 5, 6, 7].map((n) => dateForWeekday(weekStart, n)), [weekStart]);
+  const { data: liftNights = { battle_team: null, non_battle_team: null } } = useQuery({
+    queryKey: ["practice-lift-nights", weekStart],
+    queryFn: async () => {
+      const nightsOf = (days: Record<string, unknown> | null | undefined) =>
+        new Set(Object.keys(days ?? {}).map((k) => ({ monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5 } as Record<string, number>)[k]).filter(Boolean));
+      const [bt, nbt] = await Promise.all([
+        supabase.from("strength_weeks" as never).select("days").eq("week_start", weekStart).maybeSingle(),
+        supabase.from("nbt_weeks" as never).select("days").eq("week_start", weekStart).maybeSingle(),
+      ]);
+      const b = bt.data as unknown as { days: Record<string, unknown> | null } | null;
+      const n = nbt.data as unknown as { days: Record<string, unknown> | null } | null;
+      return { battle_team: b ? nightsOf(b.days) : null, non_battle_team: n ? nightsOf(n.days) : null } as { battle_team: Set<number> | null; non_battle_team: Set<number> | null };
+    },
+  });
   const { data: dayHours = [] } = useQuery({
     queryKey: ["practice-day-hours", weekStart],
     queryFn: async () => {
@@ -1020,6 +1034,8 @@ const AdminPracticePlan = () => {
                   onHours={(hours) => saveDayHours.mutate({ dateISO: dateForWeekday(weekStart, d.n), hours })}
                   verse={verseDays.find((v) => v.weekday === d.n) ?? null}
                   blocksFor={(g) => blocksFor(d.n, g)}
+                  liftNights={liftNights}
+                  onGoTab={switchTab}
                   onSaveBlock={(id, detail) => saveBlock.mutate({ id, detail })}
                   template={template}
                   onRename={(id, category) => saveCategory.mutate({ id, category })}
@@ -1105,8 +1121,11 @@ const StartWeekCard = ({
 // ── One day ──────────────────────────────────────────────────────────
 const DayCard = ({
   day, dateISO, spiritual, onWrapup, points, onPoints, reminders, onReminders, verse, blocksFor, onSaveBlock,
-  template, onRename, onReset, onRemove, onAddWeekBlock, onPromote, hours, defaultStart, onHours,
+  template, onRename, onReset, onRemove, onAddWeekBlock, onPromote, hours, defaultStart, onHours, liftNights, onGoTab,
 }: {
+  /** The nights each lift plan holds a session for this week; null = no lift week built yet. */
+  liftNights: { battle_team: Set<number> | null; non_battle_team: Set<number> | null };
+  onGoTab: (tab: string) => void;
   /** This date's own hours (a holiday), or null for the usual time. */
   hours: DayHours | null;
   defaultStart: string;
@@ -1349,8 +1368,8 @@ const DayCard = ({
                 <p className="text-xs text-neutral-600 italic">Nothing scheduled</p>
               ) : (
                 gb.map((b) => (
+                  <div key={b.id}>
                   <BlockEditor
-                    key={b.id}
                     block={b}
                     accent={g.accent}
                     templateCategory={
@@ -1369,6 +1388,14 @@ const DayCard = ({
                     onRemove={() => onRemove(b.id)}
                     onPromote={() => onPromote(b.id)}
                   />
+                  {/* A weights column with no session behind it (Josh, 2026-11-02): say so, and point at the tab that builds it. */}
+                  {(g.key === "battle_team" || g.key === "non_battle_team") && isWeightsBlock(b.category) && !liftNights[g.key]?.has(dayNumber) && (
+                    <p className="mt-1 text-[11px] text-amber-300 flex items-center gap-1.5">
+                      <span>No {g.key === "battle_team" ? "Battle Team" : "NBT"} session built for {day.long}{liftNights[g.key] ? "" : " (no lift week yet)"}.</span>
+                      <button type="button" onClick={() => onGoTab(g.key === "battle_team" ? "bt" : "nbt")} className="underline underline-offset-2 hover:text-white">Build it</button>
+                    </p>
+                  )}
+                  </div>
                 ))
               )}
               <AddTemplateBlock

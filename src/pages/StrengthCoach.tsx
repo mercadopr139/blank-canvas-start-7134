@@ -23,6 +23,7 @@ import {
   DAYS, type DayKey, type DayWorkout, type WeekRow, toMonday, isoDate, addDays, prettyRange, dayMeta, weekDays, type DayMeta,
 } from "@/lib/strength";
 import { WEEKDAY_KEYS, DAY_LABELS, weekdayOf, programDaysForNights, placeOnNight } from "@/lib/programWeek";
+import { syncLiftColumns, syncSummary } from "@/lib/liftPlanSync";
 import ExerciseVideo from "@/components/strength/ExerciseVideo";
 import { LiveSwitch } from "@/components/practice/LiveSwitch";
 
@@ -144,6 +145,14 @@ export const BattleTeamWeek = ({
       await refetch();
       queryClient.invalidateQueries({ queryKey: ["strength-history"] });
       toast.success("Week generated — review and revise, then lock it in.");
+      // The practice plan follows: a Strength column on every night this week lifts (Josh, 2026-11-02).
+      try {
+        const synced = await syncLiftColumns(weekStart, "battle_team", plan.map(([night, programDay]) => ({ night, line: newDays[night]?.main?.lift || DAYS.find((d) => d.key === programDay)?.lift || "Lift" })));
+        queryClient.invalidateQueries({ queryKey: ["practice-blocks"] });
+        queryClient.invalidateQueries({ queryKey: ["board-blocks"] });
+        const line = syncSummary(synced, "Strength");
+        if (line) toast.success(line);
+      } catch { /* the practice plan catches up on the next build; the lift week is saved */ }
     } catch (e: any) {
       toast.error(e?.message || "Couldn't generate the week.");
     } finally {

@@ -21,6 +21,7 @@ import {
 } from "@/lib/nbt";
 import { priorWeekBriefs, roomReport, carryOver, dayProblem } from "@/lib/nbtCoaching";
 import { WEEKDAY_KEYS, DAY_LABELS, weekdayOf, programDaysForNights, placeOnNight } from "@/lib/programWeek";
+import { syncLiftColumns, syncSummary } from "@/lib/liftPlanSync";
 import { AlertTriangle, Mail } from "lucide-react";
 import { roomBrief } from "@/lib/nbtRooms";
 import { prettyRange } from "@/lib/strength";
@@ -320,6 +321,14 @@ export const NbtWeekBuilder = ({
       await writeWeek(b, weekNo, context);
       refresh();
       toast.success(`Week ${weekNo} is written. Lock it when it's ready for the wall.`);
+      // The practice plan follows: an S&C column on every night this week lifts (Josh, 2026-11-02).
+      try {
+        const synced = await syncLiftColumns(mondays[weekNo - 1], "non_battle_team", plan.map(([night, programDay]) => ({ night, line: DAYS.find((d) => d.key === programDay)?.title ?? "S&C" })));
+        qc.invalidateQueries({ queryKey: ["practice-blocks"] });
+        qc.invalidateQueries({ queryKey: ["board-blocks"] });
+        const line = syncSummary(synced, "S&C");
+        if (line) toast.success(line);
+      } catch { /* the practice plan catches up on the next build; the week is saved */ }
     } catch (e) {
       toast.error((e as Error)?.message ?? "Couldn't build that week.");
     } finally {
