@@ -146,10 +146,10 @@ const SYSTEM_BODY =
   "}\n" +
   "";
 
-const countLine = (single: boolean) =>
+const countLine = (single: boolean, dayNames: string[]) =>
   single
     ? "Return EXACTLY ONE day in the array.\n\n"
-    : "Return EXACTLY five days, in Monday-to-Friday order.\n\n";
+    : `Return EXACTLY ${dayNames.length} day${dayNames.length === 1 ? "" : "s"}, in this order: ${dayNames.join(", ")}. ${dayNames.length < 5 ? "These are the only nights the gym meets this week, so each verse must stand on its own; do not assume the room heard the others." : ""}\n\n`;
 
 const SYSTEM_RULES =
   "CAPITALISATION: the question and the read-aloud each start with a capital letter.\n\n" +
@@ -159,8 +159,8 @@ const SYSTEM_RULES =
   "use a dash other than a hyphen, never cite a whole chapter. Prefer a single-verse reference (e.g. 'Mark 9:35'); " +
   "use a two-verse range only when unavoidable, never more.";
 
-const systemFor = (single: boolean, dayLabel: string) =>
-  SYSTEM_HEAD + scopeSection(single, dayLabel) + SYSTEM_BODY + countLine(single) + SYSTEM_RULES;
+const systemFor = (single: boolean, dayLabel: string, dayNames: string[]) =>
+  SYSTEM_HEAD + scopeSection(single, dayLabel) + SYSTEM_BODY + countLine(single, dayNames) + SYSTEM_RULES;
 
 // Fetch one passage's text from Crossway. Returns null when the reference
 // cannot be resolved, so a bad pick is dropped rather than shown blank.
@@ -303,6 +303,12 @@ Deno.serve(async (req: Request) => {
 
     const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
 
+    // The nights that get a verse (Josh, 2026-11-02: a Monday-and-Thursday week needs two, not five).
+    const ALL_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+    const asked = Array.isArray(body?.days) ? body.days.map((d: unknown) => String(d)).filter((d: string) => ALL_DAYS.includes(d)) : [];
+    const dayNames = asked.length ? ALL_DAYS.filter((d) => asked.includes(d)) : ALL_DAYS;
+    const count = dayNames.length;
+
     const userPrompt =
       `The theme for this week is:\n"${theme}"\n\n` +
       (exclude.length
@@ -313,14 +319,14 @@ Deno.serve(async (req: Request) => {
         : "") +
       (single
         ? `Return ONLY the JSON shape described, with exactly one day — the replacement for ${dayLabel}.`
-        : "Return ONLY the JSON shape described, with exactly five days (Monday to Friday).");
+        : `Return ONLY the JSON shape described, with exactly ${count} day${count === 1 ? "" : "s"} (${dayNames.join(", ")}).`);
 
     const response = await anthropic.messages.create({
       model: MODEL,
       // One day needs a fraction of the room a full week does — but thinking
       // is charged against this too, so neither is as small as the answer.
-      max_tokens: single ? 6000 : 12000,
-      system: systemFor(single, dayLabel),
+      max_tokens: single ? 6000 : 4000 + 1600 * count,
+      system: systemFor(single, dayLabel, dayNames),
       messages: [{ role: "user", content: userPrompt }],
       ...thinking("low"),
     } as never);
@@ -334,7 +340,7 @@ Deno.serve(async (req: Request) => {
     // rather than showing an empty verse. Text from Crossway; the rest is the
     // model's, carried through.
     const withText = await Promise.all(
-      rawDays.slice(0, single ? 1 : 5).map(async (d) => {
+      rawDays.slice(0, single ? 1 : count).map(async (d) => {
         const ref = String(d?.ref ?? "").trim();
         if (!ref) return null;
         const esv_text = await fetchEsv(ref, ESV_API_KEY);

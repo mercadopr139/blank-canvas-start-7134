@@ -37,10 +37,10 @@ export const weekSteps = (i: WeekProgressInput, skipped: ReadonlySet<SkippableSt
       : { key: "plan", title: "Practice Plan", status: `${i.plan.filled} of ${i.plan.total} drills · draft`, state: "doing" };
 
   const verse: WeekStep = !i.verse || !i.verse.theme?.trim()
-    ? { key: "verse", title: "Verse of the Week", status: "No theme yet", state: "todo" }
+    ? { key: "verse", title: "Verses of the Week", status: "No theme yet", state: "todo" }
     : i.verse.is_published
-      ? { key: "verse", title: "Verse of the Week", status: "Live on Gym Board", state: "done" }
-      : { key: "verse", title: "Verse of the Week", status: "Theme set · not live yet", state: "doing" };
+      ? { key: "verse", title: "Verses of the Week", status: "Live on Gym Board", state: "done" }
+      : { key: "verse", title: "Verses of the Week", status: "Theme set · not live yet", state: "doing" };
 
   const battle: WeekStep = !i.battle || i.battle.days === 0
     ? { key: "battle", title: "BT Workout Plan", status: "Not built", state: "todo" }

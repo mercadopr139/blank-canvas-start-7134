@@ -1060,7 +1060,7 @@ const AdminPracticePlan = () => {
 
         {/* ── Verse of the Week ── */}
         <TabsContent value="verse" className="mt-4">
-          <VerseOfTheWeekAdmin season={season} weekStart={weekStart} />
+          <VerseOfTheWeekAdmin season={season} weekStart={weekStart} practiceDays={week ? days.map((d) => d.n).filter((n) => n >= 1 && n <= 5) : undefined} />
         </TabsContent>
 
       </Tabs>
@@ -1329,7 +1329,7 @@ const DayCard = ({
             <p className="text-xs font-semibold text-neutral-500 mt-1.5">&mdash; {verse.reference}</p>
           </>
         ) : (
-          <p className="text-sm text-neutral-600 italic">Set on the Verse of the Week tab.</p>
+          <p className="text-sm text-neutral-600 italic">Set on the Verses of the Week tab.</p>
         )}
       </div>
       </div>

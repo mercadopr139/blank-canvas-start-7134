@@ -55,10 +55,18 @@ const emptyDay = (weekday: number): VerseDay => ({
 
 // The week is the Practice Plan page's week — picked once at the top of the
 // page, followed here. (Josh, 2026-10-03.)
-const VerseOfTheWeekAdmin = ({ season = "in_season", weekStart }: { season?: SeasonMode; weekStart: string }) => {
+const VerseOfTheWeekAdmin = ({ season = "in_season", weekStart, practiceDays }: { season?: SeasonMode; weekStart: string; /** The weekdays (Mon=1…Fri=5) the practice plan is built for; the verse nights start from these (Josh, 2026-11-02). */ practiceDays?: number[] }) => {
   const qc = useQueryClient();
   const [theme, setTheme] = useState("");
   const [days, setDays] = useState<VerseDay[]>(DAYS.map((d) => emptyDay(d.n)));
+  // Which nights get a verse (Josh, 2026-11-02: "I want to do a verse today (Monday) and not
+  // Thursday"). Starts as the nights the practice plan is built for; a saved week keeps its own.
+  const [chosen, setChosen] = useState<Set<number>>(new Set(DAYS.map((d) => d.n)));
+  const chosenDays = DAYS.filter((d) => chosen.has(d.n));
+  const toggleDay = (n: number) => {
+    setChosen((prev) => { const next = new Set(prev); if (next.has(n)) { if (next.size === 1) return prev; next.delete(n); } else next.add(n); return next; });
+    setDirty(true);
+  };
   // Rewriting one part of a day: which day, and which part, is in flight.
   const [partBusy, setPartBusy] = useState<{ weekday: number; part: "question" | "readaloud" } | null>(null);
   // Days whose question was edited by hand since its read-aloud was written --
@@ -116,15 +124,20 @@ const VerseOfTheWeekAdmin = ({ season = "in_season", weekStart }: { season?: Sea
         };
       })
     );
+    // A saved week keeps the nights it has; a new one starts from the practice plan's nights.
+    const saved = dys.map((r) => r.weekday).filter((n) => n >= 1 && n <= 5);
+    const fromPlan = (practiceDays ?? []).filter((n) => n >= 1 && n <= 5);
+    setChosen(new Set(saved.length ? saved : fromPlan.length ? fromPlan : DAYS.map((d) => d.n)));
     setDirty(false);
     passedOver.current = new Set();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the plan's nights seed a week only when it loads
   }, [loaded]);
 
   /** The five on screen plus everything passed over this week: all off the table for the next pick. */
   const excludeList = () =>
     Array.from(new Set([...days.map((d) => d.reference).filter(Boolean), ...passedOver.current])).slice(0, 40);
 
-  const hasContent = days.some((d) => d.reference.trim() && d.text.trim());
+  const hasContent = days.some((d) => chosen.has(d.weekday) && d.reference.trim() && d.text.trim());
 
 
   const generate = async (regenerate = false) => {
@@ -138,7 +151,7 @@ const VerseOfTheWeekAdmin = ({ season = "in_season", weekStart }: { season?: Sea
       if (regenerate) days.forEach((d) => { if (d.reference) passedOver.current.add(d.reference); });
       const exclude = regenerate ? excludeList() : [];
       const { data, error } = await supabase.functions.invoke("verse-week", {
-        body: { theme: theme.trim(), exclude },
+        body: { theme: theme.trim(), exclude, days: chosenDays.map((d) => d.label) },
       });
       if (error) throw error;
       const resDays = (data?.days ?? []) as Array<{
@@ -149,8 +162,9 @@ const VerseOfTheWeekAdmin = ({ season = "in_season", weekStart }: { season?: Sea
         return;
       }
       setDays(
-        DAYS.map((d, i) => {
-          const r = resDays[i];
+        DAYS.map((d) => {
+          const i = chosenDays.findIndex((c) => c.n === d.n);
+          const r = i >= 0 ? resDays[i] : undefined;
           if (!r) return emptyDay(d.n);
           return {
             weekday: d.n,
@@ -315,7 +329,7 @@ const VerseOfTheWeekAdmin = ({ season = "in_season", weekStart }: { season?: Sea
       // Replace the week's days wholesale — simplest correct save.
       await supabase.from("board_verse_days" as never).delete().eq("week_start", weekStart);
       const rows = days
-        .filter((d) => d.reference.trim() && d.text.trim())
+        .filter((d) => chosen.has(d.weekday) && d.reference.trim() && d.text.trim())
         .map((d) => ({
           week_start: weekStart,
           weekday: d.weekday,
@@ -351,7 +365,7 @@ const VerseOfTheWeekAdmin = ({ season = "in_season", weekStart }: { season?: Sea
       {/* Title line — the same shape as the BT and NBT tabs. */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <p className="text-sm text-neutral-400">
-          <span className="font-bold text-white">Verse of the Week</span> · Monday – Friday · one verse a night, tap to discuss on the wall
+          <span className="font-bold text-white">Verses of the Week</span> · one verse on each night you pick, tap to discuss on the wall
         </p>
         <Button
           variant="outline"
@@ -407,8 +421,29 @@ const VerseOfTheWeekAdmin = ({ season = "in_season", weekStart }: { season?: Sea
             </Button>
           )}
         </div>
+        {/* Which nights get a verse. Starts as the nights the practice plan is built for. */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-neutral-400 shrink-0">Verse on</span>
+          {DAYS.map((d) => {
+            const on = chosen.has(d.n);
+            return (
+              <button
+                key={d.n}
+                type="button"
+                onClick={() => toggleDay(d.n)}
+                disabled={generating}
+                aria-pressed={on}
+                className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${on ? "text-black" : "border-neutral-700 text-neutral-500 hover:text-neutral-300 hover:border-neutral-500"}`}
+                style={on ? { backgroundColor: TEAL, borderColor: TEAL } : undefined}
+              >
+                {d.label.slice(0, 3)}
+              </button>
+            );
+          })}
+          <span className="text-[11px] text-neutral-500">{chosenDays.length === 1 ? "one verse" : `${chosenDays.length} verses`}{practiceDays?.length ? " · starts from the nights you practice" : ""}</span>
+        </div>
         <p className="text-[11px] text-neutral-500">
-          Five verses (Mon–Fri) on this theme, real ESV text, each with one discussion question aimed at a teenager’s own week, plus a short script the mentor reads out loud afterwards. Review and edit anything below, then Save.
+          One verse for each night picked above, on this theme, real ESV text, each with one discussion question aimed at a teenager’s own week, plus a short script the mentor reads out loud afterwards. Review and edit anything below, then Save.
         </p>
       </div>
 
@@ -429,12 +464,12 @@ const VerseOfTheWeekAdmin = ({ season = "in_season", weekStart }: { season?: Sea
           <SparkIcon className="h-8 w-8 mx-auto mb-3 text-white/30" />
           <p className="font-bold mb-1 text-white">Not written yet</p>
           <p className="text-neutral-400 text-sm max-w-md mx-auto">
-            Type a theme above and hit Build this week — five verses, Monday to Friday, each with its question and the mentor&apos;s script.
+            Type a theme above, pick the nights, and hit Build this week — one verse a night, each with its question and the mentor&apos;s script.
           </p>
         </div>
       ) : (
         <div className="space-y-3">
-          {days.map((d) => {
+          {days.filter((d) => chosen.has(d.weekday)).map((d) => {
             const label = DAYS.find((x) => x.n === d.weekday)?.label ?? "";
             return (
               <div key={d.weekday} className="rounded-xl border overflow-hidden bg-[#141416] shadow-[0_0.3em_1.2em_rgba(0,0,0,0.45)]" style={{ borderColor: `${TEAL}33` }}>
