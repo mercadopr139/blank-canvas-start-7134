@@ -318,13 +318,21 @@ const AdminPracticePlan = () => {
 
   const removeWeekBlock = useMutation({
     mutationFn: async (id: string) => {
+      const me = blocks.find((b) => b.id === id);
       const { error } = await supabase
         .from("practice_blocks" as never)
         .delete()
         .eq("id", id);
       if (error) throw error;
+      // Taken off on purpose (a holiday, a lighter night): the week remembers the slot,
+      // so "Update this week" never offers it back (Josh, 2026-11-02).
+      if (me && week) {
+        const slot = `${me.group}|${me.weekday}|${me.position}`;
+        const kept = Array.from(new Set([...(week.removed_slots ?? []), slot]));
+        await supabase.from("practice_weeks" as never).update({ removed_slots: kept } as never).eq("id", week.id);
+      }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["practice-blocks", week?.id] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["practice-blocks", week?.id] }); qc.invalidateQueries({ queryKey: ["practice-week", weekStart] }); },
     onError: (e: Error) => toast.error(e.message || "Couldn't remove that."),
   });
 
@@ -598,8 +606,10 @@ const AdminPracticePlan = () => {
         .filter((t) => days.some((d) => d.n === t.weekday))
         .map((t) => [key(t.group, t.weekday, t.position), t])
     );
+    // A slot Josh took off this week on purpose is not missing; it is gone for the week.
+    const removed = new Set(week.removed_slots ?? []);
     const missing = [...inTemplate.entries()]
-      .filter(([k]) => !inWeek.has(k))
+      .filter(([k]) => !inWeek.has(k) && !removed.has(k))
       .map(([, t]) => t);
     // Only offer to drop slots nobody has written a drill into — a filled slot
     // is a record of intent and shouldn't vanish because a template changed.
@@ -626,6 +636,17 @@ const AdminPracticePlan = () => {
       .filter(Boolean) as { block: PracticeBlock; category: string }[];
     return { missing, stale, renamed };
   }, [week, blocks, template, days]);
+
+  const keepOff = useMutation({
+    mutationFn: async () => {
+      const slots = drift.missing.map((t) => `${t.group}|${t.weekday}|${t.position}`);
+      const kept = Array.from(new Set([...(week!.removed_slots ?? []), ...slots]));
+      const { error } = await supabase.from("practice_weeks" as never).update({ removed_slots: kept } as never).eq("id", week!.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Kept off for this week."); qc.invalidateQueries({ queryKey: ["practice-week", weekStart] }); },
+    onError: (e: Error) => toast.error(e.message || "Couldn't save that."),
+  });
 
   const syncTemplate = useMutation({
     mutationFn: async () => {
@@ -908,12 +929,17 @@ const AdminPracticePlan = () => {
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
-                <LiveSwitch
-                  live={week.status === "published"}
-                  onChange={() => publish.mutate()}
-                  pending={publish.isPending}
-                  what="the practice plan"
-                />
+                <div className="flex flex-col items-end gap-1">
+                  <LiveSwitch
+                    live={week.status === "published"}
+                    onChange={() => publish.mutate()}
+                    pending={publish.isPending}
+                    what="the practice plan"
+                  />
+                  <span className={`text-[11px] ${week.status === "published" ? "text-emerald-300/80" : "text-neutral-500"}`}>
+                    {week.status === "published" ? "Every change you make here shows on the board within a minute." : "Draft · the board does not show it yet."}
+                  </span>
+                </div>
               </div>
             )}
           </div>
@@ -935,20 +961,20 @@ const AdminPracticePlan = () => {
                 <div className="flex items-center justify-between gap-4 flex-wrap rounded-xl border border-violet-400/30 bg-violet-400/[0.07] p-4">
                   <div>
                     <p className="text-sm font-semibold text-violet-200">
-                      The template has changed since this week was started
+                      Your template changed since this week was built
                     </p>
                     <p className="text-xs text-violet-100/60 mt-0.5">
                       {[
                         drift.missing.length > 0 &&
-                          `${drift.missing.length} to add`,
+                          `${drift.missing.length} new slot${drift.missing.length === 1 ? "" : "s"} to add`,
                         drift.renamed.length > 0 &&
                           `${drift.renamed.length} renamed`,
                         drift.stale.length > 0 &&
-                          `${drift.stale.length} empty to remove`,
+                          `${drift.stale.length} empty column${drift.stale.length === 1 ? "" : "s"} the template no longer has`,
                       ]
                         .filter(Boolean)
                         .join(" · ")}
-                      . Your drills and anything marked{" "}
+                      . This is about the template under Edit Template, not the board: the board already shows every change you make here. Your drills and anything marked{" "}
                       <span style={{ color: OFF_TEMPLATE_VIOLET }}>this week only</span>{" "}
                       are left alone.
                     </p>
@@ -962,9 +988,20 @@ const AdminPracticePlan = () => {
                     {syncTemplate.isPending ? (
                       <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> Updating…</>
                     ) : (
-                      <><RefreshCw className="w-4 h-4 mr-1.5" /> Update this week</>
+                      <><RefreshCw className="w-4 h-4 mr-1.5" /> {drift.missing.length && !drift.renamed.length && !drift.stale.length ? `Add ${drift.missing.length === 1 ? "it" : "them"}` : "Match the template"}</>
                     )}
                   </Button>
+                  {drift.missing.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => keepOff.mutate()}
+                      disabled={keepOff.isPending}
+                      className="text-xs text-violet-200/70 hover:text-white underline underline-offset-2"
+                      title="These columns are off this week on purpose — stop offering them"
+                    >
+                      {drift.missing.length === 1 ? "It's off on purpose" : "They're off on purpose"}
+                    </button>
+                  )}
                 </div>
               )}
               {days.map((d) => (

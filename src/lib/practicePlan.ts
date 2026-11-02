@@ -354,6 +354,8 @@ export interface PracticeWeek {
   published_at: string | null;
   /** This week's own wrap-up lines, by weekday. Absent = the template's. */
   wrapups?: Wrapups | null;
+  /** Template slots ("group|weekday|position") taken off this week on purpose — never offered back as missing (2026-11-02). */
+  removed_slots?: string[] | null;
 }
 
 export interface PracticeBlock {
