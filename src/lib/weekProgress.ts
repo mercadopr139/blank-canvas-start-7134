@@ -23,8 +23,8 @@ export interface WeekProgressInput {
   plan: { status: string; filled: number; total: number } | null;
   /** The Verse of the Week row, if any. */
   verse: { theme: string | null; is_published: boolean } | null;
-  /** Battle Team S&C week, if built. */
-  battle: { status: "draft" | "locked"; days: number } | null;
+  /** Battle Team S&C week, if built: how many days are written, of how many nights it lifts (3 unless the week says otherwise). */
+  battle: { status: "draft" | "locked"; days: number; total?: number } | null;
   /** NBT: whether this week is built (all three days) and whether it's locked. */
   nbt: { built: boolean; locked: boolean } | null;
 }
@@ -46,7 +46,7 @@ export const weekSteps = (i: WeekProgressInput, skipped: ReadonlySet<SkippableSt
     ? { key: "battle", title: "BT Workout Plan", status: "Not built", state: "todo" }
     : i.battle.status === "locked"
       ? { key: "battle", title: "BT Workout Plan", status: "Live on Gym Board", state: "done" }
-      : { key: "battle", title: "BT Workout Plan", status: `${i.battle.days} of 3 days · draft`, state: "doing" };
+      : { key: "battle", title: "BT Workout Plan", status: `${i.battle.days} of ${i.battle.total ?? 3} days · draft`, state: "doing" };
 
   const nbt: WeekStep = !i.nbt || !i.nbt.built
     ? { key: "nbt", title: "NBT Workout Plan", status: "Not built", state: "todo" }

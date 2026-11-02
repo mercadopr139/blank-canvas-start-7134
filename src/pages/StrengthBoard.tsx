@@ -94,7 +94,7 @@ const StrengthBoard = () => {
   const day = week?.days?.[dayKey];
   const meta = dayMeta(dayKey);
   // The programme's days plus any night a workout was moved onto.
-  const tabs = useMemo(() => weekDays(week?.days), [week]);
+  const tabs = useMemo(() => weekDays(week?.days, week?.nights), [week]);
   // Where this day's workout went, if a coach pushed it to another night.
   const movedTo = (Object.keys(week?.days ?? {}) as DayKey[]).find((k) => week?.days?.[k]?.movedFrom === dayKey) ?? null;
   // Edit tonight — a signed-in coach fixes the plan where the kids read it.

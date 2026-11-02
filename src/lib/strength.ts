@@ -41,6 +41,8 @@ export interface WeekRow {
   status: "draft" | "locked";
   days: Partial<Record<DayKey, DayWorkout>>;
   locked_at: string | null;
+  /** The nights this week was built for (2026-11-02); null = the programme's Mon/Wed/Fri. */
+  nights?: DayKey[] | null;
 }
 
 export const DAYS: { key: DayKey; label: string; lift: string; weekday: number }[] = [
@@ -60,8 +62,8 @@ export const dayMeta = (key: DayKey): DayMeta =>
   DAYS.find((d) => d.key === key) ?? { key, label: DAY_LABELS[key], lift: "", weekday: weekdayOf(key) };
 
 /** The days a week shows: the programme's three, plus any night a workout was moved onto. */
-export const weekDays = (days: WeekRow["days"] | null | undefined): DayMeta[] =>
-  weekDayKeys(DAYS.map((d) => d.key), days).map(dayMeta);
+export const weekDays = (days: WeekRow["days"] | null | undefined, nights?: readonly string[] | null): DayMeta[] =>
+  weekDayKeys(DAYS.map((d) => d.key), days, nights).map(dayMeta);
 
 /** Move a day's workout to another night (swapping if that night has one). Pure. */
 export const moveWorkout = (days: WeekRow["days"], from: DayKey, to: DayKey): WeekRow["days"] | null =>

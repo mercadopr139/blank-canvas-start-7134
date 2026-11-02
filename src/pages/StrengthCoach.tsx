@@ -22,6 +22,7 @@ const shade = (color: string) => ({ backgroundColor: `${color}1f`, borderColor: 
 import {
   DAYS, type DayKey, type DayWorkout, type WeekRow, toMonday, isoDate, addDays, prettyRange, dayMeta, weekDays, type DayMeta,
 } from "@/lib/strength";
+import { WEEKDAY_KEYS, DAY_LABELS, weekdayOf, programDaysForNights, placeOnNight } from "@/lib/programWeek";
 import ExerciseVideo from "@/components/strength/ExerciseVideo";
 import { LiveSwitch } from "@/components/practice/LiveSwitch";
 
@@ -32,11 +33,13 @@ import { LiveSwitch } from "@/components/practice/LiveSwitch";
  * (`embedded`, where the page's week picker owns the week). (Josh, 2026-10-03.)
  */
 export const BattleTeamWeek = ({
-  weekStart: controlledWeek, onWeekChange, embedded = false,
+  weekStart: controlledWeek, onWeekChange, embedded = false, practiceDays,
 }: {
   weekStart?: string;
   onWeekChange?: (weekStart: string) => void;
   embedded?: boolean;
+  /** The weekdays (Mon=1…Fri=5) the practice plan is built for; a new week's nights start from these (2026-11-02). */
+  practiceDays?: number[];
 }) => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -84,6 +87,22 @@ export const BattleTeamWeek = ({
 
   const days = week?.days ?? {};
   const hasWeek = !!week && Object.keys(days).length > 0;
+  // The nights this week lifts (Josh, 2026-11-02): a saved week keeps its own; a new week
+  // starts from the practice plan's nights; otherwise the programme's Mon/Wed/Fri.
+  const [pickedNights, setPickedNights] = useState<DayKey[] | null>(null);
+  useEffect(() => { setPickedNights(null); }, [weekStart]);
+  const nights: DayKey[] = pickedNights
+    ?? (week?.nights?.length ? week.nights : null)
+    ?? ((practiceDays ?? []).map((n) => WEEKDAY_KEYS[n]).filter(Boolean) as DayKey[]).filter((k, i, a) => a.indexOf(k) === i)
+    .concat()
+    .slice(0, 5);
+  const liftNights: DayKey[] = nights.length ? nights : DAYS.map((d) => d.key);
+  const toggleNight = (k: DayKey) => setPickedNights((prev) => {
+    const cur = prev ?? liftNights;
+    if (cur.includes(k)) return cur.length === 1 ? cur : cur.filter((x) => x !== k);
+    return [...cur, k].sort((a, b) => weekdayOf(a) - weekdayOf(b));
+  });
+  const plan = programDaysForNights(DAYS.map((d) => d.key), liftNights);
   const locked = week?.status === "locked";
   const current = days[selectedDay];
   const selectedMeta = dayMeta(selectedDay);
@@ -99,12 +118,13 @@ export const BattleTeamWeek = ({
         .select("week_start, days").lt("week_start", weekStart)
         .order("week_start", { ascending: false }).limit(3);
 
-      // Build the three days in parallel — far faster and each day gets its own
-      // token budget, so nothing truncates.
+      // Build the days in parallel — far faster and each day gets its own token
+      // budget, so nothing truncates. One per night picked: each night takes a
+      // programme day (its own, or the next unused in Bench → Squat → Deadlift order).
       const results = await Promise.all(
-        DAYS.map((d) =>
+        plan.map(([, programDay]) =>
           supabase.functions.invoke("strength-coach", {
-            body: { mode: "generate", dayKey: d.key, weekStart, history: hist ?? [] },
+            body: { mode: "generate", dayKey: programDay, weekStart, history: hist ?? [] },
           })
         )
       );
@@ -113,11 +133,12 @@ export const BattleTeamWeek = ({
         if (r.error) throw r.error;
         if (r.data?.error) throw new Error(r.data.error);
         if (!r.data?.day?.focus) throw new Error("The coach came back empty — try again.");
-        newDays[DAYS[i].key] = r.data.day;
+        const [night, programDay] = plan[i];
+        newDays[night] = placeOnNight(r.data.day as DayWorkout, programDay, night);
       });
 
       const { error: upErr } = await (supabase.from("strength_weeks" as never) as any)
-        .upsert({ week_start: weekStart, status: "draft", days: newDays, locked_at: null }, { onConflict: "week_start" });
+        .upsert({ week_start: weekStart, status: "draft", days: newDays, locked_at: null, nights: liftNights }, { onConflict: "week_start" });
       if (upErr) throw upErr;
 
       await refetch();
@@ -316,6 +337,30 @@ export const BattleTeamWeek = ({
             )}
           </div>
 
+          {/* Which nights lift (Josh, 2026-11-02). Starts from the nights the practice plan is built for. */}
+          {!locked && (
+            <div className="flex items-center gap-2 flex-wrap mb-3">
+              <span className="text-xs text-white/50 shrink-0">Lift on</span>
+              {(Object.values(WEEKDAY_KEYS) as DayKey[]).map((k) => {
+                const on = liftNights.includes(k);
+                const take = plan.find(([night]) => night === k)?.[1];
+                const lift = take ? DAYS.find((d) => d.key === take)?.lift : undefined;
+                return (
+                  <button key={k} type="button" onClick={() => toggleNight(k)} disabled={generating} aria-pressed={on}
+                    title={on && lift ? `${DAY_LABELS[k]} · ${lift}` : `Lift on ${DAY_LABELS[k]}`}
+                    className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${on ? "border-transparent text-white" : "border-white/15 text-white/45 hover:text-white/80 hover:border-white/40"}`}
+                    style={on ? { background: NLA_RED } : undefined}>
+                    {DAY_LABELS[k].slice(0, 3)}{on && lift ? <span className="font-normal opacity-80"> · {lift.split(" ")[0]}</span> : null}
+                  </button>
+                );
+              })}
+              <span className="text-[11px] text-white/40">
+                {liftNights.length < 3 ? `${liftNights.length === 1 ? "one lift" : "two lifts"} this week · ${DAYS.filter((d) => !plan.some(([, p]) => p === d.key)).map((d) => d.lift).join(" and ")} skipped` : `${liftNights.length} lifts`}
+                {pickedNights && hasWeek && " · rebuild to apply"}
+              </span>
+            </div>
+          )}
+
           {isLoading ? (
             <div className="text-white/40 py-16 text-center">Loading…</div>
           ) : !hasWeek ? (
@@ -323,7 +368,7 @@ export const BattleTeamWeek = ({
               <Sparkles className="h-8 w-8 mx-auto mb-3 text-white/30" />
               <p className="font-bold mb-1">Not written yet</p>
               <p className="text-white/50 text-sm mb-5 max-w-md mx-auto">
-                Monday bench, Wednesday squat, Friday deadlift — three days, warm-ups, extra work and scaling, in one go.
+                Bench, squat, deadlift in that order across the nights picked above — warm-ups, extra work and scaling, in one go.
               </p>
               <button onClick={generateWeek} disabled={generating}
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-white disabled:opacity-60"
@@ -334,7 +379,7 @@ export const BattleTeamWeek = ({
             </div>
           ) : (
             <div className="space-y-4">
-              {weekDays(days).map((d) => (
+              {weekDays(days, week?.nights).map((d) => (
                 <DayCard
                   key={d.key}
                   meta={d}
@@ -360,7 +405,7 @@ export const BattleTeamWeek = ({
           <div className="mt-5">
             <div className="flex items-center gap-2 mb-3 flex-wrap">
               <span className="text-[11px] uppercase tracking-widest text-white/40 font-bold">Log sets for</span>
-              {weekDays(days).map((d) => {
+              {weekDays(days, week?.nights).map((d) => {
                 const active = d.key === selectedDay;
                 return (
                   <button key={d.key} onClick={() => setSelectedDay(d.key)}

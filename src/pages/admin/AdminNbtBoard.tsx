@@ -4,7 +4,7 @@
 // primary movements hold across a block while the challenge rises. So this
 // builds a whole month at once, feeding each week the earlier weeks of the same
 // block, and the coach reviews before any of it reaches the gym screen.
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { levelIndent, levelDot, levelText } from "@/lib/bulletText";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -20,6 +20,7 @@ import {
   DAYS, DayKey, TRACKS, TRACK_META, stationLines, withStations, Track, NbtBlock, NbtWeek, NbtDay, NbtLog, toDateString, firstOfMonth, monthLabel, mondaysInMonth, dateOfDay, mondayOf, addDays, NBT_AMBER, readableLines, minutesOf, totalMinutes, weekDays,
 } from "@/lib/nbt";
 import { priorWeekBriefs, roomReport, carryOver, dayProblem } from "@/lib/nbtCoaching";
+import { WEEKDAY_KEYS, DAY_LABELS, weekdayOf, programDaysForNights, placeOnNight } from "@/lib/programWeek";
 import { AlertTriangle, Mail } from "lucide-react";
 import { roomBrief } from "@/lib/nbtRooms";
 import { prettyRange } from "@/lib/strength";
@@ -68,11 +69,13 @@ const shiftMonth = (monthStart: string, n: number) => {
  * picker owns the week). (Josh, 2026-10-03.)
  */
 export const NbtWeekBuilder = ({
-  weekStart: controlledWeek, onWeekChange, embedded = false,
+  weekStart: controlledWeek, onWeekChange, embedded = false, practiceDays,
 }: {
   weekStart?: string;
   onWeekChange?: (weekStart: string) => void;
   embedded?: boolean;
+  /** The weekdays (Mon=1…Fri=5) the practice plan is built for; a new week's nights start from these (2026-11-02). */
+  practiceDays?: number[];
 }) => {
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -172,6 +175,19 @@ export const NbtWeekBuilder = ({
 
   const block = data?.block ?? null;
   const weeks = useMemo(() => data?.weeks ?? [], [data]);
+  // The nights this week lifts (Josh, 2026-11-02): a saved week keeps its own; a new week
+  // starts from the practice plan's nights; otherwise the programme's Mon/Tue/Thu.
+  const thisWeekRow = weeks.find((w) => w.week_start === weekStart) ?? null;
+  const [pickedNights, setPickedNights] = useState<DayKey[] | null>(null);
+  useEffect(() => { setPickedNights(null); }, [weekStart]);
+  const planNights = ((practiceDays ?? []).map((n) => WEEKDAY_KEYS[n]).filter(Boolean) as DayKey[]).filter((k, i, a) => a.indexOf(k) === i);
+  const liftNights: DayKey[] = pickedNights ?? (thisWeekRow?.nights?.length ? thisWeekRow.nights : planNights.length ? planNights : DAYS.map((d) => d.key));
+  const toggleNight = (k: DayKey) => setPickedNights((prev) => {
+    const cur = prev ?? liftNights;
+    if (cur.includes(k)) return cur.length === 1 ? cur : cur.filter((x) => x !== k);
+    return [...cur, k].sort((a, b) => weekdayOf(a) - weekdayOf(b));
+  });
+  const plan = programDaysForNights(DAYS.map((d) => d.key), liftNights);
   // Green once the week ON SCREEN is live — not today's week.
   const thisWeekLocked = weeks.some((w) => w.week_start === weekStart && w.status === "locked");
   const mondays = useMemo(() => mondaysInMonth(month), [month]);
@@ -267,9 +283,13 @@ export const NbtWeekBuilder = ({
    */
   const writeWeek = async (b: NbtBlock, weekNo: number, context: NbtWeek[]): Promise<NbtWeek> => {
     const blockFocus = focus.trim() || b.focus || "";
-    const [monday, tuesday, thursday] = await Promise.all(
-      DAYS.map((d) => generateDay(blockFocus, weekNo, d.key, context))
+    // One day per night picked: each night takes a programme day (its own, or the next
+    // unused in Monday → Tuesday → Thursday order) and is filed on the night it runs.
+    const built = await Promise.all(
+      plan.map(([, programDay]) => generateDay(blockFocus, weekNo, programDay, context))
     );
+    const days: NbtWeek["days"] = {};
+    built.forEach((day, i) => { const [night, programDay] = plan[i]; days[night] = placeOnNight(day, programDay, night); });
     const { data: saved, error } = await supabase
       .from("nbt_weeks" as never)
       .upsert(
@@ -277,7 +297,8 @@ export const NbtWeekBuilder = ({
           block_id: b.id,
           week_start: mondays[weekNo - 1],
           week_in_block: weekNo,
-          days: { monday, tuesday, thursday },
+          days,
+          nights: liftNights,
           status: "draft",
           locked_at: null,
         } as never,
@@ -482,6 +503,30 @@ export const NbtWeekBuilder = ({
             )}
           </div>
 
+          {/* Which nights lift (Josh, 2026-11-02). Starts from the nights the practice plan is built for. */}
+          {!thisWeekLocked && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-neutral-400 shrink-0">Lift on</span>
+              {(Object.values(WEEKDAY_KEYS) as DayKey[]).map((k) => {
+                const on = liftNights.includes(k);
+                const take = plan.find(([night]) => night === k)?.[1];
+                const title = take ? DAYS.find((d) => d.key === take)?.title : undefined;
+                return (
+                  <button key={k} type="button" onClick={() => toggleNight(k)} disabled={busy !== null} aria-pressed={on}
+                    title={on && title ? `${DAY_LABELS[k]} · ${title}` : `Lift on ${DAY_LABELS[k]}`}
+                    className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${on ? "border-transparent text-black" : "border-neutral-700 text-neutral-500 hover:text-neutral-300 hover:border-neutral-500"}`}
+                    style={on ? { backgroundColor: NBT_AMBER } : undefined}>
+                    {DAY_LABELS[k].slice(0, 3)}{on && title ? <span className="font-normal opacity-75"> · {title}</span> : null}
+                  </button>
+                );
+              })}
+              <span className="text-[11px] text-neutral-500">
+                {liftNights.length < 3 ? `${liftNights.length === 1 ? "one session" : "two sessions"} this week · ${DAYS.filter((d) => !plan.some(([, p]) => p === d.key)).map((d) => d.title).join(" and ")} skipped` : `${liftNights.length} sessions`}
+                {pickedNights && thisWeekRow && " · rebuild to apply"}
+              </span>
+            </div>
+          )}
+
           {isLoading ? (
             <p className="text-neutral-500 py-10 text-center">Loading…</p>
           ) : (
@@ -500,7 +545,7 @@ export const NbtWeekBuilder = ({
                       <Sparkles className="h-8 w-8 mx-auto mb-3 text-white/30" />
                       <p className="font-bold mb-1">Not written yet</p>
                       <p className="text-neutral-400 text-sm mb-5 max-w-md mx-auto">
-                        Monday squat and push, Tuesday athletic and overhead, Thursday hinge and pull — Alpha and Bravo, in one go.
+                        Squat and push, athletic and overhead, hinge and pull — one session for each night picked above, Alpha and Bravo, in one go.
                       </p>
                       <Button
                         onClick={() => buildWeek(weekNo)}
@@ -523,8 +568,8 @@ export const NbtWeekBuilder = ({
                 // the court language, the kit — is caught here, not on the
                 // wall. The checks only run when a day is generated, so a
                 // stored week needs a rebuild to pick the rules up.
-                const stale = DAYS
-                  .map((d) => ({ d, problem: w.days?.[d.key] ? dayProblem(w.days[d.key]!, d.key) : null }))
+                const stale = weekDays(w.days, w.nights)
+                  .map((d) => ({ d, problem: w.days?.[d.key] ? dayProblem(w.days[d.key]!, w.days[d.key]!.movedFrom ?? d.key) : null }))
                   .filter((x) => x.problem);
                 return (
                 <div
@@ -535,7 +580,7 @@ export const NbtWeekBuilder = ({
                     <p className="font-bold">
                       {prettyRange(w.week_start)}
                       <span className="text-neutral-500 font-normal text-sm ml-2">
-                        {isThisWeek ? "this week" : "Mon · Tue · Thu"}
+                        {weekDays(w.days, w.nights).map((d) => d.label.slice(0, 3)).join(" · ")}{isThisWeek ? " · this week" : ""}
                       </span>
                     </p>
                     <div className="flex items-center gap-2">
@@ -569,7 +614,7 @@ export const NbtWeekBuilder = ({
                     </div>
                   )}
                   <div className="space-y-4">
-                    {weekDays(w.days).map((d) => {
+                    {weekDays(w.days, w.nights).map((d) => {
                       const day = w.days?.[d.key];
                       const key = `${w.id}-${d.key}`;
                       const stations = day ? stationsOf(day) : null;

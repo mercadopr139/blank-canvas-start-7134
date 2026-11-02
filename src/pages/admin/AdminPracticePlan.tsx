@@ -1050,12 +1050,12 @@ const AdminPracticePlan = () => {
 
         {/* ── BT Workout Plan — the same builder as the sidebar page, on this week ── */}
         <TabsContent value="bt" className="mt-4">
-          <BattleTeamWeek weekStart={weekStart} onWeekChange={setWeekStart} embedded />
+          <BattleTeamWeek weekStart={weekStart} onWeekChange={setWeekStart} embedded practiceDays={week ? days.map((d) => d.n).filter((n) => n >= 1 && n <= 5) : undefined} />
         </TabsContent>
 
         {/* ── NBT Workout Plan — the same builder as the sidebar page, on this week ── */}
         <TabsContent value="nbt" className="mt-4">
-          <NbtWeekBuilder weekStart={weekStart} onWeekChange={setWeekStart} embedded />
+          <NbtWeekBuilder weekStart={weekStart} onWeekChange={setWeekStart} embedded practiceDays={week ? days.map((d) => d.n).filter((n) => n >= 1 && n <= 5) : undefined} />
         </TabsContent>
 
         {/* ── Verse of the Week ── */}

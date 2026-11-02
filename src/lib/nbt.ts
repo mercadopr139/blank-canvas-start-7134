@@ -78,8 +78,8 @@ export const dayMeta = (key: DayKey): DayMeta =>
   DAYS.find((d) => d.key === key) ?? { key, label: DAY_LABELS[key], title: "", weekday: weekdayOf(key) };
 
 /** The days a week shows: the programme's three, plus any night a workout was moved onto. */
-export const weekDays = (days: NbtWeek["days"] | null | undefined): DayMeta[] =>
-  weekDayKeys(DAYS.map((d) => d.key), days).map(dayMeta);
+export const weekDays = (days: NbtWeek["days"] | null | undefined, nights?: readonly string[] | null): DayMeta[] =>
+  weekDayKeys(DAYS.map((d) => d.key), days, nights).map(dayMeta);
 
 /** Move a day's workout to another night (swapping if that night has one). Pure. */
 export const moveWorkout = (days: NbtWeek["days"], from: DayKey, to: DayKey): NbtWeek["days"] | null =>
@@ -184,6 +184,8 @@ export interface NbtWeek {
   /** draft = still being worked on; locked = on the gym board. Per week since 2026-10-03. */
   status?: "draft" | "locked";
   locked_at?: string | null;
+  /** The nights this week was built for (2026-11-02); null = the programme's Mon/Tue/Thu. */
+  nights?: DayKey[] | null;
 }
 
 export interface NbtLogSet {

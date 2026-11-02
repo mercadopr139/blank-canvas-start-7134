@@ -47,11 +47,11 @@ export const WeekProgress = ({
     queryFn: async () => {
       const { data } = await supabase
         .from("strength_weeks" as never)
-        .select("status, days")
+        .select("status, days, nights")
         .eq("week_start", weekStart)
         .maybeSingle();
-      const row = data as unknown as { status: "draft" | "locked"; days: Record<string, unknown> | null } | null;
-      return row ? { status: row.status, days: Object.keys(row.days ?? {}).length } : null;
+      const row = data as unknown as { status: "draft" | "locked"; days: Record<string, unknown> | null; nights: string[] | null } | null;
+      return row ? { status: row.status, days: Object.keys(row.days ?? {}).length, total: row.nights?.length || 3 } : null;
     },
   });
 
@@ -62,12 +62,13 @@ export const WeekProgress = ({
     queryFn: async () => {
       const { data: wk } = await supabase
         .from("nbt_weeks" as never)
-        .select("status, days")
+        .select("status, days, nights")
         .eq("week_start", weekStart)
         .maybeSingle();
-      const row = wk as unknown as { status?: string; days: Record<string, unknown> | null } | null;
+      const row = wk as unknown as { status?: string; days: Record<string, unknown> | null; nights: string[] | null } | null;
       if (!row) return null;
-      const built = Object.keys(row.days ?? {}).length >= 3;
+      // Built = every night the week lifts has its session (three unless the week says otherwise).
+      const built = Object.keys(row.days ?? {}).length >= (row.nights?.length || 3);
       return { built, locked: row.status === "locked" };
     },
   });

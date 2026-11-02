@@ -73,10 +73,41 @@ export const removeDay = <T>(
 export const weekDayKeys = <T>(
   programKeys: readonly WeekdayKey[],
   days: Partial<Record<WeekdayKey, T>> | null | undefined,
+  /** The nights this week was built for (2026-11-02). Unset or empty: the programme's own. */
+  nights?: readonly string[] | null,
 ): WeekdayKey[] => {
-  const keys = new Set<WeekdayKey>(programKeys);
+  const chosen = (nights ?? []).filter(isWeekdayKey);
+  const keys = new Set<WeekdayKey>(chosen.length ? chosen : programKeys);
   for (const k of Object.keys(days ?? {})) if (isWeekdayKey(k) && days?.[k]) keys.add(k);
   return [...keys].sort((a, b) => weekdayOf(a) - weekdayOf(b));
+};
+
+/**
+ * Which programme day each chosen night takes (Josh, 2026-11-02: a modified
+ * week lifts Monday and Thursday though the programme is Mon/Wed/Fri). A night
+ * that IS a programme day keeps its own day; any other night takes the first
+ * programme day not yet used, in programme order — so Battle Team on Mon and
+ * Thu is Bench and Squat, and NBT on Mon and Thu is its Monday and Thursday.
+ * Returns [night, programmeDay] pairs in night order.
+ */
+export const programDaysForNights = (
+  programKeys: readonly WeekdayKey[],
+  nights: readonly WeekdayKey[],
+): [WeekdayKey, WeekdayKey][] => {
+  const ordered = [...new Set(nights)].sort((a, b) => weekdayOf(a) - weekdayOf(b));
+  const used = new Set<WeekdayKey>(ordered.filter((n) => programKeys.includes(n)));
+  return ordered.map((night) => {
+    if (programKeys.includes(night)) return [night, night];
+    const next = programKeys.find((k) => !used.has(k));
+    if (next) used.add(next);
+    return [night, next ?? programKeys[programKeys.length - 1]];
+  });
+};
+
+/** A workout built for one programme day, filed on the night it runs: it remembers where it came from unless that is home. */
+export const placeOnNight = <T extends Moveable>(workout: T, programDay: WeekdayKey, night: WeekdayKey): T => {
+  const { movedFrom: _dropped, ...rest } = workout;
+  return (night === programDay ? rest : { ...rest, movedFrom: programDay }) as T;
 };
 
 /** Where this day's workout went, if a coach pushed it to another night. */
