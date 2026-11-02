@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import {
-  Star, Search, AlertTriangle, Users, Eye, ChevronLeft, ChevronRight, CalendarDays, MapPin,
+  Star, Search, AlertTriangle, Users, Eye, ChevronLeft, ChevronRight, ChevronDown, CalendarDays, MapPin,
   Clock, TrendingUp, TrendingDown, School, Lightbulb, Activity, Trash2, X, Pencil, UserPlus, Mail,
   Plus, Truck, Bus, CheckCircle2, Lock, Unlock, StickyNote, Sparkles
 } from "lucide-react";
@@ -204,6 +204,11 @@ const AdminAttendance = () => {
   const [filter, setFilter] = useState<"all" | "bald-eagles">("all");
   const [selectedYouth, setSelectedYouth] = useState<Registration | null>(null);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
+  // Month picker: click the "October 2026" heading to jump straight to any
+  // month (Josh, 2026-11-02: going back month by month was too slow when
+  // pulling numbers for donors). pickerYear is the year the grid shows.
+  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
+  const [pickerYear, setPickerYear] = useState(() => new Date().getFullYear());
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [calendarFilter, setCalendarFilter] = useState<"all" | "bald-eagles">("all");
   const [calendarProgramFilter, setCalendarProgramFilter] = useState<string>("all");
@@ -2269,7 +2274,64 @@ const AdminAttendance = () => {
               </Button>
               <div className="flex flex-col items-center gap-0.5">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-semibold tracking-wide">{format(calendarMonth, "MMMM yyyy")}</h3>
+                  <Popover open={monthPickerOpen} onOpenChange={(o) => { setMonthPickerOpen(o); if (o) setPickerYear(calendarMonth.getFullYear()); }}>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        title="Pick a month"
+                        className="flex items-center gap-1.5 rounded-md px-2 py-0.5 -mx-2 text-lg font-semibold tracking-wide hover:bg-white/10 transition-colors"
+                      >
+                        {format(calendarMonth, "MMMM yyyy")}
+                        <ChevronDown className="w-4 h-4 text-white/40" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent align="center" className="w-72 bg-neutral-900 border-white/15 text-white p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-white/60 hover:text-white hover:bg-white/10" onClick={() => setPickerYear((y) => y - 1)}>
+                          <ChevronLeft className="w-4 h-4" />
+                        </Button>
+                        <span className="text-sm font-semibold">{pickerYear}</span>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-white/60 hover:text-white hover:bg-white/10" onClick={() => setPickerYear((y) => y + 1)}>
+                          <ChevronRight className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-3 gap-1">
+                        {Array.from({ length: 12 }, (_, i) => {
+                          const d = new Date(pickerYear, i, 1);
+                          const selected = isSameMonth(d, calendarMonth);
+                          const isNow = isSameMonth(d, now);
+                          const future = d > now;
+                          return (
+                            <button
+                              key={i}
+                              type="button"
+                              disabled={future}
+                              onClick={() => { setCalendarMonth(d); setMonthPickerOpen(false); }}
+                              className={`rounded-md px-2 py-1.5 text-sm transition-colors ${
+                                selected
+                                  ? "text-white font-semibold"
+                                  : future
+                                    ? "text-white/20 cursor-not-allowed"
+                                    : "text-white/80 hover:bg-white/10"
+                              }`}
+                              style={selected ? { backgroundColor: "#bf0f3e" } : undefined}
+                            >
+                              {format(d, "MMM")}{isNow && !selected ? <span className="text-white/40"> ·</span> : null}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {!isSameMonth(calendarMonth, now) && (
+                        <button
+                          type="button"
+                          className="mt-2 w-full rounded-md border border-white/15 bg-transparent px-2 py-1.5 text-xs text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+                          onClick={() => { setCalendarMonth(new Date()); setMonthPickerOpen(false); }}
+                        >
+                          Back to this month
+                        </button>
+                      )}
+                    </PopoverContent>
+                  </Popover>
                   {viewedMonthIsOffSeason && (
                     <Badge className="bg-amber-500/15 text-amber-300 border-amber-500/30 text-[10px]">Off-Season</Badge>
                   )}
@@ -2603,7 +2665,7 @@ const AdminAttendance = () => {
                     {snap.program.map(([prog, count]) => (
                       <div key={prog} className="flex justify-between items-center">
                         <span className="text-xs text-white/70 truncate">{prog.replace(/\s*\(.*\)/, "")}</span>
-                        <span className="text-sm font-bold">{count}</span>
+                        <span className="text-sm font-bold">{count} <span className="text-[10px] font-normal text-white/40">{pct(count, snap.poverty.total)}</span></span>
                       </div>
                     ))}
                   </div>
@@ -2618,12 +2680,12 @@ const AdminAttendance = () => {
                 <div className="flex items-center gap-3">
                   <div className="text-center flex-1">
                     <p className="text-2xl font-bold text-blue-400">{snap.sex["Male"] || 0}</p>
-                    <p className="text-[10px] text-white/40">Boys</p>
+                    <p className="text-[10px] text-white/40">Boys · {pct(snap.sex["Male"] || 0, snap.poverty.total)}</p>
                   </div>
                   <div className="w-px h-8 bg-white/10" />
                   <div className="text-center flex-1">
                     <p className="text-2xl font-bold text-pink-400">{snap.sex["Female"] || 0}</p>
-                    <p className="text-[10px] text-white/40">Girls</p>
+                    <p className="text-[10px] text-white/40">Girls · {pct(snap.sex["Female"] || 0, snap.poverty.total)}</p>
                   </div>
                 </div>
                 <div className="border-t border-white/10 mt-2 pt-1.5 text-center">
@@ -2650,7 +2712,7 @@ const AdminAttendance = () => {
                 {snap.topDistrict ? (
                   <>
                     <p className="text-sm font-bold mt-1.5 truncate">{snap.topDistrict[0]}</p>
-                    <p className="text-[10px] text-white/30">{snap.topDistrict[1]} youth</p>
+                    <p className="text-[10px] text-white/30">{snap.topDistrict[1]} youth · {pct(snap.topDistrict[1], snap.poverty.total)}</p>
                   </>
                 ) : (
                   <p className="text-white/30 text-sm mt-1">—</p>
@@ -2675,7 +2737,7 @@ const AdminAttendance = () => {
                   {midProgram.map(([prog, count]) => (
                     <div key={prog} className="flex justify-between items-center">
                       <span className="text-xs text-white/70 truncate">{prog.replace(/\s*\(.*\)/, "")}</span>
-                      <span className="text-sm font-bold">{count}</span>
+                      <span className="text-sm font-bold">{count} <span className="text-[10px] font-normal text-white/40">{pct(count, midTotal)}</span></span>
                     </div>
                   ))}
                 </div>
@@ -2690,12 +2752,12 @@ const AdminAttendance = () => {
               <div className="flex items-center gap-3">
                 <div className="text-center flex-1">
                   <p className="text-2xl font-bold text-blue-400">{midSex["Male"] || 0}</p>
-                  <p className="text-[10px] text-white/40">Boys</p>
+                  <p className="text-[10px] text-white/40">Boys · {pct(midSex["Male"] || 0, midTotal)}</p>
                 </div>
                 <div className="w-px h-8 bg-white/10" />
                 <div className="text-center flex-1">
                   <p className="text-2xl font-bold text-pink-400">{midSex["Female"] || 0}</p>
-                  <p className="text-[10px] text-white/40">Girls</p>
+                  <p className="text-[10px] text-white/40">Girls · {pct(midSex["Female"] || 0, midTotal)}</p>
                 </div>
               </div>
               <div className="border-t border-white/10 mt-2 pt-1.5 text-center">
@@ -2722,7 +2784,7 @@ const AdminAttendance = () => {
               {midDistrict ? (
                 <>
                   <p className="text-sm font-bold mt-1.5 truncate">{midDistrict[0]}</p>
-                  <p className="text-[10px] text-white/30">{midDistrict[1]} youth</p>
+                  <p className="text-[10px] text-white/30">{midDistrict[1]} youth · {pct(midDistrict[1], midPoverty.total)}</p>
                 </>
               ) : (
                 <p className="text-white/30 text-sm mt-1">—</p>
@@ -2748,7 +2810,7 @@ const AdminAttendance = () => {
                     {snap.program.map(([prog, count]) => (
                       <div key={prog} className="flex justify-between items-center">
                         <span className="text-xs text-white/70 truncate">{prog.replace(/\s*\(.*\)/, "")}</span>
-                        <span className="text-sm font-bold">{count}</span>
+                        <span className="text-sm font-bold">{count} <span className="text-[10px] font-normal text-white/40">{pct(count, snap.poverty.total)}</span></span>
                       </div>
                     ))}
                   </div>
@@ -2763,12 +2825,12 @@ const AdminAttendance = () => {
                 <div className="flex items-center gap-3">
                   <div className="text-center flex-1">
                     <p className="text-2xl font-bold text-blue-400">{snap.sex["Male"] || 0}</p>
-                    <p className="text-[10px] text-white/40">Boys</p>
+                    <p className="text-[10px] text-white/40">Boys · {pct(snap.sex["Male"] || 0, snap.poverty.total)}</p>
                   </div>
                   <div className="w-px h-8 bg-white/10" />
                   <div className="text-center flex-1">
                     <p className="text-2xl font-bold text-pink-400">{snap.sex["Female"] || 0}</p>
-                    <p className="text-[10px] text-white/40">Girls</p>
+                    <p className="text-[10px] text-white/40">Girls · {pct(snap.sex["Female"] || 0, snap.poverty.total)}</p>
                   </div>
                 </div>
                 <div className="border-t border-white/10 mt-2 pt-1.5 text-center">
@@ -2795,7 +2857,7 @@ const AdminAttendance = () => {
                 {snap.topDistrict ? (
                   <>
                     <p className="text-sm font-bold mt-1.5 truncate">{snap.topDistrict[0]}</p>
-                    <p className="text-[10px] text-white/30">{snap.topDistrict[1]} youth</p>
+                    <p className="text-[10px] text-white/30">{snap.topDistrict[1]} youth · {pct(snap.topDistrict[1], snap.poverty.total)}</p>
                   </>
                 ) : (
                   <p className="text-white/30 text-sm mt-1">—</p>
