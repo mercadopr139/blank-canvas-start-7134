@@ -461,6 +461,22 @@ export const countdownParts = (ms: number) => {
   };
 };
 
+/**
+ * One date's own hours — a holiday, an early finish (practice_day_start_times).
+ * Absent almost always; the standing start time stands. Keyed on the date, so
+ * it can never leak into the following week.
+ */
+export interface DayHours {
+  practice_date: string;
+  start_time: string;
+  end_time: string | null;
+  note: string | null;
+}
+
+/** "11:00 AM to 1:00 PM", or "11:00 AM" when no end is set. */
+export const formatHours = (start: string, end: string | null | undefined) =>
+  end ? `${formatStartTime(start)} to ${formatStartTime(end)}` : formatStartTime(start);
+
 export const formatStartTime = (startTime: string) => {
   const [h, m] = startTime.split(":").map((n) => parseInt(n, 10));
   const d = new Date();

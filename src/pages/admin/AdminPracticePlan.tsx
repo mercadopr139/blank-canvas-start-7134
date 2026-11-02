@@ -28,7 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   ChevronLeft, ChevronRight, Plus, Loader2, Send, Monitor, Users,
-  X, Sparkles, CalendarDays, Trash2, Pencil, Check, RefreshCw, Eye, EyeOff, Dumbbell, ChevronUp, ChevronDown, ArrowUpToLine, LayoutTemplate,
+  X, Sparkles, CalendarDays, Trash2, Pencil, Check, RefreshCw, Eye, EyeOff, Dumbbell, ChevronUp, ChevronDown, ArrowUpToLine, LayoutTemplate, Clock,
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -47,6 +47,7 @@ import BulletEditor from "@/components/practice/BulletEditor";
 import { SplitLanesEditor } from "@/components/practice/SplitLanes";
 import { hasLanes, isBibleStudyBlock, bibleStudyText, bibleStudySiblings, wrapupFor, planningWeekOf, type Wrapups } from "@/lib/practicePlan";
 import { templateSlotFor, standingDetailFor, effectiveDetail, detailToStore } from "@/lib/practicePlan";
+import { formatHours, type DayHours } from "@/lib/practicePlan";
 import { usePracticeCategories } from "@/hooks/usePracticeCategories";
 
 const AdminPracticePlan = () => {
@@ -511,8 +512,43 @@ const AdminPracticePlan = () => {
     onError: (e: Error) => toast.error(e.message || "Couldn't restart the week."),
   });
 
+  // Holiday hours (Josh, 2026-11-02): one date's own start, end and reason —
+  // the row the board counts down to and banners. Set here, on the day card,
+  // because the planner is where you are standing when you plan the week.
+  const weekDates = useMemo(() => [1, 2, 3, 4, 5, 6, 7].map((n) => dateForWeekday(weekStart, n)), [weekStart]);
+  const { data: dayHours = [] } = useQuery({
+    queryKey: ["practice-day-hours", weekStart],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("practice_day_start_times" as never)
+        .select("practice_date, start_time, end_time, note")
+        .in("practice_date", weekDates);
+      if (error) throw error;
+      return (data ?? []) as unknown as DayHours[];
+    },
+  });
+  const saveDayHours = useMutation({
+    mutationFn: async ({ dateISO, hours }: { dateISO: string; hours: { start: string; end: string | null; note: string | null } | null }) => {
+      if (!hours) {
+        const { error } = await supabase.from("practice_day_start_times" as never).delete().eq("practice_date", dateISO);
+        if (error) throw error;
+        return;
+      }
+      const { error } = await supabase
+        .from("practice_day_start_times" as never)
+        .upsert({ practice_date: dateISO, start_time: hours.start, end_time: hours.end, note: hours.note } as never, { onConflict: "practice_date" } as never);
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["practice-day-hours"] });
+      qc.invalidateQueries({ queryKey: ["board-day-start"] });
+      toast.success(vars.hours ? "Hours set for that day. The board counts down to them." : "Back to the usual time.");
+    },
+    onError: (e: Error) => toast.error(e.message || "Couldn't set those hours."),
+  });
+
   // The standing start time — what the board counts down to. A single day's
-  // exception (a holiday) is set on the board itself, against the date.
+  // exception (a holiday) is set on the day card below, against the date.
   const setStartTime = useMutation({
     mutationFn: async (start_time: string) => {
       const { error } = await supabase
@@ -942,6 +978,9 @@ const AdminPracticePlan = () => {
                   onPoints={(points) => saveMeeting.mutate({ weekday: d.n, points })}
                   reminders={remindersFor(d.n)}
                   onReminders={(items) => saveReminders.mutate({ weekday: d.n, items })}
+                  hours={dayHours.find((h) => h.practice_date === dateForWeekday(weekStart, d.n)) ?? null}
+                  defaultStart={settings?.start_time ?? "17:15:00"}
+                  onHours={(hours) => saveDayHours.mutate({ dateISO: dateForWeekday(weekStart, d.n), hours })}
                   verse={verseDays.find((v) => v.weekday === d.n) ?? null}
                   blocksFor={(g) => blocksFor(d.n, g)}
                   onSaveBlock={(id, detail) => saveBlock.mutate({ id, detail })}
@@ -1029,8 +1068,12 @@ const StartWeekCard = ({
 // ── One day ──────────────────────────────────────────────────────────
 const DayCard = ({
   day, dateISO, spiritual, onWrapup, points, onPoints, reminders, onReminders, verse, blocksFor, onSaveBlock,
-  template, onRename, onReset, onRemove, onAddWeekBlock, onPromote,
+  template, onRename, onReset, onRemove, onAddWeekBlock, onPromote, hours, defaultStart, onHours,
 }: {
+  /** This date's own hours (a holiday), or null for the usual time. */
+  hours: DayHours | null;
+  defaultStart: string;
+  onHours: (hours: { start: string; end: string | null; note: string | null } | null) => void;
   day: { n: number; short: string; long: string };
   dateISO: string;
   spiritual: (SpiritualDay & { overridden: boolean }) | null;
@@ -1067,6 +1110,22 @@ const DayCard = ({
     onWrapup({ label, leader: wrapLeader.trim() || null });
     setWrapOpen(false);
   };
+  // Holiday hours for THIS date: start, end, and the reason the board shows.
+  const [hoursOpen, setHoursOpen] = useState(false);
+  const [hStart, setHStart] = useState("");
+  const [hEnd, setHEnd] = useState("");
+  const [hNote, setHNote] = useState("");
+  const openHours = () => {
+    setHStart((hours?.start_time ?? defaultStart).slice(0, 5));
+    setHEnd((hours?.end_time ?? "").slice(0, 5));
+    setHNote(hours?.note ?? "");
+    setHoursOpen(true);
+  };
+  const saveHours = () => {
+    if (!hStart) return;
+    onHours({ start: hStart, end: hEnd || null, note: hNote.trim() || null });
+    setHoursOpen(false);
+  };
 
   return (
     <div className="rounded-xl border border-neutral-800 bg-neutral-900 overflow-hidden">
@@ -1076,6 +1135,48 @@ const DayCard = ({
           <span className="text-xs text-neutral-500">
             {date.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
           </span>
+          {/* The night's hours: the usual time in grey, a holiday's own hours in amber —
+              set against the date, so the board counts down to them and next week is untouched. */}
+          <Popover open={hoursOpen} onOpenChange={(o) => (o ? openHours() : setHoursOpen(false))}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                title={hours ? "Change this day's hours" : "Set holiday hours for this day"}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${hours ? "border-amber-400/60 text-amber-300 bg-amber-400/10 hover:bg-amber-400/20" : "border-neutral-700 text-neutral-500 hover:text-neutral-300 hover:border-neutral-500"}`}
+              >
+                <Clock className="w-3 h-3" />
+                {hours ? `Holiday hours · ${formatHours(hours.start_time, hours.end_time)}${hours.note ? ` · ${hours.note}` : ""}` : `starts ${formatStartTime(defaultStart)}`}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-80 bg-neutral-900 border-neutral-700 text-white p-3 space-y-2">
+              <p className="text-xs font-semibold text-neutral-300">{day.long} {date.toLocaleDateString(undefined, { month: "short", day: "numeric" })} · this date only</p>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="text-[11px] text-neutral-400">Starts
+                  <Input type="time" value={hStart} onChange={(e) => setHStart(e.target.value)} className="mt-1 h-9 bg-neutral-950 border-neutral-700 text-white text-sm" />
+                </label>
+                <label className="text-[11px] text-neutral-400">Ends (optional)
+                  <Input type="time" value={hEnd} onChange={(e) => setHEnd(e.target.value)} className="mt-1 h-9 bg-neutral-950 border-neutral-700 text-white text-sm" />
+                </label>
+              </div>
+              <Input
+                value={hNote}
+                onChange={(e) => setHNote(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") saveHours(); }}
+                placeholder="Why — e.g. Teacher convention (shows on the board)"
+                className="h-9 bg-neutral-950 border-neutral-700 text-white text-sm"
+              />
+              <div className="flex items-center justify-between gap-2 pt-1">
+                {hours ? (
+                  <button type="button" onClick={() => { onHours(null); setHoursOpen(false); }} className="text-xs text-neutral-400 hover:text-white underline">
+                    Back to the usual {formatStartTime(defaultStart)}
+                  </button>
+                ) : <span />}
+                <Button size="sm" onClick={saveHours} disabled={!hStart} className="h-8 text-white font-semibold" style={{ backgroundColor: NLA_RED }}>
+                  <Check className="w-3.5 h-3.5 mr-1" /> Save
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
         {/* A paused slot is hidden on the gym board, so it must not look live
             here either — but it stays visible, dimmed and labelled, so the

@@ -29,7 +29,7 @@ import VerseDiscussion, { DiscussionDay, DiscussionFigure } from "@/components/v
 import {
   NLA_RED, TOGETHER_GRAY, GROUPS, PracticeGroup, blockAccent, spiritualAccent,
   daysForWeek, mondayOf, dateForWeekday, todayWeekday, addDays, formatWeekRange,
-  msUntilStart, countdownParts, formatStartTime,
+  msUntilStart, countdownParts, formatStartTime, formatHours,
   PracticeSettings, PracticeWeek, PracticeBlock, SpiritualDay, MeetingPoints,
   SeasonMode, TemplateBlock, effectiveDetail, detailToStore,
 } from "@/lib/practicePlan";
@@ -235,10 +235,10 @@ const PracticeBoard = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from("practice_day_start_times" as never)
-        .select("start_time")
+        .select("start_time, end_time, note")
         .eq("practice_date", dateForWeekday(weekStart, weekday))
         .maybeSingle();
-      return (data as unknown as { start_time: string } | null) ?? null;
+      return (data as unknown as { start_time: string; end_time: string | null; note: string | null } | null) ?? null;
     },
   });
 
@@ -818,6 +818,18 @@ const PracticeBoard = () => {
       <DailyDutiesBoard open={dutiesOpen} onClose={() => setDutiesOpen(false)} />
       <JuniorsSessionBoard open={juniorsOpen} onClose={() => setJuniorsOpen(false)} />
       <VerseDiscussion day={verseDiscussion} onClose={() => setVerseDiscussion(null)} />
+
+      {/* Holiday hours, set on the planner's day card (or below): the whole room sees
+          when practice runs tonight and why, without anyone typing a reminder. */}
+      {startIsOverridden && (
+        <div className="flex items-center justify-center gap-3 px-6 py-2.5 border-b border-amber-400/30 bg-amber-400/10 flex-wrap">
+          <Timer className="w-4 h-4 text-amber-300" />
+          <span className="text-sm md:text-base font-bold text-amber-200 uppercase tracking-wide">
+            Holiday hours · {formatHours(dayStart!.start_time, dayStart!.end_time)}
+          </span>
+          {dayStart?.note && <span className="text-sm text-amber-200/80">· {dayStart.note}</span>}
+        </div>
+      )}
 
       {/* Practice starts at 5:15 — except on a holiday. Sits in Edit tonight
           because that is where you are standing when you realise. It is set
