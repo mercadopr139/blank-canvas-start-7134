@@ -30,6 +30,19 @@ describe("The week's four jobs", () => {
     expect(weekReady(steps)).toBe(true);
   });
 
+  it("count a step Josh skipped for the week as done, and never the practice plan", () => {
+    const steps = weekSteps(
+      { plan: { status: "published", filled: 14, total: 14 }, verse: null, battle: null, nbt: null },
+      new Set(["verse", "battle", "nbt"] as const),
+    );
+    expect(steps.map((s) => s.state)).toEqual(["done", "skipped", "skipped", "skipped"]);
+    expect(steps[1].status).toBe("Not this week");
+    expect(weekReady(steps)).toBe(true);
+    const half = weekSteps({ plan: null, verse: null, battle: null, nbt: null }, new Set(["verse"] as const));
+    expect(half.map((s) => s.state)).toEqual(["todo", "skipped", "todo", "todo"]);
+    expect(weekReady(half)).toBe(false);
+  });
+
   it("treat a blank theme and an empty lift week as not started", () => {
     const steps = weekSteps({
       plan: null,

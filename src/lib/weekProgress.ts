@@ -4,7 +4,11 @@
 // Pure functions so the rule is testable and the same wherever it's drawn.
 // (Josh, 2026-10-03.)
 
-export type StepState = "todo" | "doing" | "done";
+/** "skipped" = Josh said "Not this week" (a Monday-and-Thursday week needs no verse or lifts, 2026-11-02): counts as done. */
+export type StepState = "todo" | "doing" | "done" | "skipped";
+
+/** The steps that can be skipped for a week. The practice plan never can. */
+export type SkippableStep = Exclude<WeekStep["key"], "plan">;
 
 export interface WeekStep {
   key: "plan" | "verse" | "battle" | "nbt";
@@ -25,7 +29,7 @@ export interface WeekProgressInput {
   nbt: { built: boolean; locked: boolean } | null;
 }
 
-export const weekSteps = (i: WeekProgressInput): WeekStep[] => {
+export const weekSteps = (i: WeekProgressInput, skipped: ReadonlySet<SkippableStep> = new Set()): WeekStep[] => {
   const plan: WeekStep = !i.plan
     ? { key: "plan", title: "Practice Plan", status: "Not started", state: "todo" }
     : i.plan.status === "published"
@@ -50,7 +54,9 @@ export const weekSteps = (i: WeekProgressInput): WeekStep[] => {
       ? { key: "nbt", title: "NBT Workout Plan", status: "Live on Gym Board", state: "done" }
       : { key: "nbt", title: "NBT Workout Plan", status: "Built · draft", state: "doing" };
 
-  return [plan, verse, battle, nbt];
+  const skip = (s: WeekStep): WeekStep => (s.key !== "plan" && skipped.has(s.key) ? { ...s, status: "Not this week", state: "skipped" } : s);
+  return [plan, skip(verse), skip(battle), skip(nbt)];
 };
 
-export const weekReady = (steps: WeekStep[]) => steps.every((s) => s.state === "done");
+export const stepFinished = (s: WeekStep) => s.state === "done" || s.state === "skipped";
+export const weekReady = (steps: WeekStep[]) => steps.every(stepFinished);
