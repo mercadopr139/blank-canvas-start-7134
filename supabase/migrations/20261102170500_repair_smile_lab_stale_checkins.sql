@@ -1,13 +1,21 @@
 -- Repair of the check-ins the ungated Smile Lab roster filed against last
 -- year's rows since the gate came on (2026-09-03). Found 2026-11-02: nine
--- rows. Five belong to youth who re-registered (their 2026-27 row is linked
--- by youth_link_id): four move to the current-year row, one (Martin Perez Jr,
--- 2026-10-06) is a duplicate of a check-in already on his current row and
--- comes off. Four belong to youth with no 2026-27 registration yet (Jayla
--- Banks 09-03 NLA, Lyla Mercado 10-13 and 10-20, Robert Feltwell 10-20) and
--- are left exactly as they are: real attendance, waiting on a re-registration
--- to link to. Every statement names its row by id and checks before it acts,
--- so this is safe to run more than once.
+-- rows. Six belong to youth who re-registered (their 2026-27 row is linked
+-- by youth_link_id, in either direction): five move to the current-year
+-- row, one (Martin Perez Jr, 2026-10-06) is a duplicate of a check-in
+-- already on his current row and comes off. Three belong to youth with no
+-- 2026-27 registration yet (Lyla Mercado 10-13 and 10-20, Robert Feltwell
+-- 10-20) and are left exactly as they are: real attendance, waiting on a
+-- re-registration to link to. Every statement names its row by id and
+-- checks before it acts, so this is safe to run more than once.
+
+-- Jayla Banks, 2026-09-03 (a manual NLA add the night before her 2026-27 registration): 2025-26 b87ab2e5… → 2026-27 938898bb…
+UPDATE public.attendance_records a
+   SET registration_id = '938898bb-253c-460b-af83-0510c2bedfba'
+ WHERE a.id = 'efe9d21b-6791-42a6-a4a5-cc0bf3569338'
+   AND NOT EXISTS (SELECT 1 FROM public.attendance_records b
+                    WHERE b.registration_id = '938898bb-253c-460b-af83-0510c2bedfba'
+                      AND b.check_in_date = a.check_in_date AND b.program_source = a.program_source);
 
 -- Gabriel Ayende: 2025-26 a9701142… → 2026-27 07d6f6f3…
 UPDATE public.attendance_records a
