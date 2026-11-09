@@ -1,9 +1,10 @@
 // Non-Battle Team S&C board — the screen on the gym wall.
 //
 // Board Mode from the programming rules: read from across the room, no coaching
-// prose, two tracks side by side. Bravo is presented exactly as prominently
-// as Alpha, because a beginner should never be able to tell they have been
-// given "the lesser workout".
+// prose. One group since 2026-11-09 (Rev): the warm-up, the one lift everyone
+// does with its easier and harder versions, then the Cardio Stations. The
+// easier version is the same lift fitted to the athlete, never "the lesser
+// workout".
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { levelIndent, levelDot, levelText } from "@/lib/bulletText";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -22,7 +23,7 @@ import { todayNY } from "@/lib/programYear";
 import TrackTimer from "@/components/nbt/TrackTimer";
 import StationClock from "@/components/nbt/StationClock";
 import {
-  DAYS, DayKey, TRACKS, TRACK_META, NbtDay, NbtWeek, NbtBlock, toDateString, mondayOf, firstOfMonth, dateOfDay, todayDayKey, weekInBlock, SESSION_CAP_MINUTES, readableLines, NBT_AMBER, WEEKDAY_KEYS, DAY_LABELS, dayMeta, weekDays,
+  DayKey, NbtDay, NbtWeek, NbtBlock, toDateString, mondayOf, firstOfMonth, dateOfDay, todayDayKey, weekInBlock, SESSION_CAP_MINUTES, readableLines, NBT_AMBER, WEEKDAY_KEYS, DAY_LABELS, dayMeta, weekDays, liftOf, workLines,
 } from "@/lib/nbt";
 import { PrepStrip } from "@/components/practice/PrepStrip";
 import { equipmentItems } from "@/lib/practicePlan";
@@ -125,13 +126,20 @@ const NbtBoard = () => {
     refetchInterval: 60_000,
     queryFn: () => fetchLiftNote(weekStart, meta.weekday, "non_battle_team"),
   });
+  // The one lift, as everyone reads it: the dose in a chip, the run-it cue under it.
+  const lift = liftOf(day);
+  const [dose, ...cue] = lift.detail.split(" — ");
+  const hasStations = !!day && stationLines(day).length > 0;
+  // A week written before the stations keeps its circuit.
+  const oldCircuit = day && !hasStations ? workLines(day) : [];
   const equipment = useMemo(
     () => (day
       ? equipmentItems([
           ...day.prep,
-          ...TRACKS.map((t) => day.lift[t]?.name),
-          // The shared stations once, or each track's own circuit.
-          ...(stationLines(day).length ? stationLines(day) : TRACKS.flatMap((t) => day.work[t] ?? [])),
+          liftOf(day).name,
+          liftOf(day).easier,
+          // The stations, or an older week's circuit.
+          ...workLines(day),
           ...day.reset,
         ])
       : []),
@@ -153,8 +161,8 @@ const NbtBoard = () => {
   /* ───── The wall-TV specs, lifted from the Practice Board ─────
      That board is the one that already reads well on the Newline screen with
      the youth in front of it, so this one follows it exactly: the page never
-     scrolls, fullscreen reclaims the browser chrome, and the three tracks
-     shrink their text until everything fits the height available. */
+     scrolls, fullscreen reclaims the browser chrome, and the board
+     shrinks its text until everything fits the height available. */
 
   // Fullscreen hides the tabs, the address bar and the Android nav bar.
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -171,11 +179,10 @@ const NbtBoard = () => {
     return () => document.removeEventListener("fullscreenchange", sync);
   }, []);
 
-  // Fit the three track tiles to the height available instead of letting them
-  // scroll. With the room in front of the board, anything that needs scrolling
-  // is invisible. One shared size across all three, because three different
-  // text sizes side by side looks broken. Everything inside a tile is sized in
-  // em, so one number scales the lift, the clock and the circuit together.
+  // Fit the board to the height available instead of letting it scroll. With
+  // the room in front of the board, anything that needs scrolling is
+  // invisible. Everything inside is sized in em, so one number scales the
+  // warm-up, the lift, the clock and the stations together.
   const colRefs = useRef<(HTMLDivElement | null)[]>([]);
   const fitColumns = useCallback(() => {
     const els = colRefs.current.filter(Boolean) as HTMLDivElement[];
@@ -374,146 +381,28 @@ const NbtBoard = () => {
         /* Fills the screen between the header and the foot, and scrolls INSIDE
            itself only on a phone — on the wall it never page-scrolls. */
         <main className="flex-1 min-h-0 flex flex-col px-4 md:px-6 py-3 gap-3 overflow-y-auto md:overflow-hidden">
-          {/* Kids read this from across the room, so the wall carries three
-              things only: what to drag out, the lift, the work. The focus
-              sentence, the minutes, the cues and the rack reminders stay on
-              the coach's plan page. (Josh, 2026-10-03.) */}
+          {/* Kids read this from across the room, so the wall carries only what
+              they act on: what to drag out, the warm-up, the lift, the work.
+              The focus sentence, the cues and the rack reminders stay on the
+              coach's plan page. (Josh, 2026-10-03; the warm-up, 2026-11-09.) */}
           {/* Tuesday has no team meeting, so the verse opens the night here.
               Same verse and the same discussion pop-up as the Gym Board. */}
           {dayKey === "tuesday" && <VerseOfTheDayStrip weekStart={weekStart} weekday={2} />}
 
           <PrepStrip equipment={equipment} note={liftNote} accent={NBT_AMBER} />
 
-          {/* The two tracks, equal width and equal weight. This row takes
-              whatever height is left and the tiles fit themselves to it. */}
-          {stationLines(day).length === 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 md:min-h-0">
-            {TRACKS.map((t, ti) => {
-              const m = TRACK_META[t];
-              const lift = day.lift[t];
-              const work = day.work[t];
-              return (
-                <section
-                  key={t}
-                  className="rounded-2xl border border-white/15 bg-[#141416] overflow-hidden flex flex-col md:min-h-0 shadow-[0_0.3em_1.2em_rgba(0,0,0,0.45)]"
-                >
-                  {/* The lane's colour tints the header, as on Tuesday and the Gym Board. */}
-                  <div className="px-5 py-2.5 border-b shrink-0" style={{ background: "#3c3527", borderColor: `${NBT_AMBER}66` }}>
-                    <h2 className="text-base md:text-lg font-black uppercase tracking-wide leading-tight text-white">{m.label}</h2>
-                    <p className="text-[10px] md:text-[11px] text-white/40 mt-0.5">{m.blurb}</p>
-                  </div>
-
-                  {/* Everything below is sized in em against this div, which is
-                      the one fitColumns resizes. */}
-                  <div
-                    ref={(el) => { colRefs.current[ti] = el; }}
-                    className="flex-1 min-h-0 overflow-hidden flex flex-col"
-                  >
-                    {/* The lift: the name is what they read, the dose sits
-                        beside it in a chip. */}
-                    <div className="px-[0.9em] pt-[0.8em] pb-[0.6em]">
-                      <TrackLabel color={m.color}>Lift</TrackLabel>
-                      {/* The name gets the whole width; the dose sits under it
-                          and wraps, so a long note from the generator never
-                          squeezes "Back Squat / Bench Press" into one word a
-                          line or runs off the tile. */}
-                      {(() => {
-                        // Dose as a chip beside the name, the run-it cue in grey under it — Tuesday's shape.
-                        const [dose, ...cue] = (lift?.detail ?? "").split(" — ");
-                        return (
-                          <>
-                            <div className="flex items-baseline gap-[0.6em] flex-wrap mt-[0.25em]">
-                              <p className="text-[1.45em] font-bold leading-tight" style={{ color: m.color }}>{lift?.name}</p>
-                              {dose && (
-                                <p className="rounded-[0.35em] px-[0.5em] py-[0.1em] text-[0.9em] font-black leading-snug" style={{ backgroundColor: `${m.color}26`, color: m.color }}>{dose}</p>
-                              )}
-                              {lift?.name && <ExercisePictures name={lift.name} color={m.color} compact />}
-                            </div>
-                            {cue.length > 0 && <p className="mt-[0.3em] text-[0.75em] text-white/65 leading-snug">{cue.join(" — ")}</p>}
-                          </>
-                        );
-                      })()}
-                    </div>
-
-                    {work.length > 0 && (
-                      <>
-                        <div className="h-px mx-[0.9em] bg-white/10" />
-                        <div className="px-[0.9em] pt-[0.6em] pb-[0.8em] flex-1 flex flex-col">
-                          <TrackLabel color={m.color}>Cardio</TrackLabel>
-
-                          {/* The structure line ("4 rounds — rest 45 sec") reads
-                              as a header; every station underneath is one
-                              complete line with a dot, so four rows of text
-                              never become a wall. */}
-                          <ul className="mt-[0.4em] space-y-[0.45em]">
-                            {readableLines(work).map((line, i) =>
-                              line.kind === "rounds" ? (
-                                <li
-                                  key={i}
-                                  className="text-[0.75em] font-black uppercase tracking-wide"
-                                  style={{ color: m.color }}
-                                >
-                                  {line.text}
-                                </li>
-                              ) : (
-                                <li key={i} className="flex items-start gap-[0.5em]" style={{ marginLeft: levelIndent(line.level) }}>
-                                  <span
-                                    className="rounded-full shrink-0"
-                                    style={{
-                                      width: levelDot(line.level, 0.3).size,
-                                      height: levelDot(line.level, 0.3).size,
-                                      marginTop: line.level ? "0.55em" : "0.5em",
-                                      backgroundColor: m.color,
-                                      opacity: levelDot(line.level, 0.3).opacity,
-                                    }}
-                                  />
-                                  <span className="text-[0.9em] leading-snug" style={{ ...levelText(line.level), fontWeight: 400, color: line.level ? levelText(line.level).color : "rgba(255,255,255,0.88)" }}>{line.text}</span>
-                                </li>
-                              )
-                            )}
-                          </ul>
-
-                          {/* Each track has its own clock, in its own colour,
-                              because the tracks do not start together — Alpha
-                              is often into the work while Bravo is still on
-                              the bar. It counts the WHOLE session, prep to
-                              reset — the 40-minute block, always: when it
-                              hits zero, you box.
-                              (Josh, 2026-10-03.) Under the work, out of the
-                              way of the reading. */}
-                          <div className="mt-auto pt-[0.6em]">
-                            <p className="text-[0.55em] uppercase tracking-[0.18em] font-bold mb-[0.3em] text-white/45">
-                              {m.label}&apos;s session · {SESSION_CAP_MINUTES} min
-                            </p>
-                            <TrackTimer
-                              storageKey={`nbt-timer:${weekStart}:${dayKey}:${t}`}
-                              minutes={SESSION_CAP_MINUTES}
-                              color={m.color}
-                            />
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </section>
-              );
-            })}
-          </div>
-          )}
-
-          {/* Tuesday (Josh, 2026-10-20): the verse, then 15 minutes on the bar
-              for the whole room on ONE clock, then Cardio Stations — the five
-              areas as tiles and the 2:00 station clock. Built like the Gym
-              Board: ONE container, every size in em, and fitColumns sets its
-              font-size so it fills the screen exactly, on the Newline or a
-              laptop. Nothing scrolls, nothing clips. */}
-          {stationLines(day).length > 0 && (
-            <div
-              ref={(el) => { colRefs.current[0] = el; }}
-              data-max-px="44"
-              className="flex-1 min-h-0 overflow-hidden flex flex-col gap-[0.75em]"
-            >
-              {/* The lifts, hidden for tonight: the kids see nothing; a signed-in coach gets the way back. */}
+          {/* ONE group since 2026-11-09 (Rev): the warm-up for the lift, the one
+              lift everyone does with its easier and harder versions, then the
+              Cardio Stations. Built like the Gym Board: ONE container, every
+              size in em, and fitColumns sets its font-size so it fills the
+              screen exactly, on the Newline or a laptop. Nothing scrolls,
+              nothing clips. */}
+          <div
+            ref={(el) => { colRefs.current[0] = el; }}
+            data-max-px="44"
+            className="flex-1 min-h-0 overflow-hidden flex flex-col gap-[0.75em]"
+          >
+              {/* The lift, hidden for tonight: the kids see nothing; a signed-in coach gets the way back. */}
               {day.work.liftHidden ? (
                 isAdmin ? (
                   <div className="shrink-0 flex justify-end">
@@ -527,41 +416,63 @@ const NbtBoard = () => {
                   </div>
                 ) : null
               ) : (<>
-              {/* The lifts: two cards, one row. */}
-              <div className="shrink-0 grid grid-cols-2 gap-[0.5em]">
-                {TRACKS.map((t) => {
-                  const m = TRACK_META[t];
-                  const lift = day.lift[t];
-                  const [dose, ...cue] = (lift?.detail ?? "").split(" — ");
-                  return (
-                    <section key={t} className="rounded-[0.8em] border border-white/15 bg-[#141416] overflow-hidden shadow-[0_0.3em_1.2em_rgba(0,0,0,0.45)]">
-                      <div className="px-[0.9em] py-[0.4em] border-b" style={{ background: "#3c3527", borderColor: `${NBT_AMBER}66` }}>
-                        <h2 className="text-[0.85em] font-black uppercase tracking-wide leading-tight text-white">{m.label}</h2>
-                        <p className="text-[0.5em] text-white/40 mt-[0.1em]">{m.blurb}</p>
-                      </div>
-                      <div className="px-[0.9em] pt-[0.45em] pb-[0.6em]">
-                        <p className="text-[0.45em] uppercase tracking-[0.18em] font-bold" style={{ color: `${m.color}b3` }}>Lift</p>
-                        <div className="flex items-baseline gap-[0.6em] flex-wrap mt-[0.15em]">
-                          <p className="text-[1.35em] font-bold leading-tight" style={{ color: m.color }}>{lift?.name}</p>
-                          {dose && (
-                            <p className="rounded-[0.35em] px-[0.5em] py-[0.1em] text-[0.85em] font-black leading-snug" style={{ backgroundColor: `${m.color}26`, color: m.color }}>{dose}</p>
-                          )}
-                          {lift?.name && <ExercisePictures name={lift.name} color={m.color} compact />}
-                        </div>
-                        {cue.length > 0 && <p className="mt-[0.3em] text-[0.65em] text-white/65 leading-snug">{cue.join(" — ")}</p>}
-                      </div>
-                    </section>
-                  );
-                })}
+              {/* The warm-up and the lift: two cards, one row. */}
+              <div className="shrink-0 grid grid-cols-1 md:grid-cols-2 gap-[0.5em]">
+                <section className="rounded-[0.8em] border border-white/15 bg-[#141416] overflow-hidden shadow-[0_0.3em_1.2em_rgba(0,0,0,0.45)]">
+                  <div className="px-[0.9em] py-[0.4em] border-b" style={{ background: "#3c3527", borderColor: `${NBT_AMBER}66` }}>
+                    <h2 className="text-[0.85em] font-black uppercase tracking-wide leading-tight text-white">
+                      Warm-up <span className="text-white/40 text-[0.6em] tracking-normal font-bold">· {day.minutes?.prep ?? 5} min · everyone</span>
+                    </h2>
+                  </div>
+                  <ul className="px-[0.9em] pt-[0.45em] pb-[0.6em] space-y-[0.15em]">
+                    {day.prep.map((line, k) => (
+                      <li key={k} className="flex items-start gap-[0.4em]">
+                        <span className="shrink-0 rounded-full mt-[0.5em]" style={{ width: "0.3em", height: "0.3em", backgroundColor: NBT_AMBER }} />
+                        <span className="text-[0.75em] leading-snug text-white">{line}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+
+                <section className="rounded-[0.8em] border border-white/15 bg-[#141416] overflow-hidden shadow-[0_0.3em_1.2em_rgba(0,0,0,0.45)]">
+                  <div className="px-[0.9em] py-[0.4em] border-b" style={{ background: "#3c3527", borderColor: `${NBT_AMBER}66` }}>
+                    <h2 className="text-[0.85em] font-black uppercase tracking-wide leading-tight text-white">
+                      Lift <span className="text-white/40 text-[0.6em] tracking-normal font-bold">· everyone</span>
+                    </h2>
+                  </div>
+                  <div className="px-[0.9em] pt-[0.45em] pb-[0.6em]">
+                    {/* The name is what they read; the dose sits beside it in a chip and the run-it cue in grey under it. */}
+                    <div className="flex items-baseline gap-[0.6em] flex-wrap">
+                      <p className="text-[1.35em] font-bold leading-tight" style={{ color: NBT_AMBER }}>{lift.name}</p>
+                      {dose && (
+                        <p className="rounded-[0.35em] px-[0.5em] py-[0.1em] text-[0.85em] font-black leading-snug" style={{ backgroundColor: `${NBT_AMBER}26`, color: NBT_AMBER }}>{dose}</p>
+                      )}
+                      {lift.name && <ExercisePictures name={lift.name} color={NBT_AMBER} compact />}
+                    </div>
+                    {cue.length > 0 && <p className="mt-[0.3em] text-[0.65em] text-white/65 leading-snug">{cue.join(" — ")}</p>}
+                    {/* The modification: the same lift, fitted to the athlete. The coach says who takes which. */}
+                    {(lift.easier || lift.harder) && (
+                      <dl className="mt-[0.4em] pt-[0.35em] border-t border-white/10 space-y-[0.15em]">
+                        {([["Easier", lift.easier], ["Harder", lift.harder]] as const).filter(([, text]) => text).map(([label, text]) => (
+                          <div key={label} className="flex items-baseline gap-[0.6em]">
+                            <dt className="shrink-0 w-[4.6em] text-[0.5em] font-bold uppercase tracking-[0.18em]" style={{ color: `${NBT_AMBER}b3` }}>{label}</dt>
+                            <dd className="text-[0.7em] leading-snug text-white/85">{text}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    )}
+                  </div>
+                </section>
               </div>
 
-              {/* One clock for the lift, under both cards. */}
+              {/* One clock for the lift, under the cards. */}
+              {hasStations && (
               <div className="shrink-0 text-[0.8em]">
                 <StationClock
                   storageKey={`nbt-lift:${weekStart}:${dayKey}`}
                   stations={1}
                   seconds={(day.minutes?.lift ?? 15) * 60}
-                  words={{ title: `Lift · ${day.minutes?.lift ?? 15} min · everyone`, idle: "Tap Start after the verse.", running: "On the bar. Groups rotate.", rang: "Time — rack it. Stations next.", done: "Lift done" }}
+                  words={{ title: `Lift · ${day.minutes?.lift ?? 15} min · everyone`, idle: "Tap Start after the warm-up.", running: "On the bar. Groups rotate.", rang: "Time — rack it. Stations next.", done: "Lift done" }}
                   color={NBT_AMBER}
                 />
                 {/* Coach only: the lift off the wall for tonight, once it's done. */}
@@ -577,10 +488,56 @@ const NbtBoard = () => {
                   </div>
                 )}
               </div>
+              )}
               </>)}
 
+              {/* A week written before the stations: its circuit as one list, and the
+                  session clock — prep to reset, the 40-minute block: when it hits zero, you box. */}
+              {!hasStations && oldCircuit.length > 0 && (
+                <section className="rounded-[0.8em] border border-white/15 bg-[#141416] overflow-hidden flex-1 min-h-0 flex flex-col shadow-[0_0.3em_1.2em_rgba(0,0,0,0.45)]">
+                  <div className="px-[0.9em] py-[0.4em] border-b shrink-0" style={{ background: "#3c3527", borderColor: `${NBT_AMBER}66` }}>
+                    <h2 className="text-[0.85em] font-black uppercase tracking-wide leading-tight text-white">
+                      Cardio <span className="text-white/40 text-[0.6em] tracking-normal font-bold">· everyone</span>
+                    </h2>
+                  </div>
+                  <div className="px-[0.9em] pt-[0.5em] pb-[0.6em] flex-1 min-h-0 flex flex-col">
+                    <ul className="space-y-[0.3em]">
+                      {readableLines(oldCircuit).map((line, i) =>
+                        line.kind === "rounds" ? (
+                          <li key={i} className="text-[0.65em] font-black uppercase tracking-wide" style={{ color: NBT_AMBER }}>{line.text}</li>
+                        ) : (
+                          <li key={i} className="flex items-start gap-[0.5em]" style={{ marginLeft: levelIndent(line.level) }}>
+                            <span
+                              className="rounded-full shrink-0"
+                              style={{
+                                width: levelDot(line.level, 0.3).size,
+                                height: levelDot(line.level, 0.3).size,
+                                marginTop: line.level ? "0.55em" : "0.5em",
+                                backgroundColor: NBT_AMBER,
+                                opacity: levelDot(line.level, 0.3).opacity,
+                              }}
+                            />
+                            <span className="text-[0.8em] leading-snug" style={{ ...levelText(line.level), fontWeight: 400, color: line.level ? levelText(line.level).color : "rgba(255,255,255,0.88)" }}>{line.text}</span>
+                          </li>
+                        )
+                      )}
+                    </ul>
+                    <div className="mt-auto pt-[0.6em] text-[0.8em]">
+                      <p className="text-[0.55em] uppercase tracking-[0.18em] font-bold mb-[0.3em] text-white/45">
+                        The session · {SESSION_CAP_MINUTES} min
+                      </p>
+                      <TrackTimer
+                        storageKey={`nbt-timer:${weekStart}:${dayKey}`}
+                        minutes={SESSION_CAP_MINUTES}
+                        color={NBT_AMBER}
+                      />
+                    </div>
+                  </div>
+                </section>
+              )}
+
               {/* Cardio Stations: the band takes what is left. */}
-              {day.work.stationsHidden ? (
+              {!hasStations ? null : day.work.stationsHidden ? (
                 // Off the wall tonight. The kids see nothing; a signed-in coach gets the way back.
                 isAdmin ? (
                   <div className="shrink-0 flex justify-end">
@@ -685,8 +642,7 @@ const NbtBoard = () => {
                   </section>
                 );
               })()}
-            </div>
-          )}
+          </div>
         </main>
       )}
 
@@ -699,15 +655,5 @@ const addWeek = (weekStart: string, n: number) => {
   d.setDate(d.getDate() + n * 7);
   return toDateString(d);
 };
-
-/** The same, tinted to its track, inside a column — in em, so it scales with the tile. */
-const TrackLabel = ({ color, children }: { color: string; children: React.ReactNode }) => (
-  <p
-    className="text-[0.55em] uppercase tracking-[0.18em] font-bold"
-    style={{ color: `${color}73` }}
-  >
-    {children}
-  </p>
-);
 
 export default NbtBoard;

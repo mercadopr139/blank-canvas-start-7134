@@ -1,9 +1,10 @@
 // nbt-morning — the Non-Battle Team workout, emailed the morning of.
 //
 // Rev (Pastor Bill) leads the Non-Battle Team on Monday, Tuesday and Thursday.
-// At 7 AM Eastern on those days he gets the day's workout — both tracks, the
-// kit, the circuit — plus the night's Non-Battle Team column from the Practice
-// Plan, and one link into the plan to edit it (Josh, 2026-10-20).
+// At 7 AM Eastern on those days he gets the day's workout — the warm-up, the
+// one lift with its easier and harder versions, the stations — plus the
+// night's Non-Battle Team column from the Practice Plan, and one link into the
+// plan to edit it (Josh, 2026-10-20; one group, one lift, 2026-11-09).
 //
 // The week's lock is the review: whatever is locked at send time is what he gets.
 // If the week is not locked, Rev gets nothing and Josh gets one line saying so.
@@ -31,8 +32,6 @@ const json = (body: unknown, status = 200) =>
 const FROM = "No Limits Academy <joshmercado@nolimitsboxingacademy.org>";
 const PLAN_URL = "https://www.nolimitsboxingacademy.org/admin/operations/nbt-board";
 const NLA_RED = "#bf0f3e";
-const BRAVO = "#a3e635";
-const ALPHA = "#a78bfa";
 /** Who gets the workout. */
 export const RECIPIENTS = ["pastorbill@revolvechurchnj.com"];
 /** Who hears when there is nothing locked to send. */
@@ -54,10 +53,22 @@ interface NbtDay {
   focus?: string;
   minutes?: { prep?: number; lift?: number; work?: number; reset?: number };
   prep?: string[];
-  lift?: { pattern?: string; bravo?: Track; alpha?: Track; cues?: string[] };
+  /** One lift for the group since 2026-11-09 (main, easier, harder); alpha and bravo are on older days only. */
+  lift?: { pattern?: string; main?: Track; easier?: string; harder?: string; bravo?: Track; alpha?: Track; cues?: string[] };
   work?: { emphasis?: string; title?: string; shared?: string[]; bravo?: string[]; alpha?: string[]; result_unit?: string };
   reset?: string[];
 }
+
+/** The day's one lift. A day written for two tracks reads as one: Alpha's lift, with Bravo's as the easier version. */
+export const liftOf = (day: NbtDay): { name: string; detail: string; easier: string; harder: string } => {
+  const l = day.lift ?? {};
+  if (l.main?.name) return { name: l.main.name, detail: l.main.detail ?? "", easier: l.easier ?? "", harder: l.harder ?? "" };
+  if (l.alpha?.name) {
+    const easier = l.bravo?.name ? [l.bravo.name, (l.bravo.detail ?? "").split(" — ")[0]].filter(Boolean).join(" — ") : "";
+    return { name: l.alpha.name, detail: l.alpha.detail ?? "", easier, harder: "" };
+  }
+  return { name: l.bravo?.name ?? "", detail: l.bravo?.detail ?? "", easier: "", harder: "" };
+};
 interface PlanBlock { category: string; lines: string[] }
 
 const escapeHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -93,14 +104,21 @@ export function renderWorkout(date: string, day: NbtDay, plan: PlanBlocks | null
     `<p style="margin:22px 0 6px 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#6b7280;">${escapeHtml(t)}${mins ? ` <span style="color:#b0b0b0;font-weight:600;letter-spacing:0;">· ${mins} min</span>` : ""}</p>`;
   const list = (items: string[] | undefined) =>
     items?.length ? `<ul style="margin:0;padding:0 0 0 18px;color:#111;font-size:14px;line-height:1.55;">${items.map((i) => `<li>${escapeHtml(i)}</li>`).join("")}</ul>` : "";
-  const trackBox = (label: string, color: string, inner: string) =>
-    `<td width="50%" valign="top" style="padding:0 6px 0 0;"><div style="border:1px solid ${color}66;border-left:4px solid ${color};border-radius:10px;padding:10px 12px;">
-      <p style="margin:0 0 4px 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:800;letter-spacing:2px;color:${color};">${label}</p>${inner}</div></td>`;
+  const box = (label: string, inner: string) =>
+    `<div style="border:1px solid ${NLA_RED}66;border-left:4px solid ${NLA_RED};border-radius:10px;padding:10px 12px;">
+      <p style="margin:0 0 4px 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:800;letter-spacing:2px;color:${NLA_RED};">${label}</p>${inner}</div>`;
   const lift = day.lift ?? {};
-  const liftTrack = (t?: Track) => t?.name ? `<p style="margin:0;color:#111;font-size:15px;font-weight:700;">${escapeHtml(t.name)}</p>${t.detail ? `<p style="margin:2px 0 0 0;color:#374151;font-size:14px;">${escapeHtml(t.detail)}</p>` : ""}` : `<p style="margin:0;color:#9ca3af;font-size:13px;">—</p>`;
+  // One lift for the whole group, and the same lift made easier and harder.
+  const one = liftOf(day);
+  const modLine = (label: string, text: string) =>
+    text ? `<p style="margin:6px 0 0 0;color:#374151;font-size:14px;line-height:1.45;"><span style="font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#6b7280;">${label}</span> &nbsp;${escapeHtml(text)}</p>` : "";
+  const liftHtml = one.name
+    ? `<p style="margin:0;color:#111;font-size:15px;font-weight:700;">${escapeHtml(one.name)}</p>${one.detail ? `<p style="margin:2px 0 0 0;color:#374151;font-size:14px;">${escapeHtml(one.detail)}</p>` : ""}${modLine("Easier", one.easier)}${modLine("Harder", one.harder)}`
+    : `<p style="margin:0;color:#9ca3af;font-size:13px;">—</p>`;
   const work = day.work ?? {};
-  // The Cardio Stations, stored once (older days kept them under Alpha).
-  const shared: string[] = work.shared?.length ? work.shared : (/^\d+ stations/i.test(work.alpha?.[0] ?? "") ? (work.alpha ?? []) : []);
+  // The work block: the Cardio Stations, stored once — or, on a day written
+  // before them, the old circuit (kept under Alpha, else Bravo).
+  const everyone: string[] = work.shared?.length ? work.shared : (work.alpha?.length ? work.alpha : (work.bravo ?? []));
 
   const planHtml = plan?.blocks.length
     ? h(`Tonight at practice · Non-Battle Team`) +
@@ -120,20 +138,15 @@ export function renderWorkout(date: string, day: NbtDay, plan: PlanBlocks | null
           <h1 style="color:#111;font-size:21px;margin:0 0 4px 0;font-weight:700;">${escapeHtml(when)}</h1>
           ${day.focus ? `<p style="color:#6b7280;font-size:14px;margin:0;line-height:1.5;">Focus: ${escapeHtml(day.focus)}${total ? ` · about ${total} minutes, then boxing` : ""}</p>` : ""}
 
+          ${day.prep?.length ? h("Warm-up for the lift", m.prep) + list(day.prep) : ""}
+
           ${h(`Learn + lift${lift.pattern ? ` · ${lift.pattern}` : ""}`, m.lift)}
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-            ${trackBox("ALPHA", ALPHA, liftTrack(lift.alpha))}
-            ${trackBox("BRAVO", BRAVO, liftTrack(lift.bravo))}
-          </tr></table>
+          ${box("EVERYONE · ONE LIFT", liftHtml)}
           ${lift.cues?.length ? `<p style="margin:8px 0 0 0;color:#374151;font-size:13px;line-height:1.5;">${lift.cues.map(escapeHtml).join(" · ")}</p>` : ""}
 
           ${h(work.title === "Cardio Stations" ? "Cardio Stations" : `Cardio${work.title ? ` · ${work.title}` : ""}`, m.work)}
           ${work.emphasis ? `<p style="margin:0 0 8px 0;color:#6b7280;font-size:13px;">${escapeHtml(work.emphasis)}${work.result_unit ? ` · athletes write down ${escapeHtml(work.result_unit)}` : ""}</p>` : ""}
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-            ${shared.length
-              ? `<td width="100%" valign="top"><div style="border:1px solid ${NLA_RED}66;border-left:4px solid ${NLA_RED};border-radius:10px;padding:10px 12px;"><p style="margin:0 0 4px 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:800;letter-spacing:2px;color:${NLA_RED};">EVERYONE · ONE BLOCK FOR THE ROOM</p>${list(shared)}</div></td>`
-              : trackBox("ALPHA", ALPHA, list(work.alpha) || `<p style="margin:0;color:#9ca3af;font-size:13px;">—</p>`) + trackBox("BRAVO", BRAVO, list(work.bravo) || `<p style="margin:0;color:#9ca3af;font-size:13px;">—</p>`)}
-          </tr></table>
+          ${box("EVERYONE · ONE BLOCK FOR THE ROOM", list(everyone) || `<p style="margin:0;color:#9ca3af;font-size:13px;">—</p>`)}
 
           ${planHtml}
 
@@ -151,17 +164,19 @@ export function renderWorkout(date: string, day: NbtDay, plan: PlanBlocks | null
 </body></html>`;
 
   const t: string[] = [subject, "", when + (day.focus ? ` — ${day.focus}` : ""), ""];
+  if (day.prep?.length) {
+    t.push(`WARM-UP FOR THE LIFT${m.prep ? ` (${m.prep} min)` : ""}`);
+    for (const l of day.prep) t.push(`  • ${l}`);
+    t.push("");
+  }
   t.push(`LEARN + LIFT${lift.pattern ? ` · ${lift.pattern}` : ""}${m.lift ? ` (${m.lift} min)` : ""}`);
-  t.push(`Alpha: ${lift.alpha?.name ?? "—"}${lift.alpha?.detail ? ` — ${lift.alpha.detail}` : ""}`);
-  t.push(`Bravo: ${lift.bravo?.name ?? "—"}${lift.bravo?.detail ? ` — ${lift.bravo.detail}` : ""}`);
+  t.push(`Everyone: ${one.name || "—"}${one.detail ? ` — ${one.detail}` : ""}`);
+  if (one.easier) t.push(`Easier: ${one.easier}`);
+  if (one.harder) t.push(`Harder: ${one.harder}`);
   if (lift.cues?.length) t.push(`Cues: ${lift.cues.join(" · ")}`);
   t.push("");
   t.push(`CARDIO${work.title ? ` · ${work.title}` : ""}${m.work ? ` (${m.work} min)` : ""}`);
-  if (shared.length) { t.push("Everyone:"); for (const l of shared) t.push(`  • ${l}`); }
-  else {
-    t.push("Alpha:"); for (const l of work.alpha ?? []) t.push(`  • ${l}`);
-    t.push("Bravo:"); for (const l of work.bravo ?? []) t.push(`  • ${l}`);
-  }
+  t.push("Everyone:"); for (const l of everyone) t.push(`  • ${l}`);
   t.push("");
   if (plan?.blocks.length) { t.push("TONIGHT AT PRACTICE · NON-BATTLE TEAM"); for (const b of plan.blocks) { t.push(b.category); for (const l of b.lines) t.push(`  • ${l}`); } t.push(""); }
   t.push(`Open the plan to edit: ${PLAN_URL}`);

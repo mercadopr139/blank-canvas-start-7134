@@ -6,23 +6,25 @@ import { parseBulletLine, type Level } from "@/lib/bulletText";
 // be tested. Getting that wrong would break the continuity the whole programme
 // rests on.
 
-// Display order, everywhere the two tracks are shown together. Both get equal
-// width and equal weight on the board — nobody should be able to tell they
-// have been handed “the lesser workout”.
+// ONE GROUP since 2026-11-09 (Rev, through Josh): about a dozen athletes, one
+// lift, one warm-up for it, then the stations. Read a day's lift through
+// liftOf() and write it through withLift().
 //
-// Charlie (the old third "learn" track) was retired 2026-10-03 (Josh). Days
-// written before then still carry a charlie key; it is read, never shown, and
-// an athlete still filed as charlie is treated as Bravo.
+// The two tracks below are history. Days written before then carry an Alpha
+// and a Bravo lift, and old logs carry a level; they are still read (Alpha's
+// lift as the lift, Bravo's as the easier version) and the NBT Intelligence
+// page still reports them. Charlie, the third track, was retired 2026-10-03;
+// an athlete filed as charlie is read as Bravo.
 export const TRACKS = ["alpha", "bravo"] as const;
 export type Track = (typeof TRACKS)[number];
 
-/* ── The Cardio Stations, shared by both tracks ──
+/* ── The Cardio Stations, one block for the room ──
    Read them through stationLines(); write them through withStations(). Days
    written before the shared field kept the stations under work.alpha (and a
    copy under work.bravo); they are still read correctly. */
 export const STATIONS_HEADER = /^\d+ stations/i;
 type WorkHolder = { work?: { shared?: string[]; alpha?: string[]; bravo?: string[] } | null };
-/** The day's Cardio Stations lines (header first), or [] when it has a per-track circuit instead. */
+/** The day's Cardio Stations lines (header first), or [] when it has an older circuit instead. */
 export const stationLines = (day: WorkHolder): string[] => {
   const w = day.work;
   if (w?.shared?.length) return w.shared;
@@ -30,10 +32,11 @@ export const stationLines = (day: WorkHolder): string[] => {
   if (STATIONS_HEADER.test(w?.bravo?.[0] ?? "")) return w!.bravo!;
   return [];
 };
-/** A track's work block: the shared stations on a stations day, its own circuit otherwise. */
-export const workLines = (day: WorkHolder, t: Track): string[] => {
+/** The day's work block: the stations, or — on a day written before them — the old circuit (Alpha's, else Bravo's). */
+export const workLines = (day: WorkHolder): string[] => {
   const st = stationLines(day);
-  return st.length ? st : (day.work?.[t] ?? []);
+  if (st.length) return st;
+  return day.work?.alpha?.length ? day.work.alpha : (day.work?.bravo ?? []);
 };
 /** The day with these Cardio Stations, stored once; neither track keeps a copy. */
 export const withStations = <D extends { work: NbtDay["work"] }>(day: D, lines: string[]): D =>
@@ -43,10 +46,9 @@ export const withStations = <D extends { work: NbtDay["work"] }>(day: D, lines: 
 export const NBT_AMBER = "#f0a500";
 
 /**
- * How each track is presented. Violet and lime belong to no other group on
- * the wall — not Battle Team red, NBT amber, Littles blue or Bible teal — so
- * a kid can tell the two apart without confusing them with anything else.
- * (Josh, 2026-10-03.)
+ * How each retired track is named and coloured — history only: the NBT
+ * Intelligence page and the old log sheet. Nothing on the wall or the planner
+ * shows a track any more.
  */
 export const TRACK_META: Record<Track, { label: string; word: string; color: string; blurb: string }> = {
   // Bravo in a warm cream, Alpha in a tan (Josh, 2026-10-20): one warm family
@@ -117,13 +119,19 @@ export const DEFAULT_MINUTES: SessionMinutes = { prep: 5, lift: 10, work: 20, re
 export interface NbtDay {
   focus: string;
   minutes?: Partial<SessionMinutes>;
+  /** The warm-up for the lift, one line each. Shown on the wall, the planner and Rev's email. */
   prep: string[];
   lift: {
     pattern: string;
-    /** Retired track — present on days written before 2026-10-03 only. */
+    /** The one lift the whole group does (2026-11-09). Read it through liftOf(). */
+    main?: TrackMovement;
+    /** The modification: the same lift made easier, and made harder, for the coach to hand out. */
+    easier?: string;
+    harder?: string;
+    /** Retired tracks — present on days written before 2026-11-09 only. */
     charlie?: TrackMovement;
-    bravo: TrackMovement;
-    alpha: TrackMovement;
+    bravo?: TrackMovement;
+    alpha?: TrackMovement;
     cues: string[];
   };
   work: {
@@ -132,9 +140,9 @@ export interface NbtDay {
     /** Retired track — present on days written before 2026-10-03 only. */
     charlie?: string[];
     /**
-     * The Cardio Stations — ONE block for the whole room, both tracks together,
-     * stored once (Josh, 2026-10-22: "cardio stations should only be one track
-     * because it's shared"). On a stations day alpha and bravo are empty.
+     * The Cardio Stations — ONE block for the whole room, stored once (Josh,
+     * 2026-10-22: "cardio stations should only be one track because it's
+     * shared"). On a stations day alpha and bravo are empty.
      */
     shared?: string[];
     /** Tonight only (Josh, 2026-10-22): station lines the wall leaves out, by line number in `shared`. */
@@ -291,12 +299,44 @@ export const totalReps = (sets: NbtLogSet[]) =>
 export const hasLogged = (log: Pick<NbtLog, "sets" | "work_result">) =>
   log.sets.some((s) => s.weight != null || s.reps != null) || log.work_result != null;
 
-/** The movement a track is doing on a day — what a kid actually reads. */
-export const movementFor = (day: NbtDay | undefined, track: Track): TrackMovement | null =>
-  day?.lift?.[track] ?? null;
+/* ───── The one lift ───── */
 
-export const workFor = (day: NbtDay | undefined, track: Track): string[] =>
-  day?.work?.[track] ?? [];
+/** The day's lift as everyone reads it: the movement, its dose, and the modification either way. */
+export interface GroupLift {
+  name: string;
+  detail: string;
+  easier: string;
+  harder: string;
+}
+
+const movementText = (m: TrackMovement | undefined) =>
+  m?.name ? [m.name, (m.detail ?? "").split(" — ")[0]].filter(Boolean).join(" — ") : "";
+
+/**
+ * The day's one lift. A day written for two tracks reads as one too: Alpha's
+ * lift is the lift and Bravo's is the easier version, so an old week still
+ * shows everything it held.
+ */
+export const liftOf = (day: { lift?: NbtDay["lift"] | null } | null | undefined): GroupLift => {
+  const l = day?.lift;
+  if (l?.main?.name) {
+    return { name: l.main.name, detail: l.main.detail ?? "", easier: l.easier ?? "", harder: l.harder ?? "" };
+  }
+  if (l?.alpha?.name) {
+    return { name: l.alpha.name, detail: l.alpha.detail ?? "", easier: movementText(l.bravo), harder: "" };
+  }
+  return { name: l?.bravo?.name ?? "", detail: l?.bravo?.detail ?? "", easier: "", harder: "" };
+};
+
+/** The day with this lift, stored the one-group way; the retired tracks are dropped. Pure. */
+export const withLift = <D extends { lift: NbtDay["lift"] }>(day: D, lift: Partial<GroupLift>): D => {
+  const next = { ...liftOf(day), ...lift };
+  const { alpha: _a, bravo: _b, charlie: _c, ...rest } = day.lift;
+  return {
+    ...day,
+    lift: { ...rest, main: { name: next.name, detail: next.detail }, easier: next.easier, harder: next.harder },
+  };
+};
 
 /* ───── The board's clock ─────
    Generic on purpose: the conditioning block is whatever the generator said it

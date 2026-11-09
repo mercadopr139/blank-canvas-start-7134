@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
-  TRACKS, DAYS, mondayOf, addDays, firstOfMonth, mondaysInMonth, weekInBlock,
+  DAYS, mondayOf, addDays, firstOfMonth, mondaysInMonth, weekInBlock,
   dateOfDay, todayDayKey, blankSets, heaviestSet, totalReps, hasLogged,
-  movementFor, workFor, asTrack, NbtDay,
+  liftOf, withLift, workLines, asTrack, NbtDay,
   SESSION_CAP_MINUTES, DEFAULT_MINUTES, minutesOf, totalMinutes, withinCap,
   readableLines, formatClock, elapsedOf,
 } from "@/lib/nbt";
@@ -116,50 +116,100 @@ describe("logging", () => {
   });
 });
 
-describe("reading a day", () => {
+describe("reading a day — one group, one lift (2026-11-09)", () => {
   const day = {
     focus: "Own the basics",
-    prep: ["Jog", "Leg swings"],
+    prep: ["Air squats × 10", "Ramp up: 2 easy sets of 5 with the empty bar"],
     lift: {
       pattern: "Squat",
-      bravo: { name: "Heavy Goblet Squat", detail: "4 × 6" },
-      alpha: { name: "Back Squat", detail: "4 × 5" },
+      main: { name: "Back Squat", detail: "4 × 5 — four to a rack, rotate every set" },
+      easier: "Goblet squat with a kettlebell — same sets, 8 reps",
+      harder: "Add a 3-second pause at the bottom",
       cues: ["Chest up"],
     },
     work: {
       emphasis: "intervals",
-      title: "Five rounds",
-      bravo: ["400m run", "10 step-ups"],
-      alpha: ["600m run", "15 step-ups"],
+      title: "Cardio Stations",
+      shared: ["6 stations · 2 min each · rotate on the whistle", "Station 1 · The Racks — 10 wall balls"],
+      bravo: [],
+      alpha: [],
       result_unit: "rounds",
     },
     reset: ["Water", "Wraps on"],
   } as NbtDay;
 
-  it("gives every track the same pattern at its own progression", () => {
-    TRACKS.forEach((t) => expect(movementFor(day, t)?.name).toBeTruthy());
-    expect(movementFor(day, "bravo")?.name).toBe("Heavy Goblet Squat");
-    expect(movementFor(day, "alpha")?.name).toBe("Back Squat");
-    // Two progressions of one pattern, not two unrelated workouts.
-    expect(day.lift.pattern).toBe("Squat");
+  // A day written while there were still two tracks.
+  const twoTracks = {
+    ...day,
+    lift: {
+      pattern: "Squat",
+      bravo: { name: "Heavy Goblet Squat", detail: "4 × 8 — one kettlebell by the horns; groups of 3 rotate" },
+      alpha: { name: "Back Squat", detail: "4 × 5" },
+      cues: ["Chest up"],
+    },
+    work: { ...day.work, shared: undefined, bravo: ["400m run", "10 step-ups"], alpha: ["600m run", "15 step-ups"] },
+  } as NbtDay;
+
+  it("reads the one lift with its easier and harder versions", () => {
+    expect(liftOf(day)).toEqual({
+      name: "Back Squat",
+      detail: "4 × 5 — four to a rack, rotate every set",
+      easier: "Goblet squat with a kettlebell — same sets, 8 reps",
+      harder: "Add a 3-second pause at the bottom",
+    });
+  });
+
+  it("reads a two-track day as one lift: Alpha's, with Bravo's as the easier version", () => {
+    expect(liftOf(twoTracks)).toEqual({
+      name: "Back Squat",
+      detail: "4 × 5",
+      // The dose comes along; the run-it cue written for a second group does not.
+      easier: "Heavy Goblet Squat — 4 × 8",
+      harder: "",
+    });
+  });
+
+  it("falls back to Bravo's lift when a two-track day has no Alpha", () => {
+    const d = { ...twoTracks, lift: { ...twoTracks.lift, alpha: undefined } } as NbtDay;
+    expect(liftOf(d).name).toBe("Heavy Goblet Squat");
+    expect(liftOf(d).easier).toBe("");
+  });
+
+  it("writes a lift the one-group way and drops the retired tracks", () => {
+    const next = withLift(twoTracks, { harder: "Slower lowering" });
+    expect(next.lift.main).toEqual({ name: "Back Squat", detail: "4 × 5" });
+    expect(next.lift.easier).toBe("Heavy Goblet Squat — 4 × 8");
+    expect(next.lift.harder).toBe("Slower lowering");
+    expect(next.lift.alpha).toBeUndefined();
+    expect(next.lift.bravo).toBeUndefined();
+    // The pattern, the cues and the rest of the day are untouched; the original is not mutated.
+    expect(next.lift.pattern).toBe("Squat");
+    expect(next.lift.cues).toEqual(["Chest up"]);
+    expect(next.work).toBe(twoTracks.work);
+    expect(twoTracks.lift.alpha?.name).toBe("Back Squat");
+  });
+
+  it("changes one field of the lift and keeps the others", () => {
+    const next = withLift(day, { detail: "5 × 5" });
+    expect(liftOf(next)).toEqual({ ...liftOf(day), detail: "5 × 5" });
+  });
+
+  it("reads the work block as one list: the stations, or an older week's circuit", () => {
+    expect(workLines(day)).toEqual(day.work.shared);
+    expect(workLines(twoTracks)).toEqual(["600m run", "15 step-ups"]);
   });
 
   it("files an athlete still stored as the retired Charlie track under Bravo", () => {
-    // Charlie was retired 2026-10-03. Anyone whose row still says charlie is a
-    // Bravo athlete now; Alpha is the only level that stays what it was.
+    // History only: old logs still carry a level, and the NBT Intelligence page reads it.
     expect(asTrack("charlie")).toBe("bravo");
     expect(asTrack("bravo")).toBe("bravo");
     expect(asTrack("alpha")).toBe("alpha");
     expect(asTrack(null)).toBe("bravo");
   });
 
-  it("gives every track its own version of the circuit", () => {
-    TRACKS.forEach((t) => expect(workFor(day, t).length).toBeGreaterThan(0));
-  });
-
   it("copes with a day that has not been generated yet", () => {
-    expect(movementFor(undefined, "bravo")).toBeNull();
-    expect(workFor(undefined, "bravo")).toEqual([]);
+    expect(liftOf(undefined)).toEqual({ name: "", detail: "", easier: "", harder: "" });
+    expect(workLines({})).toEqual([]);
   });
 });
 

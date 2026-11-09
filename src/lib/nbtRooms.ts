@@ -5,12 +5,12 @@
 // disagree about how many benches there are. Written down with Josh on
 // 2026-10-03; change it here and nowhere else.
 //
-// The rule the inventory drives: anything with a COUNT is scarce, and a
-// scarce item belongs to ONE track per block (both tracks lift at the same
-// time, and both do the work block at the same time). "Shared" marks the
-// exception: six racks and six benches in the boxing facility are enough for
-// both tracks to lift at once. "Plenty" is anyone, any time.
-import type { DayKey, Track } from "@/lib/nbt";
+// ONE GROUP since 2026-11-09 (Rev, through Josh): about a dozen athletes lift
+// together, so anything with a COUNT is shared in turns — three racks is four
+// to a rack — and "plenty" is anyone, any time. The `shared` flag dates from
+// the two-track days (it marked kit there was enough of for both tracks at
+// once); the inventory keeps it, the brief no longer needs it.
+import type { DayKey } from "@/lib/nbt";
 
 export type RoomKey = "performance_center" | "boxing_facility";
 
@@ -61,9 +61,7 @@ export const ROOMS: Record<RoomKey, Room> = {
       plenty("rope", "jump ropes"),
       plenty("medBall", "med balls"),
       plenty("band", "bands"),
-      // The pull-up bars ARE the racks — three of them. Both tracks on
-      // assisted pull-ups is a queue (Josh, 2026-10-21: Thursday had Alpha
-      // and Bravo both on them). Scarce: one track per block.
+      // The pull-up bars ARE the racks — three of them (Josh, 2026-10-21).
       one("pullupBar", "the pull-up bars (on the three racks)", 3),
     ],
   },
@@ -82,21 +80,20 @@ export const ROOMS: Record<RoomKey, Room> = {
       plenty("rope", "jump ropes"),
       plenty("medBall", "med balls"),
       plenty("band", "bands"),
-      // Six racks here, so six bars: enough for both tracks, taking turns.
+      // Six racks here, so six bars.
       both("pullupBar", "the pull-up bars (on the six racks)", 6),
     ],
   },
 };
 
-/** The hand weights, counted (Josh, 2026-10-20, after a Tuesday where Bravo stood in line for the light dumbbells).
- *  "Plenty" for the scarce-kit rule — both tracks may use them in the same block — but at the light end it is a
- *  handful, and Bravo is the bigger, weaker group. So Bravo lifts one piece per kid. */
+/** The hand weights, counted (Josh, 2026-10-20, after a Tuesday where kids stood in line for the light dumbbells).
+ *  "Plenty" in the inventory, but at the light end it is a handful — so a lift on hand weights is one piece per kid. */
 export const HAND_WEIGHTS =
   "HAND WEIGHTS, COUNTED: five dumbbells of each weight (5 lb to 50 lb) and three kettlebells of each weight. " +
-  "At the light end that is a handful, and Bravo is the bigger group. BRAVO'S LIFT IS ONE PIECE PER KID: a " +
-  "single dumbbell held in both hands and pressed from the chest, a kettlebell by the horns, a plate for raises " +
-  "and goblets — two dumbbells only when the count allows. Spread the same movement across dumbbells, " +
-  "kettlebells and plates at once so five dumbbells never cap the group at five.";
+  "At the light end that is a handful. A LIFT ON HAND WEIGHTS IS ONE PIECE PER KID: a single dumbbell held in " +
+  "both hands and pressed from the chest, a kettlebell by the horns, a plate for raises and goblets — two " +
+  "dumbbells only when the count allows. Spread the same movement across dumbbells, kettlebells and plates at " +
+  "once so five dumbbells never cap the group at five.";
 
 /** Which room each programme day is in. A night a workout was moved onto takes the Performance Center. */
 export const DAY_ROOM: Partial<Record<DayKey, RoomKey>> = {
@@ -144,27 +141,18 @@ export const KIT_PATTERNS: Record<KitKey, RegExp> = {
 };
 
 /**
- * Kit that is physically the same fixture, so a clash is judged across the
- * group: the pull-up bars ARE the racks. Alpha on pull-ups and Bravo on an
- * inverted row is two tracks on three racks (Josh, 2026-10-21).
+ * The racks, in words, for the generator. One rack does three jobs — squat,
+ * bench press, pull-ups (Josh, 2026-10-21) — and one group of about a dozen
+ * shares them in turns (2026-11-09), so the lift can be a rack lift and the
+ * easier version stays off the racks to keep the rotation short.
  */
-export const SAME_FIXTURE: KitKey[][] = [["rack", "pullupBar"]];
-export const fixtureOf = (key: KitKey): KitKey[] => SAME_FIXTURE.find((g) => g.includes(key)) ?? [key];
-
-/**
- * The rule the racks drive, in words, for the generator (Josh, 2026-10-21).
- * One rack does three jobs — squat, bench press, pull-ups — and ONE track has
- * the racks per block. The other track trains on the floor with what is in
- * its hands; the benches follow the racks on a press day.
- */
-export const OFF_RACK_RULE =
-  "THE RACKS ARE ONE FIXTURE THAT DOES THREE JOBS — squats, bench press, pull-ups (the pull-up bars are the racks; inverted rows, ring rows and a band on a post are rack work too). ONE TRACK HAS THE RACKS PER BLOCK, never both, and the other track trains ON THE FLOOR with what is in its hands:\n" +
-  "- PULL off the racks: bent-over dumbbell row, single-arm dumbbell row with a hand on a box, kettlebell row, renegade row, band pull-apart, seated band row with the band around the feet. NEVER a pull-up, an inverted row, a ring row or a band on a post — every bar and every anchor point is a rack.\n" +
-  "- PUSH off the racks: floor press, push-ups, pike push-ups, dumbbell press lying on the floor. Not a bench press — on a press day the benches stay at the racks with the track that has them.\n" +
-  "- SQUAT off the racks: goblet squat, dumbbell front squat, kettlebell squat.\n" +
-  "- HINGE off the racks: dumbbell or kettlebell Romanian deadlift, kettlebell swing. Barbell deadlifts and Romanian deadlifts live on the floor and need no rack, so both tracks may deadlift at once.\n" +
-  "- THE BENCHES follow the racks on a press day. On a squat, pull or hinge day they may be carried to the floor as a station for a few athletes at a time — chest-supported rows, step-ups, incline push-ups.\n" +
-  "- The same in reverse: when BRAVO has the racks, ALPHA takes the floor version with a barbell — barbell Romanian deadlift, barbell row, floor press, lunges with a bar.";
+export const RACKS_RULE =
+  "THE RACKS ARE ONE FIXTURE THAT DOES THREE JOBS — squats, bench press, pull-ups (the pull-up bars are the " +
+  "racks; inverted rows, ring rows and a band on a post are rack work too). The group shares them in turns: " +
+  "three or four athletes to a rack, alternating sets. On a press day the benches are at the racks. " +
+  "THE EASIER VERSION OF A RACK LIFT IS DONE OFF THE RACKS, on the floor beside them, with what is in the " +
+  "athlete's hands — goblet squat, floor press or push-ups, dumbbell or kettlebell row, dumbbell or kettlebell " +
+  "Romanian deadlift — so the athletes who need it are not adding to the line for a bar.";
 
 /**
  * One direction of travel per day on the court (Josh, 2026-10-21): a station
@@ -180,17 +168,13 @@ export const COURT_AXIS_RULE =
 export const absentKit = (room: Room): KitKey[] =>
   (Object.keys(KIT_PATTERNS) as KitKey[]).filter((k) => !kitIn(room, k));
 
-const TRACK_NAMES: Record<Track, string> = { alpha: "Alpha", bravo: "Bravo" };
-export const trackName = (t: Track) => TRACK_NAMES[t];
-
 /**
  * The room, in words, for the generator. Rebuilt from the inventory on every
  * call so the model is never working from a stale description.
  */
 export const roomBrief = (dayKey: DayKey): string => {
   const room = roomFor(dayKey);
-  const scarce = room.kit.filter((k) => k.count !== "plenty" && !k.shared);
-  const enough = room.kit.filter((k) => k.count !== "plenty" && k.shared);
+  const counted = room.kit.filter((k) => k.count !== "plenty");
   const plentyKit = room.kit.filter((k) => k.count === "plenty");
   const absent = absentKit(room).map((k) => KIT_LABEL[k]);
   const lines = [
@@ -198,17 +182,12 @@ export const roomBrief = (dayKey: DayKey): string => {
       (room.canRun
         ? `The floor is the basketball court: 75 ft baseline to baseline, 56 ft sideline to sideline. Say every floor distance in court — baseline to baseline (75 ft), baseline to baseline and back (150 ft), sideline to sideline (56 ft), sideline to sideline and back (112 ft) — never in metres, yards or feet. Nothing longer than one court length (${room.maxYards} yards); never a lap.`
         : "No running of any kind — every movement stays on the spot."),
-    scarce.length
-      ? "SCARCE — one track per block, never both at once: " +
-        scarce.map((k) => `${k.label} (${k.count})`).join(", ") + "."
-      : "",
-    enough.length
-      ? "ENOUGH FOR BOTH TRACKS AT ONCE, taking turns in small groups: " +
-        enough.map((k) => `${k.label} (${k.count})`).join(", ") + "."
+    counted.length
+      ? "COUNTED — one group of about a dozen shares these, taking turns in small groups: " +
+        counted.map((k) => `${k.label} (${k.count})`).join(", ") + "."
       : "",
     plentyKit.length ? "PLENTY — anyone, any time: " + plentyKit.map((k) => k.label).join(", ") + "." : "",
-    // Where the racks are scarce, the off-rack rule travels with the room.
-    scarce.some((k) => k.key === "rack") ? OFF_RACK_RULE : "",
+    counted.some((k) => k.key === "rack") ? RACKS_RULE : "",
     room.canRun ? COURT_AXIS_RULE : "",
     absent.length ? "NOT IN THIS ROOM — never write them: " + absent.join(", ") + "." : "",
     HAND_WEIGHTS,

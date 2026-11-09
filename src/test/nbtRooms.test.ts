@@ -1,18 +1,20 @@
 import { describe, it, expect } from "vitest";
 import { ROOMS, roomFor, kitIn, absentKit, roomBrief, KIT_PATTERNS } from "@/lib/nbtRooms";
-import { equipmentClash, courtAxisClash, missingKit, dayProblem, courtLanguage } from "@/lib/nbtCoaching";
+import { courtAxisClash, missingKit, dayProblem, courtLanguage } from "@/lib/nbtCoaching";
 import type { NbtDay } from "@/lib/nbt";
 
-const day = (bravoLift: string, alphaLift: string, bravoWork: string[], alphaWork: string[]): NbtDay => ({
+// One group since 2026-11-09: one lift for everyone, then the work block.
+const day = (lift: string, work: string[], mods: { easier?: string; harder?: string } = {}): NbtDay => ({
   focus: "",
-  prep: ["Easy shuffle 2 min"],
+  prep: ["Air squats × 10"],
   lift: {
     pattern: "Squat",
-    bravo: { name: bravoLift, detail: "4 × 6" },
-    alpha: { name: alphaLift, detail: "4 × 5" },
+    main: { name: lift, detail: "4 × 5" },
+    easier: mods.easier ?? "",
+    harder: mods.harder ?? "",
     cues: [],
   },
-  work: { emphasis: "intervals", title: "Circuit", bravo: bravoWork, alpha: alphaWork, result_unit: "rounds" },
+  work: { emphasis: "intervals", title: "Circuit", shared: work, bravo: [], alpha: [], result_unit: "rounds" },
   reset: [],
 });
 
@@ -23,20 +25,20 @@ describe("The two rooms", () => {
     expect(roomFor("tuesday").name).toBe("boxing facility");
   });
 
-  it("know what is scarce, what there is enough of, and what is not there", () => {
+  it("know what is counted, what there is plenty of, and what is not there", () => {
     const pc = ROOMS.performance_center;
-    expect(kitIn(pc, "rack")).toMatchObject({ count: 3, shared: false });
-    expect(kitIn(pc, "bench")).toMatchObject({ count: 3, shared: false });
-    expect(kitIn(pc, "skier")).toMatchObject({ count: 2, shared: false });
+    expect(kitIn(pc, "rack")).toMatchObject({ count: 3 });
+    expect(kitIn(pc, "bench")).toMatchObject({ count: 3 });
+    expect(kitIn(pc, "skier")).toMatchObject({ count: 2 });
     // One sled does not work for a group: it is deliberately not in the room.
     expect(kitIn(pc, "sled")).toBeUndefined();
-    expect(kitIn(pc, "box")).toMatchObject({ count: 4, shared: false });
+    expect(kitIn(pc, "box")).toMatchObject({ count: 4 });
     expect(kitIn(pc, "barbell")).toMatchObject({ count: "plenty" });
     expect(kitIn(pc, "handWeight")).toMatchObject({ count: "plenty" });
 
     const bf = ROOMS.boxing_facility;
-    expect(kitIn(bf, "rack")).toMatchObject({ count: 6, shared: true });
-    expect(kitIn(bf, "bench")).toMatchObject({ count: 6, shared: true });
+    expect(kitIn(bf, "rack")).toMatchObject({ count: 6 });
+    expect(kitIn(bf, "bench")).toMatchObject({ count: 6 });
     expect(absentKit(bf).sort()).toEqual(["bike", "rower", "skier", "sled"]);
     expect(absentKit(pc)).toEqual(["sled"]);
   });
@@ -45,14 +47,25 @@ describe("The two rooms", () => {
     const tue = roomBrief("tuesday");
     expect(tue).toMatch(/boxing facility/);
     expect(tue).toMatch(/NOT IN THIS ROOM.*bikes.*rowers.*ski ergs.*sled/);
-    expect(tue).toMatch(/ENOUGH FOR BOTH TRACKS.*squat racks \(6\)/);
+    expect(tue).toMatch(/COUNTED.*squat racks \(6\).*benches \(6\)/);
     const mon = roomBrief("monday");
-    expect(mon).toMatch(/SCARCE.*squat racks \(3\).*benches \(3\).*assault bikes \(6\)/);
+    expect(mon).toMatch(/COUNTED.*squat racks \(3\).*benches \(3\).*assault bikes \(6\)/);
     expect(mon).toMatch(/75 ft baseline to baseline, 56 ft sideline to sideline/);
     expect(mon).toMatch(/never in metres, yards or feet/);
     expect(mon).toMatch(/baseline to baseline and back \(150 ft\).*sideline to sideline and back \(112 ft\)/);
     expect(mon).toMatch(/Never a sled/);
     expect(mon).toMatch(/NOT IN THIS ROOM.*the sled/);
+  });
+
+  it("describe one group sharing the room — no tracks (2026-11-09)", () => {
+    for (const key of ["monday", "tuesday", "thursday"] as const) {
+      const brief = roomBrief(key);
+      expect(brief).toMatch(/one group of about a dozen shares these/);
+      expect(brief).toMatch(/THE RACKS ARE ONE FIXTURE/);
+      expect(brief).toMatch(/THE EASIER VERSION OF A RACK LIFT IS DONE OFF THE RACKS/);
+      expect(brief).toMatch(/A LIFT ON HAND WEIGHTS IS ONE PIECE PER KID/);
+      expect(brief).not.toMatch(/\btracks?\b|alpha|bravo/i);
+    }
   });
 
   it("recognise the movements that need an item even when it is not named", () => {
@@ -68,153 +81,96 @@ describe("The two rooms", () => {
   });
 });
 
-describe("Scarce kit belongs to one track per block", () => {
-  it("lets the whole room rotate through The Racks when the work block is the Cardio Stations", () => {
-    const stations = [
-      "6 stations · 2 min each · rotate on the whistle",
-      "Station 1 · The Racks — 8 goblet squats, then 8 push-ups, repeat — strong and repeatable",
-      "Station 2 · The Rowers — row steady — long pulls",
-      "Station 3 · The Bikes — bike steady — keep the cadence",
-      "Station 4 · Open Court — bear crawl baseline to baseline — low hips",
-      "Station 5 · Open Court — 10 squat jumps, then 10 lunges, repeat — soft landings",
-      "Station 6 · Open Court — farmer carry sideline to sideline — tall chest",
-    ];
-    const d = day("Goblet Squat", "Back Squat", stations, stations);
-    expect(equipmentClash(d, "monday")).toBeNull();
-    // The lift block still keeps its rule.
-    expect(equipmentClash(day("Front Squat", "Back Squat", stations, stations), "monday")).toMatch(/squat racks/);
+describe("One group shares the room", () => {
+  const stations = [
+    "6 stations · 2 min each · rotate on the whistle",
+    "Station 1 · The Racks — 8 goblet squats, then 8 push-ups, repeat — strong and repeatable",
+    "Station 2 · The Rowers — row steady — long pulls",
+    "Station 3 · The Bikes — bike steady — keep the cadence",
+    "Station 4 · Open Court — 10 med ball slams — full reach",
+    "Station 5 · Open Court — 10 squat jumps, then 10 lunges, repeat — soft landings",
+    "Station 6 · Open Court — farmer carry baseline to baseline — tall chest",
+  ];
+
+  it("lets the whole group lift on the three racks, then rotate through the stations", () => {
+    expect(dayProblem(day("Back Squat", stations, { easier: "Box squat to a bench — same sets, 8 reps", harder: "Pause squat" }), "monday")).toBeNull();
+    expect(dayProblem(day("Barbell Bench Press", stations, { easier: "Floor press with a kettlebell" }), "monday")).toBeNull();
   });
 
-  it("refuses both tracks on the three benches in the lift", () => {
-    const d = day("DB Bench Press", "Barbell Bench Press", ["Push-ups x10"], ["Dips x8"]);
-    expect(equipmentClash(d, "monday")).toMatch(/Alpha and Bravo are both on the benches in the lift block/);
-  });
-
-  it("lets Bravo floor press while Alpha benches", () => {
-    const d = day("DB Floor Press", "Barbell Bench Press", ["Push-ups x10"], ["Dips x8"]);
-    expect(equipmentClash(d, "monday")).toBeNull();
-  });
-
-  it("refuses both tracks in the three racks, but not a goblet squat on the floor", () => {
-    expect(equipmentClash(day("Front Squat", "Back Squat", [], []), "monday")).toMatch(/squat racks/);
-    expect(equipmentClash(day("Goblet Squat", "Back Squat", [], []), "monday")).toBeNull();
-  });
-
-  it("allows both tracks on the racks on Tuesday, where there are six", () => {
-    const d = day("DB Overhead Press", "Barbell Overhead Press", ["Wall balls x12"], ["Jump rope 60 sec"]);
-    expect(equipmentClash(day("Barbell Overhead Press", "Barbell Overhead Press", [], []), "tuesday")).toBeNull();
-    expect(dayProblem(d, "tuesday")).toBeNull();
-  });
-
-  it("the pull-up bars are the racks: three in the Performance Center, six in the boxing facility (Josh, 2026-10-21)", () => {
-    // Thursday had Alpha and Bravo both on assisted pull-ups — a queue on three bars.
-    const both = day("DB RDL + Assisted Pull-Up", "Barbell RDL + Assisted Pull-Up", [], []);
-    expect(equipmentClash(both, "thursday")).toMatch(/pull-up bars/);
-    expect(equipmentClash(both, "monday")).toMatch(/pull-up bars/);
-    // Six racks on Tuesday: enough for both, taking turns.
-    expect(equipmentClash(both, "tuesday")).toBeNull();
-    // Bravo rows while Alpha pulls up: no clash.
-    expect(equipmentClash(day("DB RDL + DB Row", "Barbell RDL + Assisted Pull-Up", [], []), "thursday")).toBeNull();
+  it("lets the lift be a pull-up with the easier version on the same racks", () => {
+    expect(dayProblem(day("Pull-Up", stations, { easier: "Inverted row, bar set low" }), "thursday")).toBeNull();
   });
 
   it("one direction of travel per day on the court (Josh, 2026-10-21)", () => {
-    const mixed = day("Goblet Squat", "Back Squat",
-      ["6 stations · 2 min each", "Station 4 · Open Court — suitcase carry baseline to baseline and back", "Station 5 · Open Court — bear crawl sideline to sideline"],
-      ["6 stations · 2 min each", "Station 4 · Open Court — suitcase carry baseline to baseline and back", "Station 5 · Open Court — bear crawl sideline to sideline"]);
+    const mixed = day("Back Squat", [
+      "6 stations · 2 min each",
+      "Station 4 · Open Court — suitcase carry baseline to baseline and back",
+      "Station 5 · Open Court — walking lunges sideline to sideline",
+    ]);
     expect(courtAxisClash(mixed)).toMatch(/head on/);
     expect(dayProblem(mixed, "thursday")).toMatch(/head on/);
-    const oneWay = day("Goblet Squat", "Back Squat",
-      ["Station 4 · Open Court — suitcase carry baseline to baseline and back", "Station 5 · Open Court — lunges baseline to baseline", "Station 6 · Open Court — 12 plank shoulder taps"],
-      ["Station 4 · Open Court — suitcase carry baseline to baseline and back", "Station 5 · Open Court — lunges baseline to baseline", "Station 6 · Open Court — 12 plank shoulder taps"]);
+    const oneWay = day("Back Squat", [
+      "Station 4 · Open Court — suitcase carry baseline to baseline and back",
+      "Station 5 · Open Court — lunges baseline to baseline",
+      "Station 6 · Open Court — 12 plank shoulder taps",
+    ]);
     expect(courtAxisClash(oneWay)).toBeNull();
   });
 
-  it("an inverted row, a ring row or a band on a post is rack work — the racks are one fixture (Josh, 2026-10-21)", () => {
-    // The rewrite that slipped through: Alpha on the bars, Bravo on a bar set low on the same racks.
-    expect(equipmentClash(day("DB RDL + Inverted Row", "Barbell RDL + Assisted Pull-Up", [], []), "thursday")).toMatch(/racks|pull-up bars/);
-    expect(equipmentClash(day("DB RDL + Ring Row", "Barbell RDL + Pull-Up", [], []), "monday")).toMatch(/racks|pull-up bars/);
-    expect(equipmentClash(day("Band row on the post", "Back Squat", [], []), "monday")).toMatch(/racks|pull-up bars/);
-    // Alpha squats in the racks while Bravo hangs from them: the same three racks.
-    expect(equipmentClash(day("Assisted Pull-Up", "Back Squat", [], []), "thursday")).toMatch(/racks|pull-up bars/);
-    // A seated band row around the feet and a band pull-apart need no anchor.
-    expect(equipmentClash(day("DB RDL + Seated Band Row (band around the feet)", "Barbell RDL + Assisted Pull-Up", [], []), "thursday")).toBeNull();
-    expect(equipmentClash(day("Band pull-aparts", "Back Squat", [], []), "thursday")).toBeNull();
-  });
-
-  it("judges the lift block and the work block separately", () => {
-    // Alpha squats in the rack; Bravo's circuit uses a rack later. Different times, no clash.
-    const d = day("Goblet Squat", "Back Squat", ["Rack pull-ups x6"], ["Jump squats x10"]);
-    expect(equipmentClash(d, "monday")).toBeNull();
-  });
-
-  it("keeps the machines one-track-per-block, and knows the ski ergs", () => {
-    expect(equipmentClash(day("Goblet Squat", "Back Squat", ["Ski erg 30 sec"], ["Ski erg 45 sec"]), "monday")).toMatch(/ski ergs/);
-    expect(equipmentClash(day("Goblet Squat", "Back Squat", ["Bike 45 sec"], ["Row 250m"]), "monday")).toBeNull();
-  });
-
   it("refuses a sled push anywhere — one sled does not work for a group", () => {
-    expect(missingKit(day("Goblet Squat", "Back Squat", [], ["Sled push 35 ft up and back"]), "thursday")).toMatch(/no sleds.*Alpha/);
-    expect(missingKit(day("Goblet Squat", "Back Squat", ["Prowler push"], []), "monday")).toMatch(/no sleds/);
-  });
-
-  it("no longer treats dumbbells and kettlebells as scarce", () => {
-    const d = day("Goblet Squat", "Back Squat", ["KB swings x15"], ["DB snatch x10"]);
-    expect(equipmentClash(d, "monday")).toBeNull();
-    expect(equipmentClash(day("Goblet Squat", "Heavy Goblet Squat", [], []), "monday")).toBeNull();
-  });
-
-  it("limits the four plyo boxes to one track per block", () => {
-    const d = day("Goblet Squat", "Back Squat", ["Box jumps x5"], ["Box step-offs x6"]);
-    expect(equipmentClash(d, "tuesday")).toMatch(/plyo boxes/);
+    expect(missingKit(day("Back Squat", ["Sled push 35 ft up and back"]), "thursday")).toMatch(/no sleds.*Sled push/);
+    expect(missingKit(day("Back Squat", ["Prowler push"]), "monday")).toMatch(/no sleds/);
   });
 });
 
 describe("Kit the room does not have", () => {
   it("refuses a bike, rower, ski erg or sled on Tuesday", () => {
-    expect(missingKit(day("DB Press", "Barbell Press", ["Bike 45 sec"], ["Wall balls x12"]), "tuesday")).toMatch(/no bikes in the boxing facility.*Bravo/);
-    expect(missingKit(day("DB Press", "Barbell Press", ["Wall balls x12"], ["Row 250m"]), "tuesday")).toMatch(/no rowers/);
-    expect(missingKit(day("DB Press", "Barbell Press", ["Ski erg 30 sec"], []), "tuesday")).toMatch(/no ski ergs/);
-    expect(missingKit(day("DB Press", "Barbell Press", [], ["Sled push"]), "tuesday")).toMatch(/no sleds/);
+    expect(missingKit(day("Barbell Press", ["Bike 45 sec", "Wall balls x12"]), "tuesday")).toMatch(/no bikes in the boxing facility.*Bike 45 sec/);
+    expect(missingKit(day("Barbell Press", ["Wall balls x12", "Row 250m"]), "tuesday")).toMatch(/no rowers/);
+    expect(missingKit(day("Barbell Press", ["Ski erg 30 sec"]), "tuesday")).toMatch(/no ski ergs/);
+    expect(missingKit(day("Barbell Press", ["Sled push"]), "tuesday")).toMatch(/no sleds/);
+  });
+
+  it("refuses it in the easier or harder version of the lift too", () => {
+    expect(missingKit(day("Barbell Press", ["Wall balls x12"], { harder: "Finish with a sled push" }), "tuesday")).toMatch(/no sleds/);
+    expect(missingKit(day("Barbell Press", ["Wall balls x12"], { easier: "Row 100 m on the rower between sets" }), "tuesday")).toMatch(/no rowers/);
   });
 
   it("is fine with the same kit on Monday, and with Tuesday's own kit", () => {
-    expect(missingKit(day("DB Press", "Barbell Press", ["Bike 45 sec"], ["Row 250m"]), "monday")).toBeNull();
-    expect(missingKit(day("DB Press", "Barbell Press", ["Wall balls x12", "Jump rope 60 sec"], ["Box jumps x5"]), "tuesday")).toBeNull();
+    expect(missingKit(day("Barbell Press", ["Bike 45 sec", "Row 250m"]), "monday")).toBeNull();
+    expect(missingKit(day("Barbell Press", ["Wall balls x12", "Jump rope 60 sec", "Box jumps x5"]), "tuesday")).toBeNull();
   });
 
-  it("checks only the track being rewritten when asked to", () => {
-    const d = day("DB Press", "Barbell Press", ["Bike 45 sec"], ["Wall balls x12"]);
-    expect(missingKit(d, "tuesday", "alpha")).toBeNull();
-    expect(missingKit(d, "tuesday", "bravo")).not.toBeNull();
-  });
-
-  it("is reported by dayProblem ahead of a clash", () => {
-    const d = day("DB Press", "Barbell Press", ["Bike 45 sec"], ["Bike 60 sec"]);
-    expect(dayProblem(d, "tuesday")).toMatch(/no bikes/);
+  it("is reported by dayProblem", () => {
+    expect(dayProblem(day("Barbell Press", ["Bike 45 sec"]), "tuesday")).toMatch(/no bikes/);
   });
 });
 
 describe("On the court, distance is said in court", () => {
   it("refuses metres or yards for a carry, walk or shuttle on Monday and Thursday", () => {
-    expect(courtLanguage(day("Goblet Squat", "Back Squat", [], ["Overhead carry 20m"]), "monday")).toMatch(/say distance in court.*Alpha.*Overhead carry 20m/);
-    expect(courtLanguage(day("Goblet Squat", "Back Squat", ["Walking lunge 15 yards"], []), "thursday")).toMatch(/Bravo/);
-    expect(courtLanguage(day("Goblet Squat", "Back Squat", ["Bear crawl 30 ft"], []), "monday")).not.toBeNull();
+    expect(courtLanguage(day("Back Squat", ["Overhead carry 20m"]), "monday")).toMatch(/say distance in court.*Overhead carry 20m/);
+    expect(courtLanguage(day("Back Squat", ["Walking lunge 15 yards"]), "thursday")).toMatch(/Walking lunge 15 yards/);
+    expect(courtLanguage(day("Back Squat", ["Side shuffle 30 ft"]), "monday")).not.toBeNull();
+  });
+
+  it("refuses it in the lift's modification too", () => {
+    expect(courtLanguage(day("Farmer Carry", [], { harder: "Carry 40 yards without setting down" }), "thursday")).toMatch(/40 yards/);
   });
 
   it("accepts the court's own words", () => {
-    const d = day("Goblet Squat", "Back Squat",
-      ["Farmer carry — baseline to baseline", "Half court and back × 2 — strong but repeatable"],
-      // One direction of travel per day (2026-10-21): Alpha goes baseline to baseline too.
-      ["Overhead carry — baseline to baseline", "Full court and back — controlled"]);
+    const d = day("Back Squat", [
+      "Farmer carry — baseline to baseline", "Half court and back × 2 — strong but repeatable",
+      "Overhead carry — baseline to baseline", "Full court and back — controlled",
+    ]);
     expect(courtLanguage(d, "monday")).toBeNull();
     expect(dayProblem(d, "thursday")).toBeNull();
   });
 
   it("leaves machine lines alone — the rower shows metres", () => {
-    expect(courtLanguage(day("Goblet Squat", "Back Squat", ["Row 250m — controlled pace"], ["Bike 45 sec"]), "monday")).toBeNull();
+    expect(courtLanguage(day("Back Squat", ["Row 250m — controlled pace", "Bike 45 sec"]), "monday")).toBeNull();
   });
 
   it("does not apply on Tuesday, where there is no court", () => {
-    expect(courtLanguage(day("DB Press", "Barbell Press", ["Farmer carry 20m"], []), "tuesday")).toBeNull();
+    expect(courtLanguage(day("Barbell Press", ["Farmer carry 20m"]), "tuesday")).toBeNull();
   });
 });

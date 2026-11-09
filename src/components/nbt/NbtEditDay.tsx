@@ -12,7 +12,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
-import { DAYS, DayKey, TRACKS, TRACK_META, NbtDay, dayMeta, stationLines, NBT_AMBER } from "@/lib/nbt";
+import { DayKey, NbtDay, dayMeta, stationLines, workLines, withLift, NBT_AMBER } from "@/lib/nbt";
 import BulletEditor from "@/components/practice/BulletEditor";
 import { bulletLinesOf } from "@/lib/bulletText";
 
@@ -32,8 +32,9 @@ const NbtEditDay = ({
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    // Deep copy, so abandoning the dialog leaves the saved day untouched.
-    setDraft(day ? (JSON.parse(JSON.stringify(day)) as NbtDay) : null);
+    // Deep copy, so abandoning the dialog leaves the saved day untouched. A day
+    // written for two tracks opens — and saves — as one group, one lift.
+    setDraft(day ? withLift(JSON.parse(JSON.stringify(day)) as NbtDay, {}) : null);
   }, [day]);
 
   if (!draft || !dayKey) return null;
@@ -80,7 +81,7 @@ const NbtEditDay = ({
             </div>
           </div>
 
-          <Block label="Prep — one line each">
+          <Block label="Warm-up for the lift — one line each">
             <Textarea
               value={draft.prep.join("\n")}
               onChange={(e) => set((d) => { d.prep = linesOf(e.target.value); })}
@@ -89,29 +90,33 @@ const NbtEditDay = ({
             />
           </Block>
 
-          {/* The lift, one row per track — kept side by side so it is obvious
-              they are three progressions of one pattern. */}
-          <Block label="Strength — Learn + Lift">
+          {/* One lift for the whole group, and the same lift made easier and
+              harder for the coach to hand out (2026-11-09). */}
+          <Block label="Strength — Learn + Lift · everyone">
             <div className="space-y-2">
-              {TRACKS.map((t) => (
-                <div key={t} className="flex gap-2 items-center">
-                  <span
-                    className="w-16 shrink-0 text-xs font-bold"
-                    style={{ color: TRACK_META[t].color }}
-                  >
-                    {TRACK_META[t].label}
-                  </span>
+              <div className="flex gap-2 items-center">
+                <span className="w-16 shrink-0 text-xs font-bold" style={{ color: NBT_AMBER }}>Lift</span>
+                <Input
+                  value={draft.lift.main?.name ?? ""}
+                  onChange={(e) => set((d) => { d.lift.main = { name: e.target.value, detail: d.lift.main?.detail ?? "" }; })}
+                  placeholder="Exercise"
+                  className="flex-1 h-9 bg-neutral-900 border-neutral-800 text-white text-sm"
+                />
+                <Input
+                  value={draft.lift.main?.detail ?? ""}
+                  onChange={(e) => set((d) => { d.lift.main = { name: d.lift.main?.name ?? "", detail: e.target.value }; })}
+                  placeholder="4 × 5"
+                  className="w-28 shrink-0 h-9 bg-neutral-900 border-neutral-800 text-white text-sm"
+                />
+              </div>
+              {(["easier", "harder"] as const).map((k) => (
+                <div key={k} className="flex gap-2 items-center">
+                  <span className="w-16 shrink-0 text-xs font-bold text-white/50">{k === "easier" ? "Easier" : "Harder"}</span>
                   <Input
-                    value={draft.lift[t].name}
-                    onChange={(e) => set((d) => { d.lift[t].name = e.target.value; })}
-                    placeholder="Exercise"
+                    value={draft.lift[k] ?? ""}
+                    onChange={(e) => set((d) => { d.lift[k] = e.target.value; })}
+                    placeholder={k === "easier" ? "Goblet squat with a kettlebell — same sets, 8 reps" : "Add a 3-second pause at the bottom"}
                     className="flex-1 h-9 bg-neutral-900 border-neutral-800 text-white text-sm"
-                  />
-                  <Input
-                    value={draft.lift[t].detail}
-                    onChange={(e) => set((d) => { d.lift[t].detail = e.target.value; })}
-                    placeholder="3 × 8"
-                    className="w-28 shrink-0 h-9 bg-neutral-900 border-neutral-800 text-white text-sm"
                   />
                 </div>
               ))}
@@ -142,40 +147,24 @@ const NbtEditDay = ({
                 className="h-9 bg-neutral-900 border-neutral-800 text-white text-sm"
               />
             </div>
-            {/* The Cardio Stations are ONE shared block for the room: one editor, stored once (Josh, 2026-10-22). */}
-            {stationLines(draft).length > 0 ? (
-              <div>
-                <p className="text-xs font-bold mb-1" style={{ color: NBT_AMBER }}>
-                  Everyone <span className="text-white/40 font-normal">· one block for the room, both tracks together</span>
-                </p>
-                <BulletEditor
-                  defaultValue={stationLines(draft).join("\n")}
-                  accent={NBT_AMBER}
-                  textClassName="text-sm"
-                  className="min-h-[6rem] !bg-neutral-900 !border-neutral-800"
-                  placeholder="The header line, then one station per line."
-                  onSave={(v) => set((d) => { d.work.shared = bulletLinesOf(v); d.work.alpha = []; d.work.bravo = []; })}
-                />
-              </div>
-            ) : (
-            <div className="grid gap-2 md:grid-cols-2">
-              {TRACKS.map((t) => (
-                <div key={t}>
-                  <p className="text-xs font-bold mb-1" style={{ color: TRACK_META[t].color }}>
-                    {TRACK_META[t].label}
-                  </p>
-                  <BulletEditor
-                    defaultValue={draft.work[t].join("\n")}
-                    accent={TRACK_META[t].color}
-                    textClassName="text-sm"
-                    className="min-h-[6rem] !bg-neutral-900 !border-neutral-800"
-                    placeholder="One station per line. Enter for the next, Tab to nest."
-                    onSave={(v) => set((d) => { d.work[t] = bulletLinesOf(v); })}
-                  />
-                </div>
-              ))}
+            {/* ONE block for the room, stored once (Josh, 2026-10-22). A day written
+                before the stations keeps its old circuit, edited the same way. */}
+            <div>
+              <p className="text-xs font-bold mb-1" style={{ color: NBT_AMBER }}>
+                Everyone <span className="text-white/40 font-normal">· one block for the room</span>
+              </p>
+              <BulletEditor
+                defaultValue={workLines(draft).join("\n")}
+                accent={NBT_AMBER}
+                textClassName="text-sm"
+                className="min-h-[6rem] !bg-neutral-900 !border-neutral-800"
+                placeholder="The header line, then one station per line."
+                onSave={(v) => set((d) => {
+                  if (stationLines(d).length > 0) { d.work.shared = bulletLinesOf(v); d.work.alpha = []; d.work.bravo = []; }
+                  else { d.work.alpha = bulletLinesOf(v); d.work.bravo = []; }
+                })}
+              />
             </div>
-            )}
             <div className="mt-2">
               <Label className="text-xs text-white/50">What athletes write down</Label>
               <Input

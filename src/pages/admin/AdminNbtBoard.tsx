@@ -17,9 +17,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  DAYS, DayKey, TRACKS, TRACK_META, stationLines, withStations, Track, NbtBlock, NbtWeek, NbtDay, NbtLog, toDateString, firstOfMonth, monthLabel, mondaysInMonth, dateOfDay, mondayOf, addDays, NBT_AMBER, readableLines, minutesOf, totalMinutes, weekDays,
+  DAYS, DayKey, stationLines, withStations, workLines, liftOf, withLift, NbtBlock, NbtWeek, NbtDay, NbtLog, toDateString, firstOfMonth, monthLabel, mondaysInMonth, dateOfDay, mondayOf, addDays, NBT_AMBER, readableLines, minutesOf, totalMinutes, weekDays,
 } from "@/lib/nbt";
-import { priorWeekBriefs, roomReport, carryOver, dayProblem } from "@/lib/nbtCoaching";
+import { priorWeekBriefs, roomReport, carryOver, dayProblem, dayForModel } from "@/lib/nbtCoaching";
 import { WEEKDAY_KEYS, DAY_LABELS, weekdayOf, programDaysForNights, placeOnNight } from "@/lib/programWeek";
 import { syncLiftColumns, syncSummary } from "@/lib/liftPlanSync";
 import { AlertTriangle, Mail } from "lucide-react";
@@ -51,7 +51,7 @@ const stationsOf = (day: NbtDay) => {
 
 /** The wall's card header shade — every card on the NBT wall wears it. */
 const CARD_HEADER = { background: "#3c3527", borderColor: `${NBT_AMBER}66` } as const;
-/** The small outline button on a lift card: Lift · Cardio · Both. */
+/** The small outline button on a card: Rewrite lift · Rewrite stations. */
 const PART_BTN = "inline-flex items-center gap-1 rounded border border-white/20 px-1.5 py-0.5 text-[10px] font-semibold text-white/55 hover:text-white hover:border-white/50 disabled:opacity-40 transition-colors";
 /** A control in a card header. */
 const ICON_BTN = "text-white/50 hover:text-white disabled:opacity-30 transition-colors";
@@ -206,16 +206,19 @@ export const NbtWeekBuilder = ({
     dayKey: DayKey,
     prior: NbtWeek[],
     attempt = 0,
-    only?: { track: Track; keepDay: NbtDay; block?: "lift" | "work" },
+    /** Rewriting one part of a day that exists: the lift (with its warm-up), or the stations. */
+    only?: { part: "lift" | "work"; keepDay: NbtDay },
     /** Why the last attempt was thrown away, so the next one can fix it. */
     retryNote?: string
   ): Promise<NbtDay> => {
-    // All three tracks of every earlier week in this block, not Alpha alone.
+    // The lift, and its easier and harder versions, from every earlier week in this block.
     const priorWeeks = priorWeekBriefs(prior, dayKey, weekNo);
     // Anonymised medians of what the room managed. Names never leave the app.
     const room = roomReport(history?.logs ?? [], dayKey, toDateString(new Date()));
-    // Where last month finished, so week 1 continues rather than resets.
-    const carry = weekNo === 1 ? carryOver(history?.prevWeeks ?? [], dayKey) : null;
+    // Where last month finished, so the first week this day is written continues
+    // rather than resets. That is usually week 1 — but a day skipped in week 1
+    // (a two-night week) is first written in week 2, and still has to carry on.
+    const carry = priorWeeks.length === 0 ? carryOver(history?.prevWeeks ?? [], dayKey) : null;
 
     try {
       const { data: res, error } = await supabase.functions.invoke("nbt-workout", {
@@ -224,7 +227,7 @@ export const NbtWeekBuilder = ({
           dayKey, weekInBlock: weekNo, blockFocus, priorWeeks, roomKit: roomBrief(dayKey),
           ...(room ? { room } : {}),
           ...(carry ? { carryOver: carry } : {}),
-          ...(only ? { onlyTrack: only.track, keepDay: only.keepDay, ...(only.block ? { onlyBlock: only.block } : {}) } : {}),
+          ...(only ? { onlyBlock: only.part, keepDay: dayForModel(only.keepDay) } : {}),
           ...(retryNote ? { retryNote } : {}),
         },
       });
@@ -232,9 +235,9 @@ export const NbtWeekBuilder = ({
       if (!res?.day) throw new Error(res?.error ?? "Nothing came back.");
       // The room and the equipment are hard limits, and a prompt rule can be
       // ignored silently. A session that cannot physically be run — nowhere to
-      // do it, or two tracks queueing for the same six bikes — is refused here
-      // rather than put on the screen.
-      const problem = dayProblem(res.day as NbtDay, dayKey, only?.track);
+      // do it, or kit the room does not have — is refused here rather than put
+      // on the screen.
+      const problem = dayProblem(res.day as NbtDay, dayKey);
       if (problem) throw new Error(problem);
       return res.day as NbtDay;
     } catch (e) {
@@ -368,18 +371,15 @@ export const NbtWeekBuilder = ({
   };
 
   /**
-   * Rewrite ONE track of a day, handing the model the other two so the three
-   * stay progressions of the same pattern rather than drifting apart.
+   * Rewrite one part of a day: the lift — with its easier and harder versions
+   * and the warm-up, which is written for the lift — or the Cardio Stations.
+   * Whatever was not asked for is put back from what we sent, so a model that
+   * ignores the instruction still cannot disturb it. (Josh, 2026-10-03.)
    */
-  /**
-   * Rewrite one track — or just its lift, or just its work block. Whatever
-   * was not asked for is put back from what we sent, so a model that ignores
-   * the instruction still cannot disturb it. (Josh, 2026-10-03.)
-   */
-  const regenerateTrack = async (week: NbtWeek, dayKey: DayKey, track: Track, blockPart?: "lift" | "work") => {
+  const regeneratePart = async (week: NbtWeek, dayKey: DayKey, part: "lift" | "work") => {
     const current = week.days?.[dayKey];
     if (!current) return;
-    setBusy(`${week.id}-${dayKey}-${track}${blockPart ? `-${blockPart}` : ""}`);
+    setBusy(`${week.id}-${dayKey}-${part}`);
     try {
       const day = await generateDay(
         block?.focus ?? "",
@@ -387,23 +387,21 @@ export const NbtWeekBuilder = ({
         dayKey,
         weeks,
         0,
-        { track, keepDay: current, block: blockPart }
+        { part, keepDay: current }
       );
-      const merged: NbtDay = {
-        ...current,
-        lift: blockPart === "work" ? current.lift : { ...current.lift, [track]: day.lift[track] },
-        // The Cardio Stations are one shared block: only "Rewrite stations" changes them. A lift or
-        // track rewrite keeps tonight's stations as they are (it used to replace them every time).
-        work: blockPart === "work"
-          ? { ...withStations(current, stationLines(day)).work, hiddenStations: [] }
-          : stationLines(current).length
-            ? current.work
-            : { ...current.work, [track]: day.work[track] },
-      };
+      let merged: NbtDay;
+      if (part === "work") {
+        // A new station list renumbers the lines, so tonight's hides start fresh.
+        merged = { ...current, work: { ...withStations(current, stationLines(day)).work, hiddenStations: [] } };
+      } else {
+        // The lift, its modification, its cues and its warm-up. The pattern and the stations stay.
+        const relifted = withLift(current, liftOf(day));
+        merged = { ...relifted, prep: day.prep, lift: { ...relifted.lift, cues: day.lift.cues } };
+      }
       await saveDay(week, dayKey, merged);
-      toast.success(blockPart === "work" ? "Cardio Stations rewritten for the room." : `${TRACK_META[track].label}'s ${blockPart === "lift" ? "lift" : "track"} rewritten.`);
+      toast.success(part === "work" ? "Cardio Stations rewritten for the room." : "Lift and warm-up rewritten.");
     } catch (e) {
-      toast.error((e as Error)?.message ?? "Couldn’t rewrite that track.");
+      toast.error((e as Error)?.message ?? "Couldn’t rewrite that.");
     } finally {
       setBusy(null);
     }
@@ -437,13 +435,13 @@ export const NbtWeekBuilder = ({
       <div className="flex items-start justify-between gap-4 flex-wrap">
         {embedded ? (
           <p className="text-sm text-neutral-400 self-center">
-            <span className="font-bold text-white">NBT Workout Plan</span> · Monday · Tuesday · Thursday · Bravo and Alpha
+            <span className="font-bold text-white">NBT Workout Plan</span> · Monday · Tuesday · Thursday · one group
           </p>
         ) : (
         <div>
           <h2 className="text-2xl font-bold">NBT Workout Plan</h2>
           <p className="text-neutral-400 text-sm mt-1">
-            Monday, Tuesday and Thursday for the Non-Battle Team — Bravo and Alpha, one week at a time, each week seeing the last.
+            Monday, Tuesday and Thursday for the Non-Battle Team — one group: a warm-up, one lift, the stations. One week at a time, each week seeing the last.
           </p>
         </div>
         )}
@@ -554,7 +552,7 @@ export const NbtWeekBuilder = ({
                       <Sparkles className="h-8 w-8 mx-auto mb-3 text-white/30" />
                       <p className="font-bold mb-1">Not written yet</p>
                       <p className="text-neutral-400 text-sm mb-5 max-w-md mx-auto">
-                        Squat and push, athletic and overhead, hinge and pull — one session for each night picked above, Alpha and Bravo, in one go.
+                        Squat and push, athletic and overhead, hinge and pull — one session for each night picked above: the warm-up, one lift for the whole group, and the stations, in one go.
                       </p>
                       <Button
                         onClick={() => buildWeek(weekNo)}
@@ -681,62 +679,84 @@ export const NbtWeekBuilder = ({
                               <div className="flex items-baseline justify-between gap-3 flex-wrap">
                                 <p className="text-sm text-white">{day.focus || ""}</p>
                                 <p className="text-[11px] text-white/45 tabular-nums">
-                                  prep {minutesOf(day).prep} · lift {minutesOf(day).lift} · stations {minutesOf(day).work} · reset {minutesOf(day).reset} · {totalMinutes(day)} min
+                                  warm-up {minutesOf(day).prep} · lift {minutesOf(day).lift} · stations {minutesOf(day).work} · reset {minutesOf(day).reset} · {totalMinutes(day)} min
                                 </p>
                               </div>
 
-                              {/* The lifts: two cards, one row — Alpha left, Bravo right, as on the wall. */}
-                              <div className="grid gap-3 sm:grid-cols-2">
-                                {TRACKS.map((t) => {
-                                  const m = TRACK_META[t];
-                                  const lift = day.lift[t];
-                                  const [dose, ...cue] = (lift?.detail ?? "").split(" — ");
-                                  return (
-                                    <section key={t} className="rounded-lg border border-white/15 bg-[#141416] overflow-hidden">
-                                      <div className="px-3 py-2 border-b flex items-center justify-between gap-2" style={CARD_HEADER}>
-                                        <div className="min-w-0">
-                                          <p className="text-sm font-black uppercase tracking-wide text-white leading-tight">{m.label}</p>
-                                          <p className="text-[10px] text-white/40 truncate">{m.blurb}</p>
-                                        </div>
-                                        {/* Rewrite this track's lift. The Cardio Stations are one block for
-                                            the room, so their button sits on the stations card (Josh, 2026-10-21). */}
-                                        <div className="flex items-center gap-1 shrink-0">
-                                          {([
-                                            ["lift", "Rewrite lift"],
-                                          ] as const).map(([part, label]) => {
-                                            const bkey = `${w.id}-${d.key}-${t}${part ? `-${part}` : ""}`;
-                                            return (
-                                              <button
-                                                key={label}
-                                                onClick={() => regenerateTrack(w, d.key, t, part)}
-                                                disabled={busy !== null}
-                                                title={part === "lift" ? `Rewrite only ${m.label}'s lift` : part === "work" ? "Rewrite the Cardio Stations for the room" : `Rewrite ${m.label}'s lift and the Cardio Stations`}
-                                                className={PART_BTN}
-                                              >
-                                                {busy === bkey ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                                                {label}
-                                              </button>
-                                            );
-                                          })}
-                                        </div>
+                              {/* The warm-up and the lift: two cards, one row, as on the wall.
+                                  One group, one lift, with its easier and harder versions (2026-11-09). */}
+                              {(() => {
+                                const lift = liftOf(day);
+                                const [dose, ...cue] = lift.detail.split(" — ");
+                                // A week written before the stations keeps its circuit under the lift.
+                                const oldCircuit = stations ? [] : workLines(day);
+                                return (
+                                  <div className="grid gap-3 sm:grid-cols-2">
+                                    <section className="rounded-lg border border-white/15 bg-[#141416] overflow-hidden">
+                                      <div className="px-3 py-2 border-b" style={CARD_HEADER}>
+                                        <p className="text-sm font-black uppercase tracking-wide text-white leading-tight">
+                                          Warm-up <span className="text-white/40 text-[10px] tracking-normal font-bold">· {minutesOf(day).prep} min · for the lift</span>
+                                        </p>
                                       </div>
                                       <div className="px-3 pt-2 pb-3">
-                                        <p className="text-[10px] uppercase tracking-[0.18em] font-bold" style={{ color: `${m.color}b3` }}>Lift</p>
-                                        <div className="flex items-baseline gap-2 flex-wrap mt-0.5">
-                                          <p className="text-lg font-bold leading-tight" style={{ color: m.color }}>{lift?.name || "—"}</p>
+                                        {day.prep?.length ? (
+                                          <ul className="space-y-0.5">
+                                            {day.prep.map((line, k) => (
+                                              <li key={k} className="flex items-start gap-1.5">
+                                                <span className="shrink-0 rounded-full mt-[0.45em]" style={{ width: 5, height: 5, backgroundColor: NBT_AMBER }} />
+                                                <span className="text-xs leading-snug text-white">{line}</span>
+                                              </li>
+                                            ))}
+                                          </ul>
+                                        ) : (
+                                          <p className="text-xs text-neutral-600 italic">No warm-up written. Add one with the pencil.</p>
+                                        )}
+                                      </div>
+                                    </section>
+
+                                    <section className="rounded-lg border border-white/15 bg-[#141416] overflow-hidden">
+                                      <div className="px-3 py-2 border-b flex items-center justify-between gap-2" style={CARD_HEADER}>
+                                        <p className="text-sm font-black uppercase tracking-wide text-white leading-tight">
+                                          Lift <span className="text-white/40 text-[10px] tracking-normal font-bold">· {minutesOf(day).lift} min · everyone</span>
+                                        </p>
+                                        {/* The warm-up is written for the lift, so it is rewritten with it. The
+                                            stations have their own button on the stations card. */}
+                                        <button
+                                          onClick={() => regeneratePart(w, d.key, "lift")}
+                                          disabled={busy !== null}
+                                          title="Rewrite the lift, its easier and harder versions, and the warm-up — the stations stay as they are"
+                                          className={`${PART_BTN} shrink-0`}
+                                        >
+                                          {busy === `${w.id}-${d.key}-lift` ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                                          Rewrite lift
+                                        </button>
+                                      </div>
+                                      <div className="px-3 pt-2 pb-3">
+                                        <div className="flex items-baseline gap-2 flex-wrap">
+                                          <p className="text-lg font-bold leading-tight" style={{ color: NBT_AMBER }}>{lift.name || "—"}</p>
                                           {dose && (
-                                            <p className="rounded px-1.5 py-0.5 text-sm font-black leading-snug" style={{ backgroundColor: `${m.color}26`, color: m.color }}>{dose}</p>
+                                            <p className="rounded px-1.5 py-0.5 text-sm font-black leading-snug" style={{ backgroundColor: `${NBT_AMBER}26`, color: NBT_AMBER }}>{dose}</p>
                                           )}
                                         </div>
                                         {cue.length > 0 && <p className="mt-1 text-xs text-white/65 leading-snug">{cue.join(" — ")}</p>}
-                                        {/* A week written before the stations keeps its circuit under the lift. */}
-                                        {!stations && (day.work[t] ?? []).length > 0 && (
+                                        {/* The modification: the same lift, fitted to the athlete. */}
+                                        {(lift.easier || lift.harder) && (
+                                          <dl className="mt-2 space-y-1 border-t border-white/10 pt-2">
+                                            {([["Easier", lift.easier], ["Harder", lift.harder]] as const).filter(([, text]) => text).map(([label, text]) => (
+                                              <div key={label} className="flex items-baseline gap-2">
+                                                <dt className="w-11 shrink-0 text-[10px] font-bold uppercase tracking-wide" style={{ color: `${NBT_AMBER}b3` }}>{label}</dt>
+                                                <dd className="text-xs leading-snug text-white/80">{text}</dd>
+                                              </div>
+                                            ))}
+                                          </dl>
+                                        )}
+                                        {oldCircuit.length > 0 && (
                                           <div className="mt-2">
-                                            <p className="text-[10px] uppercase tracking-[0.18em] font-bold" style={{ color: `${m.color}b3` }}>Cardio</p>
+                                            <p className="text-[10px] uppercase tracking-[0.18em] font-bold" style={{ color: `${NBT_AMBER}b3` }}>Cardio</p>
                                             <ul className="mt-0.5 space-y-0.5">
-                                              {readableLines(day.work[t]).map((line, k) =>
+                                              {readableLines(oldCircuit).map((line, k) =>
                                                 line.kind === "rounds" ? (
-                                                  <li key={k} className="text-[11px] font-bold uppercase tracking-wide" style={{ color: m.color }}>
+                                                  <li key={k} className="text-[11px] font-bold uppercase tracking-wide" style={{ color: NBT_AMBER }}>
                                                     {line.text}
                                                   </li>
                                                 ) : (
@@ -751,9 +771,9 @@ export const NbtWeekBuilder = ({
                                         )}
                                       </div>
                                     </section>
-                                  );
-                                })}
-                              </div>
+                                  </div>
+                                );
+                              })()}
 
                               {/* Cardio Stations: one card for the room, a tile per station. */}
                               {stations && (
@@ -764,14 +784,14 @@ export const NbtWeekBuilder = ({
                                     </p>
                                     <div className="flex items-center gap-3 flex-wrap">
                                       <p className="text-[11px] text-white/40">{stations.header}</p>
-                                      {/* One rewrite for the room: the stations are the same lines for both tracks. */}
+                                      {/* The stations have their own rewrite; the lift and the warm-up stay. */}
                                       <button
-                                        onClick={() => regenerateTrack(w, d.key, "alpha", "work")}
+                                        onClick={() => regeneratePart(w, d.key, "work")}
                                         disabled={busy !== null}
-                                        title="Rewrite the Cardio Stations for the whole room — both lifts stay as they are"
+                                        title="Rewrite the Cardio Stations — the lift and the warm-up stay as they are"
                                         className={PART_BTN}
                                       >
-                                        {busy === `${w.id}-${d.key}-alpha-work` ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                                        {busy === `${w.id}-${d.key}-work` ?<Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
                                         Rewrite stations
                                       </button>
                                     </div>

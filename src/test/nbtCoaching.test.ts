@@ -1,10 +1,27 @@
 import { describe, it, expect } from "vitest";
 import { NbtDay, NbtLog, NbtWeek, Track } from "@/lib/nbt";
 import {
-  priorWeekBrief, priorWeekBriefs, roomReport, carryOver, spaceViolation, equipmentClash, liftRepeated, unreadableLine, dayProblem, THIN_ROOM,
+  priorWeekBrief, priorWeekBriefs, roomReport, carryOver, spaceViolation, liftRepeated, unreadableLine, dayProblem, dayForModel, THIN_ROOM,
 } from "@/lib/nbtCoaching";
 
-const day = (pattern: string, b: string, a: string, work = "Engine"): NbtDay => ({
+// One group since 2026-11-09: one lift for everyone, with an easier and a
+// harder version, then the work block.
+const day = (pattern: string, lift: string, work: string[] = [], title = "Engine"): NbtDay => ({
+  focus: "f",
+  prep: ["p"],
+  lift: {
+    pattern,
+    main: { name: lift, detail: "4 × 5" },
+    easier: "Goblet squat with a kettlebell — same sets, 8 reps",
+    harder: "Add a 3-second pause at the bottom",
+    cues: [],
+  },
+  work: { emphasis: "intervals", title, shared: work, bravo: [], alpha: [], result_unit: "rounds" },
+  reset: ["r"],
+});
+
+/** A day written while there were still two tracks. */
+const twoTracks = (pattern: string, b: string, a: string, work = "Engine"): NbtDay => ({
   focus: "f",
   prep: ["p"],
   lift: {
@@ -39,14 +56,23 @@ const log = (
   notes: null,
 });
 
-describe("priorWeekBrief — both tracks, not just Alpha", () => {
-  const w = week(1, "2026-09-07", { monday: day("Squat", "Heavy Goblet", "Back Squat") });
+describe("priorWeekBrief — the lift and its modification", () => {
+  const w = week(1, "2026-11-02", { monday: day("Squat", "Back Squat") });
 
-  it("names every track with its dose", () => {
+  it("names the lift with its dose, and the easier and harder versions", () => {
     const b = priorWeekBrief(w, "monday")!;
-    expect(b.bravo).toBe("Heavy Goblet — 4 × 6");
-    expect(b.alpha).toBe("Back Squat — 4 × 5");
+    expect(b.lift).toBe("Back Squat — 4 × 5");
+    expect(b.easier).toBe("Goblet squat with a kettlebell — same sets, 8 reps");
+    expect(b.harder).toBe("Add a 3-second pause at the bottom");
     expect(b.pattern).toBe("Squat");
+  });
+
+  it("reads a two-track week as one group: Alpha's lift, Bravo's as the easier version", () => {
+    const old = week(1, "2026-09-07", { monday: twoTracks("Squat", "Heavy Goblet", "Back Squat") });
+    const b = priorWeekBrief(old, "monday")!;
+    expect(b.lift).toBe("Back Squat — 4 × 5");
+    expect(b.easier).toBe("Heavy Goblet — 4 × 6");
+    expect(b.harder).toBe("—");
   });
 
   it("carries the circuit and its emphasis", () => {
@@ -59,16 +85,43 @@ describe("priorWeekBrief — both tracks, not just Alpha", () => {
 
   it("only returns weeks earlier than the one being written", () => {
     const weeks = [
-      week(1, "2026-09-07", { monday: day("Squat", "B", "C") }),
-      week(2, "2026-09-14", { monday: day("Squat", "B", "C") }),
-      week(3, "2026-09-21", { monday: day("Squat", "B", "C") }),
+      week(1, "2026-09-07", { monday: day("Squat", "Back Squat") }),
+      week(2, "2026-09-14", { monday: day("Squat", "Back Squat") }),
+      week(3, "2026-09-21", { monday: day("Squat", "Back Squat") }),
     ];
     expect(priorWeekBriefs(weeks, "monday", 3).map((b) => b.week)).toEqual([1, 2]);
     expect(priorWeekBriefs(weeks, "monday", 1)).toEqual([]);
   });
 });
 
+describe("dayForModel — a day handed back to be partly rewritten", () => {
+  it("goes over in the shape the generator writes", () => {
+    const d = day("Squat", "Back Squat", ["6 stations · 2 min each · rotate on the whistle", "Station 1 · The Racks — 10 wall balls"]);
+    expect(dayForModel(d)).toEqual({
+      focus: "f",
+      prep: ["p"],
+      lift: {
+        pattern: "Squat",
+        main: { name: "Back Squat", detail: "4 × 5" },
+        easier: "Goblet squat with a kettlebell — same sets, 8 reps",
+        harder: "Add a 3-second pause at the bottom",
+        cues: [],
+      },
+      work: { emphasis: "intervals", stations: d.work.shared, result_unit: "rounds" },
+      reset: ["r"],
+    });
+  });
+
+  it("sends a two-track day as one group, with no word of the tracks", () => {
+    const sent = dayForModel(twoTracks("Squat", "Heavy Goblet", "Back Squat"));
+    expect(sent.lift.main).toEqual({ name: "Back Squat", detail: "4 × 5" });
+    expect(sent.lift.easier).toBe("Heavy Goblet — 4 × 6");
+    expect(JSON.stringify(sent)).not.toMatch(/alpha|bravo/i);
+  });
+});
+
 describe("roomReport — anonymised evidence", () => {
+  // Rows logged while there were two tracks still count: one room, one report.
   const logs = [
     log("2026-09-07", "bravo", "Goblet Squat", 25, 24, 5, "rounds", "kid1"),
     log("2026-09-07", "bravo", "Goblet Squat", 30, 24, 4, "rounds", "kid2"),
@@ -89,24 +142,17 @@ describe("roomReport — anonymised evidence", () => {
     expect(roomReport(logs, "monday", "2026-09-20")!.athletes).toBe(3);
   });
 
-  it("reports the movement most of a track actually logged", () => {
+  it("reports the room as one group, whatever track an old row was filed under", () => {
     const r = roomReport(logs, "monday", "2026-09-20")!;
-    expect(r.byTrack.bravo.lift).toBe("Goblet Squat");
-    expect(r.byTrack.alpha.lift).toBe("Back Squat");
+    expect(r.lift).toBe("Goblet Squat");
+    expect(r.medianReps).toBe(24);
+    expect(r.unit).toBe("rounds");
+    expect(JSON.stringify(r)).not.toMatch(/alpha|bravo|byTrack/i);
   });
 
   it("uses medians, so one outlier cannot move the room", () => {
     const withOutlier = [...logs, log("2026-09-14", "bravo", "Goblet Squat", 500, 24, 6, "rounds", "kid9")];
-    expect(roomReport(withOutlier, "monday", "2026-09-20")!.byTrack.bravo.medianTopWeight).toBeLessThan(60);
-  });
-
-  it("says nothing about a track nobody trained", () => {
-    // Only Alpha showed up. Bravo's report is empty, not invented from Alpha.
-    const alphaOnly = logs.filter((l) => l.level === "alpha");
-    const r = roomReport(alphaOnly, "monday", "2026-09-20")!;
-    expect(r.byTrack.bravo.athletes).toBe(0);
-    expect(r.byTrack.bravo.lift).toBeNull();
-    expect(r.byTrack.alpha.athletes).toBe(1);
+    expect(roomReport(withOutlier, "monday", "2026-09-20")!.medianTopWeight).toBeLessThan(60);
   });
 
   it("reads a rising circuit result as up", () => {
@@ -163,16 +209,24 @@ describe("roomReport — anonymised evidence", () => {
 
 describe("carryOver — a month is not a reset", () => {
   const prev = [
-    week(1, "2026-08-03", { monday: day("Squat", "Heavy Goblet", "Back Squat") }),
-    week(2, "2026-08-10", { monday: day("Squat", "Heavy Goblet", "Back Squat") }),
-    week(3, "2026-08-17", { monday: day("Squat", "Heavy Goblet", "Back Squat") }),
+    week(1, "2026-08-03", { monday: day("Squat", "Back Squat") }),
+    week(2, "2026-08-10", { monday: day("Squat", "Back Squat") }),
+    week(3, "2026-08-17", { monday: day("Squat", "Back Squat") }),
   ];
 
   it("hands over where the block actually finished", () => {
     const c = carryOver(prev, "monday")!;
     expect(c.weekStart).toBe("2026-08-17");
-    expect(c.alpha).toBe("Back Squat — 4 × 5");
-    expect(c.bravo).toBe("Heavy Goblet — 4 × 6");
+    expect(c.lift).toBe("Back Squat — 4 × 5");
+    expect(c.easier).toBe("Goblet squat with a kettlebell — same sets, 8 reps");
+    expect(c.harder).toBe("Add a 3-second pause at the bottom");
+  });
+
+  it("hands over a two-track month as one group — the first one-group week continues from it", () => {
+    const old = [week(4, "2026-10-26", { monday: twoTracks("Squat", "Heavy Goblet", "Back Squat") })];
+    const c = carryOver(old, "monday")!;
+    expect(c.lift).toBe("Back Squat — 4 × 5");
+    expect(c.easier).toBe("Heavy Goblet — 4 × 6");
   });
 
   it("counts how long the pattern has run, so six weeks can unlock a change", () => {
@@ -181,9 +235,9 @@ describe("carryOver — a month is not a reset", () => {
 
   it("stops counting at the point the pattern changed", () => {
     const switched = [
-      week(1, "2026-08-03", { monday: day("Lunge", "DB Split Squat", "Front Rack Lunge") }),
-      week(2, "2026-08-10", { monday: day("Squat", "Heavy Goblet", "Back Squat") }),
-      week(3, "2026-08-17", { monday: day("Squat", "Heavy Goblet", "Back Squat") }),
+      week(1, "2026-08-03", { monday: day("Lunge", "Front Rack Lunge") }),
+      week(2, "2026-08-10", { monday: day("Squat", "Back Squat") }),
+      week(3, "2026-08-17", { monday: day("Squat", "Back Squat") }),
     ];
     expect(carryOver(switched, "monday")!.weeksOnPattern).toBe(2);
   });
@@ -200,10 +254,7 @@ describe("carryOver — a month is not a reset", () => {
 });
 
 describe("spaceViolation — the room is a hard limit", () => {
-  const withWork = (lines: string[]): NbtDay => {
-    const d = day("Squat", "Heavy Goblet", "Back Squat");
-    return { ...d, work: { ...d.work, bravo: lines, alpha: lines } };
-  };
+  const withWork = (lines: string[]): NbtDay => day("Squat", "Back Squat", lines);
 
   describe("Tuesday — boxing facility, no floor at all", () => {
     it("refuses a run", () => {
@@ -219,6 +270,11 @@ describe("spaceViolation — the room is a hard limit", () => {
     it("refuses running hidden in the warm-up rather than the circuit", () => {
       const d = { ...withWork(["10 burpees"]), prep: ["Two easy laps to warm up"] };
       expect(spaceViolation(d, "tuesday")).not.toBeNull();
+    });
+
+    it("refuses running hidden in the easier or harder version of the lift", () => {
+      const d = withWork(["10 burpees"]);
+      expect(spaceViolation({ ...d, lift: { ...d.lift, harder: "Finish each set with a shuttle" } }, "tuesday")).not.toBeNull();
     });
 
     it("allows the conditioning that actually fits the room", () => {
@@ -259,339 +315,119 @@ describe("spaceViolation — the room is a hard limit", () => {
       const d = { ...withWork(["10 burpees"]), reset: ["Cool down with 2 laps"] };
       expect(spaceViolation(d, "monday")).not.toBeNull();
     });
-  });
-});
 
-describe("spaceViolation — rewriting one track of an old day", () => {
-  it("judges only the track being rewritten, so a legacy day can be fixed piece by piece", () => {
-    const d = day("Squat", "Heavy Goblet", "Back Squat");
-    const legacy: NbtDay = {
-      ...d,
-      work: { ...d.work, bravo: ["30 seconds bike"], alpha: ["Run 800m"] },
-    };
-    expect(spaceViolation(legacy, "tuesday", "bravo")).toBeNull();
-    expect(spaceViolation(legacy, "tuesday", "alpha")).not.toBeNull();
-    expect(spaceViolation(legacy, "tuesday")).not.toBeNull();
-  });
-});
-
-describe("equipmentClash — six bikes, six rowers, two tracks at once", () => {
-  const withTracks = (
-    lift: Record<Track, string>,
-    work: Record<Track, string[]>
-  ): NbtDay => {
-    const d = day("Squat", lift.bravo, lift.alpha);
-    return {
-      ...d,
-      lift: {
-        ...d.lift,
-        bravo: { name: lift.bravo, detail: "4 × 6" },
-        alpha: { name: lift.alpha, detail: "4 × 5" },
-      },
-      work: { ...d.work, ...work },
-    };
-  };
-
-  const lifts = { bravo: "Goblet Squat", alpha: "Back Squat" };
-
-  it("refuses two tracks sent to the bikes", () => {
-    const d = withTracks(lifts, {
-      bravo: ["Bike 45 sec easy"],
-      alpha: ["Assault bike 60 sec"],
+    it("still reads the circuit of a week written for two tracks", () => {
+      const old = twoTracks("Squat", "Heavy Goblet", "Back Squat");
+      const d: NbtDay = { ...old, work: { ...old.work, alpha: ["Run 800m"], bravo: ["30 seconds bike"] } };
+      expect(spaceViolation(d, "monday")).toMatch(/25 yards/);
     });
-    expect(equipmentClash(d)).toMatch(/bikes/i);
-  });
-
-  it("refuses two tracks sent to the rowers", () => {
-    const d = withTracks(lifts, {
-      bravo: ["Row 200m steady"],
-      alpha: ["Rower, 90 seconds"],
-    });
-    expect(equipmentClash(d)).toMatch(/rowers/i);
-  });
-
-  it("allows one track per machine", () => {
-    const d = withTracks(lifts, {
-      bravo: ["Row 250m", "Air squats x15"],
-      alpha: ["Assault bike 60 sec", "Burpees x10"],
-    });
-    expect(equipmentClash(d)).toBeNull();
-  });
-
-  it("lets both tracks hold dumbbells on the lift — there are plenty", () => {
-    const d = withTracks(
-      { bravo: "Seated DB Overhead Press", alpha: "Standing DB Overhead Press" },
-      { bravo: ["Burpees"], alpha: ["Jump rope"] }
-    );
-    expect(equipmentClash(d)).toBeNull();
-  });
-
-  it("passes the implement ladder — dumbbell, barbell", () => {
-    const d = withTracks(
-      { bravo: "Standing DB Overhead Press", alpha: "Standing Barbell Press" },
-      { bravo: ["Row 250m"], alpha: ["Assault bike 60 sec"] }
-    );
-    expect(equipmentClash(d)).toBeNull();
-  });
-
-  it("does not mistake a pulling exercise for the rowing machine", () => {
-    const d = withTracks(
-      { bravo: "DB Row", alpha: "Barbell Row" },
-      { bravo: ["Jump rope 60 sec"], alpha: ["Med ball slams"] }
-    );
-    // Two rows, neither of them the erg — and only Bravo is on a dumbbell.
-    expect(equipmentClash(d)).toBeNull();
-  });
-
-  it("still catches the erg when it is written as a distance", () => {
-    const d = withTracks(lifts, {
-      bravo: ["Row 300m"],
-      alpha: ["Row 500m"],
-    });
-    expect(equipmentClash(d)).toMatch(/rowers/i);
-  });
-
-  it("lets both tracks use med balls, ropes and bodyweight", () => {
-    const d = withTracks(
-      { bravo: "Goblet Squat", alpha: "Back Squat" },
-      {
-        bravo: ["Med ball slams x15", "Jump rope 60 sec"],
-        alpha: ["Med ball slams x20", "Jump rope 60 sec"],
-      }
-    );
-    expect(equipmentClash(d)).toBeNull();
-  });
-
-  it("names both offending tracks so a coach knows what to change", () => {
-    const d = withTracks(
-      { bravo: "DB Bench Press", alpha: "Barbell Bench Press" },
-      { bravo: ["Kettlebell swings x15"], alpha: ["KB carry 30 sec"] }
-    );
-    expect(equipmentClash(d)).toMatch(/Alpha and Bravo are both on the benches/);
-  });
-
-  it("treats the three benches as the scarce thing, never the dumbbells", () => {
-    const d = withTracks(
-      { bravo: "KB Goblet Squat", alpha: "Back Squat" },
-      { bravo: ["Jump rope"], alpha: ["DB step-ups x10"] }
-    );
-    expect(equipmentClash(d)).toBeNull();
-  });
-
-  it("sees a front squat as needing a rack even though it never says so", () => {
-    const d = withTracks(
-      { bravo: "Front Squat", alpha: "Back Squat" },
-      { bravo: ["Jump rope"], alpha: ["KB swings x15"] }
-    );
-    expect(equipmentClash(d)).toMatch(/squat racks/);
   });
 });
 
 describe("dayProblem — the room, then the kit", () => {
   it("reports the room first, because a session nobody can perform is worse", () => {
-    const d = day("Squat", "Goblet Squat", "Back Squat");
-    const bad: NbtDay = {
-      ...d,
-      work: { ...d.work, bravo: ["Run 400m", "Bike 60 sec"], alpha: ["Assault bike 60 sec"] },
-    };
+    const bad = day("Squat", "Back Squat", ["Run 400m", "Bike 60 sec"]);
     expect(dayProblem(bad, "tuesday")).toMatch(/no room to run/i);
   });
 
-  it("falls through to equipment once the room is fine", () => {
-    const d = day("Squat", "Goblet Squat", "Back Squat");
-    const bad: NbtDay = {
-      ...d,
-      work: { ...d.work, bravo: ["Bike 60 sec"], alpha: ["Assault bike 60 sec"] },
-    };
-    expect(dayProblem(bad, "tuesday")).toMatch(/bikes/i);
+  it("falls through to the kit once the room is fine", () => {
+    const bad = day("Squat", "Back Squat", ["Bike 60 sec"]);
+    expect(dayProblem(bad, "tuesday")).toMatch(/no bikes/i);
   });
 
   it("passes a day that fits both — machines on a Performance Center day", () => {
-    const d = day("Squat", "Goblet Squat", "Back Squat");
-    const ok: NbtDay = {
-      ...d,
-      work: { ...d.work, bravo: ["Row 250m"], alpha: ["Assault bike 60 sec"] },
-    };
+    const ok = day("Squat", "Back Squat", ["Row 250m", "Assault bike 60 sec"]);
     expect(dayProblem(ok, "monday")).toBeNull();
     // The same circuit on Tuesday is refused: the machines are in the other building.
     expect(dayProblem(ok, "tuesday")).toMatch(/no (?:bikes|rowers)/);
   });
-});
 
-describe("equipmentClash — the rowing machine versus the rowing exercise", () => {
-  const ladder = { bravo: "DB Row", alpha: "Barbell Row" };
-  const build = (work: Record<Track, string[]>): NbtDay => {
-    const d = day("Pull", ladder.bravo, ladder.alpha);
-    return {
-      ...d,
-      lift: {
-        ...d.lift,
-        bravo: { name: ladder.bravo, detail: "4 × 6" },
-        alpha: { name: ladder.alpha, detail: "4 × 5" },
-      },
-      work: { ...d.work, ...work },
-    };
-  };
-
-  it("does not let a rest line further down turn a DB row into the erg", () => {
-    // Bravo's lift is a DB row. Its circuit mentions "2 min" on a LATER line.
-    // Before the lookahead was line-bounded that read as "row ... 2 min" = erg,
-    // and clashed with Alpha's genuine rower.
-    const d = build({
-      bravo: ["Burpees x10", "Rest 2 min"],
-      alpha: ["Row 250m easy"],
-    });
-    expect(equipmentClash(d)).toBeNull();
-  });
-
-  it("does count a rower written with a pace instead of a distance", () => {
-    const d = build({
-      bravo: ["Row: easy conversational pace"],
-      alpha: ["Row: strong, sustainable pace"],
-    });
-    expect(equipmentClash(d)).toMatch(/rowers/i);
-  });
-
-  it("tells the model how to split the stations, not just that they clash", () => {
-    const d = build({
-      bravo: ["Bike 60 sec"],
-      alpha: ["Bike 60 sec hard"],
-    });
-    const msg = equipmentClash(d)!;
-    expect(msg).toMatch(/Alpha and Bravo are both/);
-    expect(msg).toMatch(/one track per block/i);
+  it("no longer refuses a rack lift for the whole group — a dozen share three racks in turns", () => {
+    // With two tracks, both on the racks was a clash. One group rotates through them.
+    const d = day("Squat", "Back Squat", ["Jump rope 60 skips"]);
+    expect(dayProblem({ ...d, lift: { ...d.lift, easier: "Front squat with an empty bar", harder: "Pause squat" } }, "monday")).toBeNull();
+    const pull = day("Pull", "Pull-Up", ["Jump rope 60 skips"]);
+    expect(dayProblem({ ...pull, lift: { ...pull.lift, easier: "Inverted row on the rack", harder: "Slow lowering" } }, "thursday")).toBeNull();
   });
 });
 
-describe("liftRepeated — the circuit never repeats the lift", () => {
-  const build = (lift: Record<Track, string>, work: Record<Track, string[]>): NbtDay => {
-    const d = day("Hinge", lift.bravo, lift.alpha);
-    return {
-      ...d,
-      lift: {
-        ...d.lift,
-        bravo: { name: lift.bravo, detail: "4 × 6" },
-        alpha: { name: lift.alpha, detail: "4 × 5" },
-      },
-      work: { ...d.work, ...work },
-    };
-  };
-  const hinge = { bravo: "DB Romanian Deadlift", alpha: "Barbell RDL" };
-
+describe("liftRepeated — the stations never repeat the lift", () => {
   it("refuses the same movement with a different weight in front of it", () => {
-    const d = build(hinge, {
-      bravo: ["Light DB Romanian deadlifts x12", "Burpees"],
-      alpha: ["Swings x15"],
-    });
-    expect(liftRepeated(d)).toMatch(/Bravo/);
+    const d = day("Hinge", "DB Romanian Deadlift", ["Light DB Romanian deadlifts x12", "Burpees"]);
+    expect(liftRepeated(d)).toMatch(/stations repeat the lift/);
   });
 
   it("knows RDL and Romanian deadlift are the same thing", () => {
-    const d = build(hinge, {
-      bravo: ["Burpees"],
-      alpha: ["Romanian deadlift x10, light bar"],
-    });
-    expect(liftRepeated(d)).toMatch(/Alpha/);
+    const d = day("Hinge", "Barbell RDL", ["Burpees", "Romanian deadlift x10, light bar"]);
+    expect(liftRepeated(d)).toMatch(/Romanian deadlift x10/);
   });
 
   it("allows a different movement in the same pattern", () => {
-    const d = build(hinge, {
-      bravo: ["Single-leg KB deadlift x8 each", "Med ball ground-to-overhead x10"],
-      alpha: ["KB swings x15", "Hip bridge x20"],
-    });
+    const d = day("Hinge", "Barbell RDL", ["Single-leg KB deadlift x8 each", "KB swings x15", "Hip bridge x20"]);
     expect(liftRepeated(d)).toBeNull();
   });
 
-  it("is per track — Bravo's lift does not police Alpha's circuit", () => {
-    const d = build(
-      { bravo: "Goblet Squat", alpha: "Back Squat" },
-      { bravo: ["Step-ups x10", "Wall sit 30s"], alpha: ["Goblet squats x15"] }
-    );
-    expect(liftRepeated(d)).toBeNull();
+  it("refuses a station repeating a bodyweight lift", () => {
+    expect(liftRepeated(day("Squat", "Tempo Air Squat", ["10 air squats"]))).not.toBeNull();
   });
 
-  it("does refuse a track repeating its own bodyweight lift", () => {
-    const d = build(
-      { bravo: "Tempo Air Squat", alpha: "Back Squat" },
-      { bravo: ["10 air squats"], alpha: ["Lunges"] }
-    );
-    expect(liftRepeated(d)).toMatch(/Bravo/);
-  });
-
-  it("does not read 'back squat' as a repeat of 'air squat'", () => {
-    const d = build(
-      { bravo: "Air Squat", alpha: "Back Squat" },
-      { bravo: ["Step-ups"], alpha: ["12 air squats, own pace"] }
-    );
-    expect(liftRepeated(d)).toBeNull();
+  it("does not read 'air squat' as a repeat of 'back squat'", () => {
+    expect(liftRepeated(day("Squat", "Back Squat", ["12 air squats, own pace"]))).toBeNull();
   });
 
   it("checks each half of a combined lift", () => {
-    const d = build(
-      { bravo: "DB RDL + DB Row", alpha: "Barbell RDL + Pull-Up" },
-      { bravo: ["Burpees"], alpha: ["Pull-ups x5", "Swings"] }
-    );
-    expect(liftRepeated(d)).toMatch(/Alpha/);
+    const d = day("Hinge", "Barbell RDL + Pull-Up", ["Pull-ups x5", "Swings"]);
+    expect(liftRepeated(d)).toMatch(/Pull-ups x5/);
   });
 
   it("does not mistake the rowing machine for the rowing exercise", () => {
-    const d = build(
-      { bravo: "DB Row", alpha: "Barbell Row" },
-      { bravo: ["Row 250m"], alpha: ["Burpees"] }
-    );
-    expect(liftRepeated(d)).toBeNull();
+    expect(liftRepeated(day("Pull", "Barbell Row", ["Row 250m"]))).toBeNull();
   });
 
   it("handles plurals and hyphens", () => {
-    const d = build(
-      { bravo: "Incline Push-up", alpha: "Barbell Bench Press" },
-      { bravo: ["10 pushups"], alpha: ["Dips"] }
-    );
-    expect(liftRepeated(d)).toMatch(/Bravo/);
+    expect(liftRepeated(day("Push", "Incline Push-up", ["10 pushups"]))).not.toBeNull();
+  });
+
+  it("reads the lift of a week written for two tracks", () => {
+    const old = twoTracks("Hinge", "DB RDL", "Barbell RDL");
+    const d: NbtDay = { ...old, work: { ...old.work, alpha: ["RDL x10"], bravo: ["Row 250m"] } };
+    expect(liftRepeated(d)).toMatch(/RDL x10/);
   });
 
   it("tells the model what to do instead", () => {
-    const d = build(hinge, { bravo: ["Romanian deadlift x12"], alpha: ["Swings"] });
+    const d = day("Hinge", "Barbell RDL", ["Romanian deadlift x12"]);
     expect(liftRepeated(d)).toMatch(/different, simpler movement/);
   });
 });
 
 describe("dayProblem — order of checks", () => {
   it("reaches the repeat check once room and kit are fine", () => {
-    const d = day("Hinge", "DB RDL", "Barbell RDL");
-    const bad: NbtDay = {
-      ...d,
-      work: { ...d.work, bravo: ["Row 250m"], alpha: ["RDL x10", "Bike 45s"] },
-    };
-    expect(dayProblem(bad, "thursday")).toMatch(/repeats its lift/);
+    const bad = day("Hinge", "Barbell RDL", ["RDL x10", "Bike 45s"]);
+    expect(dayProblem(bad, "thursday")).toMatch(/repeat the lift/);
   });
 });
 
 describe("unreadableLine — every line stands on its own", () => {
-  const build = (work: Record<Track, string[]>): NbtDay => {
-    const d = day("Squat", "Goblet Squat", "Back Squat");
-    return { ...d, work: { ...d.work, ...work } };
-  };
-  const fine = ["4 rounds — rest 45 sec", "Jump rope — 30 sec — steady"];
+  const build = (work: string[]): NbtDay => day("Squat", "Back Squat", work);
 
   it("refuses a heading with nothing on it", () => {
-    expect(unreadableLine(build({ alpha: ["Bike station:", "30 sec strong"], bravo: fine }))).toMatch(/heading/);
+    expect(unreadableLine(build(["Bike station:", "30 sec strong"]))).toMatch(/heading/);
   });
 
   it("refuses a line that opens with a time and no movement", () => {
-    expect(unreadableLine(build({ alpha: [":30 strong effort"], bravo: fine }))).toMatch(/starts with a time/);
-    expect(unreadableLine(build({ alpha: fine, bravo: ["250m controlled pace"] }))).toMatch(/Bravo/);
+    expect(unreadableLine(build([":30 strong effort"]))).toMatch(/starts with a time/);
+    expect(unreadableLine(build(["Jump rope — steady", "250m controlled pace"]))).toMatch(/250m controlled pace/);
   });
 
   it("allows a structure line that begins with a time", () => {
-    expect(unreadableLine(build({ alpha: ["12 min AMRAP", "Burpees — 10"], bravo: fine }))).toBeNull();
+    expect(unreadableLine(build(["12 min AMRAP", "Burpees — 10"]))).toBeNull();
   });
 
   it("allows a shuttle written as a distance-named movement", () => {
-    expect(unreadableLine(build({ alpha: ["15-yard shuttle × 2 — strong"], bravo: fine }))).toBeNull();
+    expect(unreadableLine(build(["15-yard shuttle × 2 — strong"]))).toBeNull();
   });
 
   it("says how to write it instead", () => {
-    expect(unreadableLine(build({ alpha: ["Rower:"], bravo: fine }))).toMatch(/Assault bike — 30 sec/);
+    expect(unreadableLine(build(["Rower:"]))).toMatch(/Station 3 · The Bikes — bike — strong but repeatable/);
   });
 });

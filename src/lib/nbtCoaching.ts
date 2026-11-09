@@ -5,17 +5,21 @@
 // coaching decision that deserves tests rather than a hopeful object literal
 // built inline in a click handler.
 //
-// 1. priorWeekBrief  — what ALL THREE tracks did earlier in this block.
+// 1. priorWeekBrief  — the lift, and its modification, earlier in this block.
 // 2. roomReport      — what the room actually managed, anonymised.
 // 3. carryOver       — where the last block finished, so a month is not a reset.
+//
+// ONE GROUP since 2026-11-09 (Rev, through Josh): one lift for everyone, with
+// an easier and a harder version. A week written for two tracks is read the
+// same way — see liftOf() in nbt.ts.
 //
 // PRIVACY: roomReport deliberately returns counts and medians and never a name,
 // a registration id, or an individual's numbers. nbt_logs names children; the
 // generator is an outbound AI call and has no business knowing who anyone is.
 import {
-  DayKey, NbtDay, NbtLog, NbtWeek, Track, TRACKS, heaviestSet, totalReps, isRoundsLine,
+  DayKey, NbtDay, NbtLog, NbtWeek, heaviestSet, totalReps, isRoundsLine, liftOf,
 } from "@/lib/nbt";
-import { roomFor, absentKit, KIT_PATTERNS, fixtureOf, trackName, type Room } from "@/lib/nbtRooms";
+import { roomFor, absentKit, KIT_PATTERNS, type Room } from "@/lib/nbtRooms";
 import { stationLines, workLines } from "@/lib/nbt";
 
 /* ───── 1. Earlier weeks of this block ───── */
@@ -23,35 +27,58 @@ import { stationLines, workLines } from "@/lib/nbt";
 export interface PriorWeekBrief {
   week: number;
   pattern: string;
-  /** "Goblet Squat — 3 × 8", per track, so continuity is not anchored to Alpha. */
-  bravo: string;
-  alpha: string;
+  /** "Back Squat — 4 × 5": the lift everyone did. */
+  lift: string;
+  /** The modification either way, so it progresses with the lift instead of being a fresh guess. */
+  easier: string;
+  harder: string;
   work: string;
 }
 
-const movementLine = (day: NbtDay | undefined, track: Track) => {
-  const m = day?.lift?.[track];
-  if (!m?.name) return "—";
-  return m.detail ? `${m.name} — ${m.detail}` : m.name;
+const liftLine = (day: NbtDay | undefined) => {
+  const l = liftOf(day);
+  if (!l.name) return "—";
+  return l.detail ? `${l.name} — ${l.detail}` : l.name;
 };
 
-/**
- * A week of this block, described for the model.
- *
- * Both tracks, not just Alpha. Sending Alpha alone made Bravo's month a
- * fresh guess every week, which is exactly backwards: the newer athletes are
- * the group that needs the repetition most.
- */
+/** A week of this block, described for the model: the lift and how it was modified. */
 export const priorWeekBrief = (week: NbtWeek, dayKey: DayKey): PriorWeekBrief | null => {
   const day = week.days?.[dayKey];
   if (!day) return null;
   const work = [day.work?.title, day.work?.emphasis].filter(Boolean).join(" — ");
+  const l = liftOf(day);
   return {
     week: week.week_in_block,
     pattern: day.lift?.pattern ?? "",
-    bravo: movementLine(day, "bravo"),
-    alpha: movementLine(day, "alpha"),
+    lift: liftLine(day),
+    easier: l.easier || "—",
+    harder: l.harder || "—",
     work: work || "—",
+  };
+};
+
+/**
+ * A day as the generator writes it, for handing one back to be partly
+ * rewritten. A day written for two tracks goes over in the one-group shape.
+ */
+export const dayForModel = (day: NbtDay) => {
+  const l = liftOf(day);
+  return {
+    focus: day.focus ?? "",
+    prep: day.prep ?? [],
+    lift: {
+      pattern: day.lift?.pattern ?? "",
+      main: { name: l.name, detail: l.detail },
+      easier: l.easier,
+      harder: l.harder,
+      cues: day.lift?.cues ?? [],
+    },
+    work: {
+      emphasis: day.work?.emphasis ?? "",
+      stations: workLines(day),
+      result_unit: day.work?.result_unit ?? "rounds",
+    },
+    reset: day.reset ?? [],
   };
 };
 
@@ -64,21 +91,16 @@ export const priorWeekBriefs = (weeks: NbtWeek[], dayKey: DayKey, beforeWeekNo: 
 
 /* ───── 2. What the room actually did ───── */
 
-export interface TrackReport {
+export interface RoomReport {
+  sessions: number;
+  lastDate: string;
   athletes: number;
-  /** The movement most of this track logged, so the model can see what stuck. */
+  /** The movement most of the room logged, so the model can see what stuck. */
   lift: string | null;
   medianTopWeight: number | null;
   medianReps: number | null;
   medianWork: number | null;
   unit: string | null;
-}
-
-export interface RoomReport {
-  sessions: number;
-  lastDate: string;
-  athletes: number;
-  byTrack: Record<Track, TrackReport>;
   /** Circuit result, oldest session in the window vs newest. Null if incomparable. */
   workTrend: "up" | "flat" | "down" | null;
   /**
@@ -115,15 +137,6 @@ const commonest = (xs: string[]): string | null => {
 /** Units where a smaller number is the better result. */
 const LOWER_IS_BETTER = new Set(["seconds", "minutes"]);
 
-const emptyTrack = (): TrackReport => ({
-  athletes: 0,
-  lift: null,
-  medianTopWeight: null,
-  medianReps: null,
-  medianWork: null,
-  unit: null,
-});
-
 /**
  * The last few sessions of one training day, summarised and stripped of names.
  *
@@ -148,25 +161,11 @@ export const roomReport = (
   const dates = Array.from(new Set(mine.map((l) => l.workout_date))).sort().slice(-window);
   const inWindow = mine.filter((l) => dates.includes(l.workout_date));
 
-  const byTrack = {} as Record<Track, TrackReport>;
-  TRACKS.forEach((t) => {
-    const rows = inWindow.filter((l) => l.level === t);
-    if (rows.length === 0) {
-      byTrack[t] = emptyTrack();
-      return;
-    }
-    const weights = rows.map((l) => heaviestSet(l.sets ?? [])).filter((w): w is number => w != null);
-    const reps = rows.map((l) => totalReps(l.sets ?? [])).filter((n) => n > 0);
-    const results = rows.map((l) => l.work_result).filter((n): n is number => n != null);
-    byTrack[t] = {
-      athletes: new Set(rows.map((l) => l.registration_id ?? l.athlete_name)).size,
-      lift: commonest(rows.map((l) => l.lift ?? "")),
-      medianTopWeight: median(weights),
-      medianReps: median(reps),
-      medianWork: median(results.map(Number)),
-      unit: commonest(rows.map((l) => l.work_unit ?? "")),
-    };
-  });
+  // One group: every log in the window counts together, whatever track an
+  // older row was filed under.
+  const weights = inWindow.map((l) => heaviestSet(l.sets ?? [])).filter((w): w is number => w != null);
+  const reps = inWindow.map((l) => totalReps(l.sets ?? [])).filter((n) => n > 0);
+  const results = inWindow.map((l) => l.work_result).filter((n): n is number => n != null);
 
   // Trend on the circuit, only where the unit held steady across the window —
   // comparing rounds of one workout to metres of another would invent a result.
@@ -194,7 +193,11 @@ export const roomReport = (
     sessions: dates.length,
     lastDate: dates[dates.length - 1],
     athletes,
-    byTrack,
+    lift: commonest(inWindow.map((l) => l.lift ?? "")),
+    medianTopWeight: median(weights),
+    medianReps: median(reps),
+    medianWork: median(results.map(Number)),
+    unit: commonest(inWindow.map((l) => l.work_unit ?? "")),
     workTrend,
     thin: athletes < THIN_ROOM,
   };
@@ -238,43 +241,36 @@ const distancesInYards = (line: string): number[] => {
   return out;
 };
 
-/**
- * Every line of a day a coach or athlete would actually read.
- *
- * Narrowed to one track when only that track is being rewritten: a day written
- * before these rules existed still has running in the tracks nobody touched,
- * and refusing a good new Bravo because of an old Alpha would make the day
- * impossible to fix one track at a time.
- */
-const linesOf = (day: NbtDay, only?: Track): string[] => {
-  const tracks = only ? [only] : (["bravo", "alpha"] as Track[]);
-  const perTrack = tracks.flatMap((t) => [
-    day.lift?.[t]?.name ?? "",
-    day.lift?.[t]?.detail ?? "",
-    ...workLines(day, t),
-  ]);
-  if (only) return perTrack;
-  return [
-    day.focus ?? "",
-    ...(day.prep ?? []),
-    day.lift?.pattern ?? "",
-    ...perTrack,
-    ...(day.lift?.cues ?? []),
-    day.work?.title ?? "",
-    day.work?.emphasis ?? "",
-    ...(day.reset ?? []),
-  ];
+/** The lift as written: its name, its dose, and the modification either way. */
+const liftLines = (day: NbtDay): string[] => {
+  const l = liftOf(day);
+  return [l.name, l.detail, l.easier, l.harder];
 };
+
+/** What the group actually does: the lift, its modification, and the work block. */
+const sessionLines = (day: NbtDay): string[] => [...liftLines(day), ...workLines(day)];
+
+/** Every line of a day a coach or athlete would actually read. */
+const linesOf = (day: NbtDay): string[] => [
+  day.focus ?? "",
+  ...(day.prep ?? []),
+  day.lift?.pattern ?? "",
+  ...sessionLines(day),
+  ...(day.lift?.cues ?? []),
+  day.work?.title ?? "",
+  day.work?.emphasis ?? "",
+  ...(day.reset ?? []),
+];
 
 /**
  * Why this session cannot be done in the room it is scheduled for, or null.
  *
  * The message is written to be read by a coach in a toast, not parsed.
  */
-export const spaceViolation = (day: NbtDay, dayKey: DayKey, only?: Track): string | null => {
+export const spaceViolation = (day: NbtDay, dayKey: DayKey): string | null => {
   const room = FACILITY[dayKey];
   if (!room) return null;
-  const lines = linesOf(day, only).filter(Boolean);
+  const lines = linesOf(day).filter(Boolean);
 
   if (!room.canRun) {
     const bad = lines.find((l) => TRAVELS.test(l));
@@ -296,89 +292,30 @@ export const spaceViolation = (day: NbtDay, dayKey: DayKey, only?: Track): strin
   return null;
 };
 
-/* ───── 4. Shared equipment ─────
-   Both tracks train at the same time in the same room, with anywhere between
-   15 and 40 athletes on the floor. Anything the room has a COUNT of is scarce,
-   and a scarce item belongs to one track per block — both tracks lift at the
-   same time, and both do the work block at the same time. An item the room
-   does not have at all is a refusal, not a queue. The inventory, and which
-   items the room has enough of for both, is nbtRooms.ts.
+/* ───── 4. The room's equipment ─────
+   One group of about a dozen shares the room, so the counted kit — three racks,
+   six bikes — is shared in turns and there is no clash between groups to
+   refuse. What is still refused is kit the room does not have at all. The
+   inventory is nbtRooms.ts. */
 
-   Only unambiguous collisions are refused. A guard that fires on a maybe would
-   fail whole months and leave a coach with nothing, which is worse than one
-   shared bench. */
-
-const liftText = (day: NbtDay, track: Track) =>
-  [day.lift?.[track]?.name ?? "", day.lift?.[track]?.detail ?? ""].join(" \n ");
-const workText = (day: NbtDay, track: Track) => workLines(day, track).join(" \n ");
-/** The work block is the Cardio Stations — one block for the room, both tracks together. */
+/** The work block is the Cardio Stations — one block for the room. */
 export const isStations = (day: NbtDay) => stationLines(day).length > 0;
 
-const bothNames = (users: Track[]) => users.map(trackName).join(" and ");
-
 /**
- * Which scarce item both tracks have been sent to in the same block, or null.
- *
- * Checked on the whole day even when only one track is being rewritten: the
- * new track has to fit around the one that is staying, which is precisely the
- * thing being asked. Defaults to the Performance Center's rules when no day
- * is given, which is the stricter room.
+ * Kit the room does not have, named in the lift, its modification or the
+ * stations, or null. Tuesday's bikes and rowers are the usual culprit: they
+ * live in the Performance Center with the Junior Boxers.
  */
-export const equipmentClash = (day: NbtDay, dayKey: DayKey = "monday"): string | null => {
+export const missingKit = (day: NbtDay, dayKey: DayKey): string | null => {
   const room = roomFor(dayKey);
-  // Cardio Stations are one block for the whole room, rotated in groups on
-  // the clock — "one track per scarce item" is a lift-block rule there.
-  const blocks = isStations(day) ? ([["lift", liftText]] as const) : ([["lift", liftText], ["work", workText]] as const);
-  const seen = new Set<string>();
-  for (const kit of room.kit) {
-    if (kit.shared) continue;
-    // The pull-up bars are the racks: judge the fixture once, across every
-    // pattern that lands on it (Josh, 2026-10-21).
-    const group = fixtureOf(kit.key);
-    const groupKey = group.join("+");
-    if (seen.has(groupKey)) continue;
-    seen.add(groupKey);
-    const patterns = group.map((k) => KIT_PATTERNS[k]);
-    for (const [block, textOf] of blocks) {
-      const users = TRACKS.filter((t) => patterns.some((re) => re.test(textOf(day, t))));
-      if (users.length > 1) {
-        // Read by a coach in a toast AND fed back to the model on retry, so it
-        // has to say how to fix it, not just that it is wrong.
-        return (
-          `${bothNames(users)} are both on ${kit.label} in the ${block} block, and the ${room.name} only has ${kit.count}. ` +
-          (group.includes("rack")
-            ? "The pull-up bars are the racks, and one track has the racks per block. The other track trains on " +
-              "the floor with what is in its hands: dumbbell or kettlebell rows, floor press, goblet squats, " +
-              "dumbbell RDLs, band pull-aparts — never a pull-up, an inverted row or a band on a post."
-            : "A scarce item belongs to one track per block: give the other track a version of the same " +
-              "pattern that needs none of it — the floor, a different machine, bodyweight, bands, med balls, " +
-              "wall balls, or dumbbells and kettlebells, which there are plenty of.")
-        );
-      }
-    }
-  }
-  return null;
-};
-
-/**
- * Kit the room does not have, named anywhere in a track's session, or null.
- * Tuesday's bikes and rowers are the usual culprit: they live in the
- * Performance Center with the Junior Boxers.
- */
-export const missingKit = (day: NbtDay, dayKey: DayKey, only?: Track): string | null => {
-  const room = roomFor(dayKey);
-  const tracks = only ? [only] : [...TRACKS];
+  const lines = sessionLines(day);
   for (const key of absentKit(room)) {
-    const re = KIT_PATTERNS[key];
-    for (const t of tracks) {
-      const lines = [day.lift?.[t]?.name ?? "", day.lift?.[t]?.detail ?? "", ...workLines(day, t)];
-      const bad = lines.find((l) => re.test(l));
-      if (bad) {
-        return (
-          `There are no ${KIT_WORDS[key]} in the ${room.name}, but ${trackName(t)}'s session says "${bad.trim()}". ` +
-          "Use only what this room has."
-        );
-      }
+    const bad = lines.find((l) => KIT_PATTERNS[key].test(l));
+    if (bad) {
+      return (
+        `There are no ${KIT_WORDS[key]} in the ${room.name}, but the session says "${bad.trim()}". ` +
+        "Use only what this room has."
+      );
     }
   }
   return null;
@@ -394,10 +331,7 @@ const KIT_WORDS: Record<string, string> = {
    The lift block is quality reps under load; the work block is the same
    PATTERN under fatigue with a different, simpler movement. A track that just
    did 4 × 8 Romanian deadlift does not do Romanian deadlifts again tired and
-   sloppy in its circuit — it does hip bridges, swings, single-leg deadlifts.
-
-   Per track. Bravo's goblet-squat lift means Bravo's circuit has no goblet
-   squats; Alpha's still may. */
+   sloppy in its circuit — it does hip bridges, swings, single-leg deadlifts. */
 
 /**
  * Words that describe HOW a movement is loaded or positioned, not WHAT it is.
@@ -462,33 +396,30 @@ const coreMovements = (liftName: string): string[] =>
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /**
- * Which track's circuit repeats its own lift, or null.
+ * The station that repeats the lift, or null.
  *
  * A bare "row" is the one movement that is also the name of a machine, so a
  * rowing-exercise lift is not counted as repeated by "Row 250m" — the rower
  * pattern above already knows how to tell them apart.
  */
 export const liftRepeated = (day: NbtDay): string | null => {
-  for (const t of TRACKS) {
-    const lift = day.lift?.[t]?.name ?? "";
-    if (!lift) continue;
-    const lines = workLines(day, t);
-    for (const movement of coreMovements(lift)) {
-      const re = new RegExp(`\\b${escapeRe(movement)}\\b`);
-      const hit = lines.find((line) => {
-        if (!re.test(normalise(line))) return false;
-        // The rowing machine is not the rowing exercise.
-        if (movement === "row" && KIT_PATTERNS.rower.test(line)) return false;
-        return true;
-      });
-      if (hit) {
-        const name = t[0].toUpperCase() + t.slice(1);
-        return (
-          `${name}'s circuit repeats its lift: the lift is "${lift}" and the circuit says "${hit.trim()}". ` +
-          "Keep the same movement pattern in the circuit but use a different, simpler movement — the lift is " +
-          "for quality reps under load, the circuit is the pattern under fatigue."
-        );
-      }
+  const lift = liftOf(day).name;
+  if (!lift) return null;
+  const lines = workLines(day);
+  for (const movement of coreMovements(lift)) {
+    const re = new RegExp(`\\b${escapeRe(movement)}\\b`);
+    const hit = lines.find((line) => {
+      if (!re.test(normalise(line))) return false;
+      // The rowing machine is not the rowing exercise.
+      if (movement === "row" && KIT_PATTERNS.rower.test(line)) return false;
+      return true;
+    });
+    if (hit) {
+      return (
+        `The stations repeat the lift: the lift is "${lift}" and a station says "${hit.trim()}". ` +
+        "Keep the same movement pattern on the station but use a different, simpler movement — the lift is " +
+        "for quality reps under load, the stations are the pattern under fatigue."
+      );
     }
   }
   return null;
@@ -506,22 +437,19 @@ const TIME_FIRST =
   /^\s*(?::\d{1,2}\b|\d+(?:\.\d+)?\s*(?:s|sec|secs|seconds?|min|mins|minutes?|m|meters?|metres?|cal|cals|calories?)\b)/i;
 
 export const unreadableLine = (day: NbtDay): string | null => {
-  for (const t of TRACKS) {
-    const name = t[0].toUpperCase() + t.slice(1);
-    for (const line of workLines(day, t)) {
-      if (HEADER_LINE.test(line)) {
-        return (
-          `${name}'s circuit has a heading with nothing on it: "${line.trim()}". Every line must be complete on ` +
-          "its own — the movement, then the time or reps, then the effort, all on ONE line. " +
-          'Write it like "Assault bike — 30 sec — strong but repeatable".'
-        );
-      }
-      if (TIME_FIRST.test(line) && !isRoundsLine(line)) {
-        return (
-          `${name}'s circuit has a line that starts with a time and no movement: "${line.trim()}". Put the ` +
-          'movement first, then the time, then the effort, on one line: "Row — 250 m — controlled pace".'
-        );
-      }
+  for (const line of workLines(day)) {
+    if (HEADER_LINE.test(line)) {
+      return (
+        `The work block has a heading with nothing on it: "${line.trim()}". Every line must be complete on ` +
+        "its own — the movement, then the reps, then the effort, all on ONE line. " +
+        'Write it like "Station 3 · The Bikes — bike — strong but repeatable".'
+      );
+    }
+    if (TIME_FIRST.test(line) && !isRoundsLine(line)) {
+      return (
+        `The work block has a line that starts with a time and no movement: "${line.trim()}". Put the ` +
+        'movement first, then the count, then the effort, on one line: "Row — 250 m — controlled pace".'
+      );
     }
   }
   return null;
@@ -537,23 +465,18 @@ export const unreadableLine = (day: NbtDay): string | null => {
 const FLOOR_DISTANCE = /\b\d+(?:\.\d+)?\s*(?:m|meters?|metres?|yards?|yds?|ft|feet)\b/i;
 const MACHINE_LINE = /\b(?:rowers?|row ergs?|ski ?ergs?|skiers?|bikes?)\b|\brow(?:ing)?\b/i;
 
-export const courtLanguage = (day: NbtDay, dayKey: DayKey, only?: Track): string | null => {
+export const courtLanguage = (day: NbtDay, dayKey: DayKey): string | null => {
   if (!roomFor(dayKey).canRun) return null;
-  const tracks = only ? [only] : [...TRACKS];
-  for (const t of tracks) {
-    const lines = [day.lift?.[t]?.name ?? "", day.lift?.[t]?.detail ?? "", ...workLines(day, t)];
-    const bad = lines.find((l) => FLOOR_DISTANCE.test(l) && !MACHINE_LINE.test(l));
-    if (bad) {
-      return (
-        `On the court, say distance in court, not in metres or yards — ${trackName(t)}'s session says "${bad.trim()}". ` +
-        "Write it as baseline to baseline (75 ft), baseline to baseline and back (150 ft), sideline to sideline (56 ft), or sideline to sideline and back (112 ft)."
-      );
-    }
+  const bad = sessionLines(day).find((l) => FLOOR_DISTANCE.test(l) && !MACHINE_LINE.test(l));
+  if (bad) {
+    return (
+      `On the court, say distance in court, not in metres or yards — the session says "${bad.trim()}". ` +
+      "Write it as baseline to baseline (75 ft), baseline to baseline and back (150 ft), sideline to sideline (56 ft), or sideline to sideline and back (112 ft)."
+    );
   }
   return null;
 };
 
-/** Everything wrong with a generated day, or null. The room, the kit, the court, the repeat, then the reading. */
 /**
  * One direction of travel per day (Josh, 2026-10-21). A station running
  * baseline to baseline crosses a station running sideline to sideline, head
@@ -564,8 +487,7 @@ export const courtLanguage = (day: NbtDay, dayKey: DayKey, only?: Track): string
 const BASELINE = /\bbaseline to baseline\b/i;
 const SIDELINE = /\bsideline to sideline\b/i;
 export const courtAxisClash = (day: NbtDay): string | null => {
-  // The shared stations once (two tracks reading the same block would double-count it).
-  const lines = stationLines(day).length ? stationLines(day) : TRACKS.flatMap((t) => day.work?.[t] ?? []);
+  const lines = workLines(day);
   const along = lines.filter((l) => BASELINE.test(l));
   const across = lines.filter((l) => SIDELINE.test(l));
   if (along.length && across.length) {
@@ -578,12 +500,12 @@ export const courtAxisClash = (day: NbtDay): string | null => {
   return null;
 };
 
-export const dayProblem = (day: NbtDay, dayKey: DayKey, only?: Track): string | null =>
-  spaceViolation(day, dayKey, only) ??
-  missingKit(day, dayKey, only) ??
-  equipmentClash(day, dayKey) ??
+/** Everything wrong with a generated day, or null. The room, the kit, the court, the repeat, then the reading. */
+export const dayProblem = (day: NbtDay, dayKey: DayKey): string | null =>
+  spaceViolation(day, dayKey) ??
+  missingKit(day, dayKey) ??
   courtAxisClash(day) ??
-  courtLanguage(day, dayKey, only) ??
+  courtLanguage(day, dayKey) ??
   liftRepeated(day) ??
   unreadableLine(day);
 
@@ -592,8 +514,9 @@ export const dayProblem = (day: NbtDay, dayKey: DayKey, only?: Track): string | 
 export interface CarryOver {
   weekStart: string;
   pattern: string;
-  bravo: string;
-  alpha: string;
+  lift: string;
+  easier: string;
+  harder: string;
   work: string;
   /** Consecutive weeks that pattern has now been trained. Drives "time to advance". */
   weeksOnPattern: number;
@@ -627,8 +550,9 @@ export const carryOver = (prevWeeks: NbtWeek[], dayKey: DayKey): CarryOver | nul
   return {
     weekStart: last.week_start,
     pattern: brief.pattern,
-    bravo: brief.bravo,
-    alpha: brief.alpha,
+    lift: brief.lift,
+    easier: brief.easier,
+    harder: brief.harder,
     work: brief.work,
     weeksOnPattern,
   };

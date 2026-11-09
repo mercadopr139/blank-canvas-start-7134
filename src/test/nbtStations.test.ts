@@ -43,25 +43,26 @@ describe("a one-picture move says what to do", () => {
   });
 });
 
-import { stationLines, workLines, withStations } from "@/lib/nbt";
+import { stationLines, workLines, withStations, type NbtDay } from "@/lib/nbt";
 describe("the Cardio Stations are stored once", () => {
   const lines = ["6 stations · 2 min each · rotate on the whistle", "Station 1 · The Racks — 12 band pull-aparts"];
-  const base = { work: { emphasis: "", title: "Cardio Stations", alpha: [] as string[], bravo: [] as string[], result_unit: "rounds" } };
+  const base: { work: NbtDay["work"] } = { work: { emphasis: "", title: "Cardio Stations", alpha: [], bravo: [], result_unit: "rounds" } };
   it("writes them once, to the shared block, with no track copies", () => {
     const d = withStations(base, lines);
     expect(d.work.shared).toEqual(lines);
     expect(d.work.alpha).toEqual([]);
     expect(d.work.bravo).toEqual([]);
   });
-  it("hands every track the shared stations, and still reads the old Alpha copy", () => {
+  it("reads the stations as the room's one work block, and still reads the old Alpha copy", () => {
     const d = withStations(base, lines);
-    expect(workLines(d, "alpha")).toEqual(lines);
-    expect(workLines(d, "bravo")).toEqual(lines);
+    expect(workLines(d)).toEqual(lines);
     expect(stationLines({ work: { ...base.work, alpha: lines, bravo: lines } })).toEqual(lines);
+    expect(workLines({ work: { ...base.work, alpha: lines, bravo: lines } })).toEqual(lines);
   });
-  it("leaves a per-track circuit alone", () => {
+  it("reads a circuit written before the stations as one list: Alpha's, else Bravo's", () => {
     const d = { work: { ...base.work, alpha: ["Bike — 30 sec"], bravo: ["Row — 30 sec"] } };
     expect(stationLines(d)).toEqual([]);
-    expect(workLines(d, "bravo")).toEqual(["Row — 30 sec"]);
+    expect(workLines(d)).toEqual(["Bike — 30 sec"]);
+    expect(workLines({ work: { ...base.work, alpha: [], bravo: ["Row — 30 sec"] } })).toEqual(["Row — 30 sec"]);
   });
 });
