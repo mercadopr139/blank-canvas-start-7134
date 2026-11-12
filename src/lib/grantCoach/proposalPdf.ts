@@ -7,7 +7,7 @@
 // (pasted dates, "not answered", "NLA's copy of the online application").
 //
 // Typography (Josh, 2026-11-12, "worthy for review"): one-inch margins,
-// 11-point Helvetica, headings with a fine red rule, run-in labels
+// 11-point Helvetica, bold headings with air above them, run-in labels
 // ("Equipment, with safety paramount:") in bold, bullet lines kept as
 // bullets, the cost table ruled with the total in a shaded row.
 import jsPDF from "jspdf";
@@ -134,14 +134,13 @@ export async function buildProposalPdf(input: ProposalPdfInput): Promise<jsPDF> 
       for (const piece of doc.splitTextToSize(ln, TEXT_W) as string[]) { need(LEAD); doc.text(piece, L, y + size); y += LEAD; }
     }
   };
-  /** A section heading: bold, a little larger, a fine red rule beneath, kept with the lines that follow. */
+  /** A section heading: bold, a little larger, air above it, kept with the lines that follow. No rule — a letter does not underline its headings (Josh, 2026-11-12). */
   const heading = (text: string) => {
     need(LEAD * 4);
-    y += 6;
+    y += 8;
     setType(12.5, DARK, "bold");
     for (const ln of doc.splitTextToSize(text, TEXT_W) as string[]) { doc.text(ln, L, y + 12.5); y += LEAD + 1; }
-    doc.setDrawColor(...RED); doc.setLineWidth(0.75); doc.line(L, y + 1, L + 40, y + 1);
-    y += 10;
+    y += 5;
   };
 
   // ── Letterhead ──
