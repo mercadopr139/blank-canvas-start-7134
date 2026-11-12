@@ -24,6 +24,10 @@ import { loadLibrary, type CaseBrief, type FunderBrief as FunderBriefT } from "@
 import FunderBrief, { readAndSaveBrief } from "@/components/admin/grantCoach/FunderBrief";
 import AboutFunder, { useFunderNotes, useFunderFolders } from "@/components/admin/grantCoach/AboutFunder";
 import { funderHistoryText, FUNDER_HISTORY_HEADING } from "@/lib/grantCoach/funders";
+import ProposalSetupRow from "@/components/admin/grantCoach/ProposalSetup";
+import { asDelivery, defaultSetup, proposalSections, DELIVERY_LABEL, type Delivery, type ProposalSetup } from "@/lib/grantCoach/proposal";
+import { buildProposalPdf, proposalPdfFileName } from "@/lib/grantCoach/proposalPdf";
+import { todayNY } from "@/lib/programYear";
 import type { Review } from "@/lib/grantCoach/review";
 import GrantApplication, { type AppItem } from "@/components/admin/grantCoach/GrantApplication";
 import GcCard, { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
@@ -44,6 +48,10 @@ interface Folder {
   reporting_basis?: "as_written" | "changed" | null; applied_from?: string | null;
   /** Another application to the same funder in the same cycle: the folder this one was started from (2026-10-29). */
   sibling_of?: string | null;
+  /** How it is delivered (2026-11-12): the funder's online portal, or a written proposal mailed or emailed back. */
+  delivery?: Delivery | null;
+  /** A proposal's addressee, subject line and signer. */
+  proposal?: Partial<ProposalSetup> | null;
 }
 interface Doc {
   id: string; folder_id: string; side: "funder" | "ours"; title: string; storage_path: string | null; file_name: string | null;
@@ -200,6 +208,7 @@ const AdminGrantFolder = () => {
     name: folder!.name, funder: folder!.funder, program_name: folder!.program_name, amount_requested: folder!.amount_requested,
     period_start: folder!.period_start, period_end: folder!.period_end, due_at: folder!.due_at, notes: folder!.notes,
     funder_notes: funderNotes(),
+    delivery: asDelivery(folder!.delivery),
   });
 
   /* Wipe this folder: its checklist, conversations, documents and files.
@@ -291,6 +300,47 @@ const AdminGrantFolder = () => {
       toast.error(`Couldn't print: ${(e as Error).message}`);
     } finally {
       setPrinting(false);
+    }
+  };
+
+  /* ───── The proposal (Josh, 2026-11-12) ─────
+     A grant delivered as a written proposal prints as one document on NLA's
+     letterhead: date, addressee, subject, the sections under the funder's
+     headings, the cost table, the closing and signature, the enclosures
+     listed, and every enclosed PDF following. Downloads; Josh attaches it
+     to the email himself. */
+  const delivery: Delivery = asDelivery(folder?.delivery);
+  const lib = (k: string) => library.find((e) => e.key === k)?.value?.trim() || null;
+  const setup = (): ProposalSetup => defaultSetup(folder?.proposal ?? null, { name: folder?.name ?? "", funder: folder?.funder ?? "", amount_requested: folder?.amount_requested ?? null, program_name: folder?.program_name ?? null }, lib("signer_name"));
+  const [printingProposal, setPrintingProposal] = useState(false);
+  const printProposal = async () => {
+    if (!folder) return;
+    const live = items.filter((i) => i.status !== "na");
+    const { sections, enclosures, missing } = proposalSections(live.map((i) => ({
+      label: i.label, detail: i.detail, kind: i.kind, answer: i.answer, status: i.status,
+      attachment: i.attachment_id ? docs.find((d) => d.id === i.attachment_id) ?? null : null,
+    })));
+    if (!sections.length) { toast.error("Nothing to print yet: write the sections first."); return; }
+    setPrintingProposal(true);
+    try {
+      const uploads = live.filter((i) => i.kind === "upload");
+      const { pdfs } = await planMerge(uploads.map((i) => ({ label: i.label, doc: i.attachment_id ? docs.find((d) => d.id === i.attachment_id) ?? null : null })));
+      const ymd = todayNY();
+      const pdf = await buildProposalPdf({
+        folder, setup: setup(), sections, enclosures, date: ymd,
+        letterhead: { org: lib("legal_name") ?? "No Limits Academy Inc.", address: lib("address_mailing") ?? lib("address_physical") ?? "", phone: lib("phone"), website: lib("website"), ein: lib("ein") },
+      });
+      const merged = await mergePdfs(pdf.output("arraybuffer"), pdfs);
+      const blob = new Blob([merged as BlobPart], { type: "application/pdf" });
+      const href = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = href; a.download = proposalPdfFileName(folder, ymd); a.click();
+      setTimeout(() => URL.revokeObjectURL(href), 10_000);
+      if (missing.length) toast.warning(`Printed without: ${missing.join(", ")}.`);
+      else toast.success(pdfs.length ? `Proposal printed with ${pdfs.length} enclosure${pdfs.length === 1 ? "" : "s"}. Attach it to your email.` : "Proposal printed. Attach it to your email.");
+    } catch (e) {
+      toast.error(`Couldn't print the proposal: ${(e as Error).message}`);
+    } finally {
+      setPrintingProposal(false);
     }
   };
 
@@ -423,7 +473,20 @@ const AdminGrantFolder = () => {
             )}
           </div>
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 text-sm">
+        <div className="mt-4 grid gap-3 sm:grid-cols-3 text-sm">
+          <div className="rounded-lg bg-white/[0.04] p-3">
+            <p className="text-[11px] text-white/40 uppercase tracking-wide">Delivered as</p>
+            <div className="mt-1 inline-flex rounded-md border border-white/15 overflow-hidden" role="radiogroup" aria-label="How this grant is delivered">
+              {(["portal", "proposal"] as Delivery[]).map((d) => (
+                <button key={d} type="button" role="radio" aria-checked={delivery === d} onClick={() => { if (delivery !== d) void patchFolder({ delivery: d }); }}
+                  title={d === "portal" ? "Answers are pasted into the funder's online portal" : "A written proposal, printed on NLA's letterhead and mailed or emailed"}
+                  className={`px-2.5 py-1 text-[12px] font-semibold ${delivery === d ? "text-[#0a0a0a]" : "text-white/60 hover:text-white hover:bg-white/10"}`}
+                  style={delivery === d ? { backgroundColor: GC_BLUE } : undefined}>
+                  {DELIVERY_LABEL[d]}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="rounded-lg bg-white/[0.04] p-3"><p className="text-[11px] text-white/40 uppercase tracking-wide">Requesting</p><p className="font-semibold"><Inline value={money(folder.amount_requested)} onSave={(v) => void patchFolder({ amount_requested: toMoney(v) })} title="The amount requested — click to edit" placeholder="—" /></p></div>
           <div className="rounded-lg bg-white/[0.04] p-3">
             <p className="text-[11px] text-white/40 uppercase tracking-wide">Grant period</p>
@@ -524,6 +587,10 @@ const AdminGrantFolder = () => {
             <FunderBrief folderId={id!} folder={draftFolder()} docs={docs} brief={folder.funder_brief ?? null} briefAt={folder.funder_brief_at ?? null} briefDocIds={folder.funder_brief_docs ?? []} />
             {/* 3. What NLA knows about the funder — kept per funder, not per grant (2026-11-12). */}
             <AboutFunder folderId={id!} funder={folder.funder} userId={user?.id ?? null} />
+            {/* 4. A written proposal: who it goes to and who signs (2026-11-12). */}
+            {delivery === "proposal" && (
+              <ProposalSetupRow setup={setup()} onSave={(next) => patchFolder({ proposal: next })} />
+            )}
             <FoldRow icon={<Sparkles className="w-4 h-4" />} title="The numbers Grant Coach uses" blurb={factsLoading ? "reading…" : `${facts.length} facts · program year ${factYearLabel()} · pulled live from the back end`} open={factsOpen} onToggle={() => setFactsOpen((o) => !o)}>
               <p className="text-[12px] text-white/45 pb-2">Program year {factYearLabel()}, the last complete year, pulled live from the back end. Every number about NLA's youth in a draft comes from here, never from the website or the CPF proposal; the library supplies the story, not the statistics. Nothing is made up.</p>
               <ul className="space-y-2">
@@ -660,6 +727,8 @@ const AdminGrantFolder = () => {
             userId={user?.id ?? null}
             onPrint={() => void printAnswers()}
             printing={printing}
+            onPrintProposal={delivery === "proposal" ? () => void printProposal() : undefined}
+            printingProposal={printingProposal}
             confirm={(o) => ask.confirm(o)}
             prompt={(a) => ask.prompt(a)}
             caseBrief={folder.case_brief ?? null}

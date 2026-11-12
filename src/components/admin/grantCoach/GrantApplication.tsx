@@ -9,6 +9,7 @@
 // Coach what to change. Anything it can't stand behind says "Needs you".
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { attachmentMismatch, costCheck, isCostItem } from "@/lib/grantCoach/proposal";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -67,6 +68,9 @@ interface Props {
   userId: string | null;
   onPrint: () => void;
   printing: boolean;
+  /** A written proposal (2026-11-12): print it as one document on NLA's letterhead. Set only when the folder is delivered that way. */
+  onPrintProposal?: () => void;
+  printingProposal?: boolean;
   confirm: (o: { title: string; body: string; confirmLabel: string; danger?: boolean; typeToConfirm?: string }) => Promise<boolean>;
   prompt: (a: PromptAsk) => Promise<Record<string, string> | null>;
   /** The case Josh locked in the strategy session; story questions wait for it. */
@@ -96,7 +100,8 @@ async function pool<T>(list: T[], n: number, job: (t: T) => Promise<void>) {
 const cleanName = (s: string) => s.replace(/[^\w.-]+/g, "_").slice(0, 60);
 const sectionTitle = (s: string) => s.replace(/^Portal · /, "");
 
-export default function GrantApplication({ folderId, folder, items, library, getFacts, userId, onPrint, printing, confirm, prompt, caseBrief, caseLockedAt, review, reviewedAt, funderBrief, actionsHost, submitted = false, sibling = null }: Props) {
+export default function GrantApplication({ folderId, folder, items, library, getFacts, userId, onPrint, printing, onPrintProposal, printingProposal = false, confirm, prompt, caseBrief, caseLockedAt, review, reviewedAt, funderBrief, actionsHost, submitted = false, sibling = null }: Props) {
+  const proposal = folder.delivery === "proposal";
   const caseLocked = !!caseBrief && !!caseLockedAt;
   const qc = useQueryClient();
   const refresh = useCallback(() => qc.invalidateQueries({ queryKey: ["grant-items", folderId] }), [qc, folderId]);
@@ -686,8 +691,13 @@ export default function GrantApplication({ folderId, folder, items, library, get
               <Button size="sm" variant="outline" onClick={() => setViewOpen(true)} className="bg-transparent border-white/20 text-white/85 hover:bg-white/10 hover:text-white">
                 <Eye className="w-4 h-4 mr-1.5" /> View application
               </Button>
-              <Button size="sm" variant="outline" onClick={onPrint} disabled={printing} className="bg-transparent border-white/20 text-white/85 hover:bg-white/10 hover:text-white">
-                {printing ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Printer className="w-4 h-4 mr-1.5" />} Print
+              {proposal && onPrintProposal && (
+                <Button size="sm" onClick={onPrintProposal} disabled={printingProposal} title="One document on NLA's letterhead: date, addressee, the sections under the funder's headings, the cost table, signature, enclosures" className="font-bold" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}>
+                  {printingProposal ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Printer className="w-4 h-4 mr-1.5" />} Print proposal
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={onPrint} disabled={printing} title={proposal ? "NLA's internal record of every row, with its status" : undefined} className="bg-transparent border-white/20 text-white/85 hover:bg-white/10 hover:text-white">
+                {printing ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Printer className="w-4 h-4 mr-1.5" />} {proposal ? "Print record" : "Print"}
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -797,6 +807,7 @@ export default function GrantApplication({ folderId, folder, items, library, get
                     onCopy={() => void copy(r.answer ?? "")}
                     onRemove={() => void removeRow(r)}
                     folderId={folderId}
+                    folder={folder}
                     userId={userId}
                     folderDocs={folderDocs}
                     attachment={r.attachment_id ? docById.get(r.attachment_id) ?? null : null}
@@ -921,11 +932,11 @@ export default function GrantApplication({ folderId, folder, items, library, get
 }
 
 /* ───── One question ───── */
-function QuestionRow({ item, number, pastFunder, twin, storyTitle, focused, forceOpen, onClosed, onApproveNext, renderChat, writing, busy, onApprove, onUnapprove, onCopy, onRemove, onSave, onRegenerate, onClear, folderId, userId, folderDocs, attachment, onAttach }: {
+function QuestionRow({ item, number, pastFunder, twin, storyTitle, focused, forceOpen, onClosed, onApproveNext, renderChat, writing, busy, onApprove, onUnapprove, onCopy, onRemove, onSave, onRegenerate, onClear, folderId, folder, userId, folderDocs, attachment, onAttach }: {
   item: AppItem; number?: number; pastFunder?: string | null; storyTitle?: string | null; focused?: boolean; writing: boolean; busy: boolean;
   /** The sister application answered this too: which program it was for, and how much of this answer still matches it (2026-10-29). */
   twin?: { program: string | null; pct: number } | null;
-  folderId: string; userId: string | null; folderDocs: FolderDoc[]; attachment: FolderDoc | null; onAttach: (doc: FolderDoc) => Promise<void>;
+  folderId: string; folder: DraftFolder; userId: string | null; folderDocs: FolderDoc[]; attachment: FolderDoc | null; onAttach: (doc: FolderDoc) => Promise<void>;
   forceOpen?: boolean; onClosed?: () => void;
   onApproveNext: (answer: string, source: "coach" | "you", storyId: string | null, before: string | null) => Promise<void>;
   renderChat: (draft: string, fill: (text: string, storyId: string | null) => void) => ReactNode;
@@ -998,6 +1009,8 @@ function QuestionRow({ item, number, pastFunder, twin, storyTitle, focused, forc
               <p className="mt-1 text-sm text-white/35 italic">No file attached yet.</p>
             )}
             {item.needs && !attachment && <p className="mt-1.5 text-[12px] text-amber-300 inline-flex items-start gap-1.5"><AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" /> {item.needs}</p>}
+            {/* The attachment check (2026-11-12): a row that asks for the 990 should not carry the determination letter. */}
+            {attachment && !reading && (() => { const wrong = attachmentMismatch(item.label, attachment); return wrong ? <p className="mt-1.5 text-[12px] text-amber-300 inline-flex items-start gap-1.5"><AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" /> {wrong} Replace it from the Vault's documents.</p> : null; })()}
           </div>
           <div className="shrink-0 flex items-center gap-1.5">
             {approved && attachment ? (
@@ -1097,7 +1110,7 @@ function QuestionRow({ item, number, pastFunder, twin, storyTitle, focused, forc
               {renderChat(draft, (text, storyId) => { onType(text); setFromCoach({ text, storyId }); })}
               {!fact && (
                 <div className="flex items-center justify-between gap-3 pt-1">
-                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/50">Your answer · what goes into the portal</p>
+                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/50">{folder.delivery === "proposal" ? "Your section · what prints in the proposal" : "Your answer · what goes into the portal"}</p>
                   {approved && !changed
                     ? <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-300"><Check className="w-3.5 h-3.5" /> Approved</span>
                     : changed ? <span className="text-[11px] font-semibold text-amber-300">Changed · approve again</span> : null}
@@ -1121,6 +1134,13 @@ function QuestionRow({ item, number, pastFunder, twin, storyTitle, focused, forc
                 )}
                 {!typeIn && <Button size="sm" variant="outline" onMouseDown={(e) => e.preventDefault()} onClick={close} className="bg-transparent border-white/20 text-white/70 hover:bg-white/10 hover:text-white">Close</Button>}
                 <span className="text-[11px] text-white/35">{saving ? "Saving…" : "Saves as you go"}</span>
+                {/* The cost estimate adds up (2026-11-12): every line priced, the lines equal to the request. */}
+                {folder.delivery === "proposal" && isCostItem(item.label) && (() => { const c = costCheck(draft, folder.amount_requested); return (
+                  <span className={`basis-full text-[12px] inline-flex items-start gap-1.5 ${c ? "text-amber-300" : "text-emerald-300/90"}`}>
+                    {c ? <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" /> : <Check className="w-3.5 h-3.5 mt-0.5 shrink-0" />}
+                    {c ?? "Itemized and adds up to the request. It prints as a table."}
+                  </span>
+                ); })()}
                 {item.limit_value && <span className={`ml-auto text-[11px] tabular-nums ${over ? "text-amber-300" : "text-white/40"}`}>{count.toLocaleString()} / {item.limit_value.toLocaleString()} {item.limit_kind}</span>}
               </div>
             </div>

@@ -22,6 +22,7 @@ export interface SourceFolder {
   amount_requested: number | null; period_start: string | null; period_end: string | null; portal_url: string | null;
   notes: string | null; template_key: string | null;
   case_brief?: CaseBrief | null; funder_brief?: FunderBrief | null; funder_brief_at?: string | null; funder_brief_docs?: string[];
+  delivery?: "portal" | "proposal" | null; proposal?: unknown;
 }
 export interface SourceDoc {
   id: string; side: "funder" | "ours"; title: string; storage_path: string | null; file_name: string | null; mime_type?: string | null;
@@ -82,6 +83,8 @@ export async function startNext(input: {
     name: next.name, funder: source.funder, program_name: next.program, status: "applying",
     due_at: source.due_at, amount_requested: next.amount, period_start: source.period_start, period_end: source.period_end,
     portal_url: source.portal_url, template_key: source.template_key, sibling_of: source.id, created_by: userId,
+    // The same funder, the same way of delivering it (2026-11-12): a proposal's addressee and signer carry over too.
+    delivery: source.delivery ?? "portal", proposal: source.proposal ?? null,
     notes: next.different.trim() ? `What this application funds that "${source.name}" does not: ${next.different.trim()}` : null,
   } as never).select("id").single();
   if (error) throw new Error(error.message);

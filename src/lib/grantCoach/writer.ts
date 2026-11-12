@@ -45,6 +45,8 @@ export interface DraftFolder {
   period_start: string | null; period_end: string | null; due_at: string | null; notes: string | null;
   /** What NLA knows about this funder (2026-11-12): Josh's notes, kept per funder, plus NLA's other grants with them. */
   funder_notes?: string | null;
+  /** How it is delivered (2026-11-12): copy/paste boxes in an online portal (the default) or a written proposal mailed or emailed back. */
+  delivery?: "portal" | "proposal";
 }
 export interface DraftItem {
   id: string; section: string; label: string; detail: string | null; kind: string; answer: string | null;

@@ -28,7 +28,9 @@ type Item = { id: string; section: string; label: string; detail: string | null;
 const limitLine = (it: Item) => (it.limit_kind && it.limit_value ? `\nThe funder's limit: ${it.limit_value} ${it.limit_kind} — stay under it.` : "");
 type Folder = { name: string; funder: string; program_name: string | null; amount_requested: number | null; period_start: string | null; period_end: string | null; due_at: string | null; notes: string | null;
   /** What NLA knows about this funder (Josh, 2026-11-12): his notes, kept per funder, plus NLA's other grants with them. */
-  funder_notes?: string | null };
+  funder_notes?: string | null;
+  /** How it is delivered (2026-11-12): an online portal's copy/paste boxes (default) or a written proposal mailed or emailed back. */
+  delivery?: "portal" | "proposal" | null };
 type Msg = { role: "user" | "coach"; content: string };
 /** What the funder's documents say, read once (Josh, 2026-10-22). */
 type FunderBrief = {
@@ -281,8 +283,18 @@ const funderNotesBlock = (folder?: Folder) => {
   return `\n\nWHAT NLA KNOWS ABOUT THIS FUNDER (${folder!.funder.trim()}) — Josh's own notes, kept for every grant with them\n` +
     `This is the relationship: who they are to NLA, who reads and decides, what their money has paid for, what they respond to, what NLA asked for before and what happened. Write to the people named here and to what they have funded before; mention the relationship where it helps (a funder who has given before is thanked and shown what their gift did), and never contradict it. The funder's own documents still win on rules, eligibility and scoring.\n${notes}`;
 };
+/** A grant delivered as a written proposal (Josh, 2026-11-12): one document, not a set of portal boxes. */
+const PROPOSAL_RULES = `
+
+THIS GRANT IS A WRITTEN PROPOSAL, NOT A PORTAL
+The funder sent a letter asking for a proposal back; NLA prints it on its letterhead and mails or emails it. The rows in this folder are the SECTIONS of that one document, printed in order under the funder's own headings, with a date, the addressee, a subject line, a closing and a signature added by the page. So:
+- Write every section as part of ONE document in one voice. Read ALREADY WRITTEN IN THIS FOLDER first: what another section already says is NOT said again. The thank-you for past support appears once, in the first section. The reporting promise ("will provide details on the use of funds") appears once, at the end of the last narrative section. NO section carries its own closing, its own "NLA is grateful to be considered", or a contact line — the page prints the closing, the signature and the contact section.
+- A section is prose: paragraphs, no numbered question text, no "Answer:", never the heading repeated inside the text. Short inline lead-ins ("Equipment, with safety paramount:") are fine.
+- THE COST ESTIMATE / BUDGET section is a TABLE the page draws and adds up. Write it as lines, nothing else: a heading line for each group (e.g. "Equipment purchase"), then one line per item under it in exactly this form: "- <item> — $<amount>". EVERY item line carries its own dollar figure; no bullet without a figure; the figures across every line add up EXACTLY to the amount requested; no "Total" line (the page adds it). One short sentence of prose before the lines is allowed (where the figures come from — e.g. NLA's board-approved operating budget) and one after (the balance of each line is met by other revenue). Nothing else.
+- THE CONTACT section is a short block: name and title, organization, phone, email — one line each or separated by " · ".
+- An UPLOAD row (a 990, an audit) is an enclosure the page lists; nothing to write.`;
 /** The system prompt for this grant: the O.C.E.A.N. notes only when the funder is O.C.E.A.N. */
-const systemFor = (folder?: Folder, brief?: FunderBrief | null) => systemBase(folder, brief) + funderNotesBlock(folder);
+const systemFor = (folder?: Folder, brief?: FunderBrief | null) => systemBase(folder, brief) + funderNotesBlock(folder) + (folder?.delivery === "proposal" ? PROPOSAL_RULES : "");
 const systemBase = (folder?: Folder, brief?: FunderBrief | null) => {
   const a = SYSTEM.indexOf(OCEAN_START), b = SYSTEM.indexOf(OCEAN_END);
   // "O.C.E.A.N., Inc." or "OCEAN, Inc." — not "Ocean City Community Foundation".
@@ -336,6 +348,9 @@ const describeFolder = (f: Folder) =>
     f.amount_requested != null ? `Amount requested: $${Number(f.amount_requested).toLocaleString()}` : null,
     f.period_start && f.period_end ? `Grant period: ${f.period_start} to ${f.period_end}` : null,
     f.notes ? `Josh's notes on this grant: ${f.notes}` : null,
+    f.delivery === "proposal"
+      ? "Delivery: a WRITTEN PROPOSAL, printed on NLA's letterhead and mailed or emailed to the funder — one document, its sections under the funder's own headings, signed by NLA. Not an online portal."
+      : "Delivery: the funder's online portal — each answer is pasted into its own box.",
   ].filter(Boolean).join("\n");
 
 /** The public website, as published — read first for what NLA is and offers. */
@@ -736,7 +751,8 @@ YOU ARE NOW THE REVIEWER, NOT THE WRITER
 Read this application the way the funder's scoring panel will: experienced, skeptical, reading forty applications this week, scoring against the criteria above. You want to fund programs that deliver; you have been fooled before by polished writing from weak programs, so you reward PROOF — specific numbers with periods, named places, measured outcomes with targets, a real example — and you mark down adjectives, vague claims, unmeasured promises and answers that don't answer the question asked.
 Be honest and specific. A generous score helps no one: Josh wants to know where it would lose points while there is still time to fix it.
 ${body.previousReview ? `CONSISTENCY (Josh, 2026-10-29: a review that churns is useless). Start from YOUR PREVIOUS REVIEW. For each note in it: if the answers it cites are in ANSWERS CHANGED SINCE and now fix it, DROP it; if they are unchanged, CARRY IT FORWARD in the same words; if changed and still wrong, carry it forward and say what is still wrong. Raise a NEW note only for a real defect you missed or one a change introduced. Never raise a dismissed note or the same point in other words. Scores move only as much as the changes warrant: an unchanged criterion keeps its score unless you say in "why" what you missed.\n` : ""}${mustFix ? `FOCUS: MUST-FIX ONLY. List only what would cost points or disqualify. No style, no grammar, no "could be tighter", no "consider". In "contradictions" and "wrong_numbers" list only genuine conflicts of fact — two answers that cannot both be true, or a figure that contradicts the record — never a difference in detail or rounding. If a criterion has nothing that costs points, say so in one clause.\n` : `FOCUS: EVERYTHING. Note what costs points first, then what a careful panel would also say.\n`}
-Check: every criterion the funder scores; whether each answer answers exactly what was asked, within its limit (only a limit stated on that question counts — the Program Narrative has no page or word limit, so never mark it down for length); contradictions between answers (program name, amounts, counts, dates, who is served); any number that doesn't match the live numbers; required questions left blank.`,
+Check: every criterion the funder scores; whether each answer answers exactly what was asked, within its limit (only a limit stated on that question counts — the Program Narrative has no page or word limit, so never mark it down for length); contradictions between answers (program name, amounts, counts, dates, who is served); any number that doesn't match the live numbers; required questions left blank.${body.folder?.delivery === "proposal" ? `
+THIS IS A WRITTEN PROPOSAL (one document on NLA's letterhead, the sections in order under the funder's headings), so read it as the funder's board will read a letter: does it read as one document, or as separate answers stapled together (the same thank-you, the same reporting promise, a closing in more than one section)? Is the cost estimate itemized with a dollar figure on every line, and do the lines add up exactly to the amount requested? Does each enclosure match what was asked for (a row that asks for the Form 990 must carry a 990, not the determination letter — say so under the criterion it costs)? Is the ask tied to what this funder said it funds?` : ""}`,
         messages: [{ role: "user", content: context +
           `\n\nReturn ONLY JSON: {"overall":<0-100, your honest total>,"verdict":"<two sentences: would you fund it as written, and the one thing that would move the score most>",` +
           `"criteria":[{"name":"<the funder's criterion, exactly as the funder names it>","score":<points>,"max":<points available>,"why":"<one line: what earned or lost points, citing the answers as [i]>",` +

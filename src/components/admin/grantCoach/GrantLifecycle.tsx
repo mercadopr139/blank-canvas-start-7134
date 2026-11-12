@@ -150,6 +150,8 @@ export default function GrantLifecycle({ folder, draftFolder, items, docs, repor
       due_at: nextDue, amount_requested: folder.amount_requested, period_start: plusYear(folder.period_start), period_end: plusYear(folder.period_end),
       portal_url: folder.portal_url, notes: [folder.decline_reason ? `Last time they said: ${folder.decline_reason}` : null, folder.notes].filter(Boolean).join("\n\n") || null,
       template_key: folder.template_key, applied_from: folder.id, created_by: userId,
+      // Next year is delivered the same way (2026-11-12): a proposal keeps its addressee and signer.
+      delivery: (folder as { delivery?: string }).delivery ?? "portal", proposal: (folder as { proposal?: unknown }).proposal ?? null,
     } as never).select("id").single();
     if (error) throw new Error(error.message);
     const newId = (data as unknown as { id: string }).id;
