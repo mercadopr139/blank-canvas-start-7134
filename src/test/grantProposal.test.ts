@@ -44,6 +44,15 @@ describe("the cost estimate", () => {
     expect(text).toBe("Gear — $1,250.5\n- Gloves — $1,000\n- Wraps — $250.5\n\nTotal — $1,250.5".replace(/\$1,250\.5/g, "$1,250.50").replace("$250.5", "$250.50"));
   });
 
+  it("still makes a table when only the group lines are priced, with blank item amounts", () => {
+    const t = parseCostLines("Equipment purchase — $8,000\n- Gloves\n- Headgear\n\nMeals — $8,000\n- Dinners\n\nTotal request: $16,000.");
+    expect(t.lineCount).toBe(0);
+    expect(t.unpriced).toEqual(["Gloves", "Headgear", "Dinners"]);
+    expect(t.groups.map((g) => [g.heading, g.amount, g.lines.length])).toEqual([["Equipment purchase", 8000, 2], ["Meals", 8000, 1]]);
+    expect(t.total).toBe(16000);
+    expect(costCheck("Equipment purchase — $8,000\n- Gloves", 8000)).toMatch(/^1 line has no dollar figure/);
+  });
+
   it("splits the prose around the table into before and after", () => {
     const p = costProse(estimate);
     expect(p.before).toEqual(["NLA requests $20,000 from the Avalon Lions Charities Foundation's FY 2026–2027 Special Grants Program."]);

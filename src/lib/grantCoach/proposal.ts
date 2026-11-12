@@ -47,9 +47,23 @@ export const isCostItem = (label: string) => /\b(cost estimate|itemi[sz]ed|budge
 /** A row that is contact information: printed as a block, not a paragraph. */
 export const isContactItem = (label: string) => /\bcontact\b/i.test(label);
 
-export interface CostLine { item: string; amount: number }
-export interface CostGroup { heading: string | null; lines: CostLine[] }
-export interface CostTable { groups: CostGroup[]; total: number; lineCount: number; /** Lines that look like items but carry no dollar figure. */ unpriced: string[] }
+export interface CostLine { item: string; /** null = the line carries no figure yet; the table prints a blank. */ amount: number | null }
+export interface CostGroup { heading: string | null; /** The figure on the heading line itself ("Equipment purchase — $8,000"), if any. */ amount: number | null; lines: CostLine[] }
+export interface CostTable {
+  groups: CostGroup[];
+  /** The priced item lines added up; when no item is priced, the group figures added up. */
+  total: number;
+  /** Priced item lines. */
+  lineCount: number;
+  /** Lines that look like items but carry no dollar figure. */
+  unpriced: string[];
+}
+
+/** A group's figure as printed: its own, or its priced lines added up. */
+export const groupAmount = (g: CostGroup) => {
+  const priced = g.lines.filter((l) => l.amount != null);
+  return priced.length ? priced.reduce((s, l) => s + (l.amount ?? 0), 0) : g.amount;
+};
 
 const AMOUNT_RE = /(?:[—–\-:]\s*)?\$\s?([\d,]+(?:\.\d{1,2})?)\s*$/;
 const GROUP_TOTAL_RE = /^(.*?)\s*[—–\-:]?\s*(?:subtotal|total)?\s*\$\s?[\d,]+(?:\.\d{1,2})?\s*$/i;
@@ -68,12 +82,12 @@ export function parseCostLines(answer: string | null | undefined): CostTable {
     const text = line.replace(/^[-•*]\s+/, "");
     const m = text.match(AMOUNT_RE);
     if (bullet) {
-      if (!current) { current = { heading: null, lines: [] }; groups.push(current); }
+      if (!current) { current = { heading: null, amount: null, lines: [] }; groups.push(current); }
       if (m) {
         const amount = Number(m[1].replace(/,/g, ""));
         current.lines.push({ item: text.slice(0, m.index).replace(/[—–\-:]\s*$/, "").trim(), amount });
         total += amount; lineCount += 1;
-      } else unpriced.push(text);
+      } else { current.lines.push({ item: text, amount: null }); unpriced.push(text); }
       continue;
     }
     // A heading, with or without its own figure ("Equipment purchase — $8,000": the figure is the group's, the lines are what count).
@@ -81,10 +95,13 @@ export function parseCostLines(answer: string | null | undefined): CostTable {
     const heading = (g ? g[1] : text).replace(/[—–\-:]\s*$/, "").trim();
     // A long sentence is prose around the table, not a heading.
     if (heading.split(/\s+/).length > 12 || /[.!?]$/.test(heading)) continue;
-    current = { heading, lines: [] };
+    current = { heading, amount: m ? Number(m[1].replace(/,/g, "")) : null, lines: [] };
     groups.push(current);
   }
-  return { groups: groups.filter((g) => g.lines.length), total, lineCount, unpriced };
+  const kept = groups.filter((g) => g.lines.length);
+  // Nothing priced line by line: the group figures are the estimate.
+  if (!lineCount) total = kept.reduce((s, g) => s + (g.amount ?? 0), 0);
+  return { groups: kept, total, lineCount, unpriced };
 }
 
 export const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
@@ -102,8 +119,9 @@ export function costCheck(answer: string | null | undefined, amountRequested: nu
 export function costTableText(t: CostTable): string {
   const out: string[] = [];
   for (const g of t.groups) {
-    if (g.heading) out.push(`${g.heading} — ${money(g.lines.reduce((s, l) => s + l.amount, 0))}`);
-    for (const l of g.lines) out.push(`- ${l.item} — ${money(l.amount)}`);
+    const ga = groupAmount(g);
+    if (g.heading) out.push(ga != null ? `${g.heading} — ${money(ga)}` : g.heading);
+    for (const l of g.lines) out.push(l.amount != null ? `- ${l.item} — ${money(l.amount)}` : `- ${l.item}`);
     out.push("");
   }
   out.push(`Total — ${money(t.total)}`);
@@ -161,7 +179,7 @@ export function proposalSections(items: ProposalItem[]): { sections: ProposalSec
     if (!text) { missing.push(heading); continue; }
     if (isCostItem(it.label)) {
       const cost = parseCostLines(text);
-      sections.push({ heading, kind: "cost", text, cost: cost.lineCount ? cost : undefined });
+      sections.push({ heading, kind: "cost", text, cost: cost.groups.length ? cost : undefined });
     } else sections.push({ heading, kind: isContactItem(it.label) ? "contact" : "prose", text });
   }
   return { sections, enclosures, missing };
@@ -169,10 +187,11 @@ export function proposalSections(items: ProposalItem[]): { sections: ProposalSec
 
 /** The prose that sits around a cost table — sentences before the first priced line and after the last — so the page prints them on either side of the table. */
 export function costProse(text: string): { before: string[]; after: string[] } {
-  const lines = text.replace(/\r\n/g, "\n").split("\n").map((l) => l.trim()).filter(Boolean);
+  // A "Total request: … = $20,000. The balance is …" line: the page adds the total itself; any sentence after it is kept.
+  const lines = text.replace(/\r\n/g, "\n").split("\n").map((l) => l.trim().replace(/^(total|grand total|total request)\b[^.]*\.?\s*/i, "")).filter(Boolean);
   const priced = lines.map((l) => /^[-•*]\s+/.test(l) && AMOUNT_RE.test(l));
   const first = priced.indexOf(true), last = priced.lastIndexOf(true);
-  const isProse = (l: string) => !/^[-•*]\s+/.test(l) && !/^(total|grand total|total request)\b/i.test(l) && (l.split(/\s+/).length > 12 || /[.!?]$/.test(l));
+  const isProse = (l: string) => !/^[-•*]\s+/.test(l) && (l.split(/\s+/).length > 12 || /[.!?]$/.test(l));
   if (first < 0) return { before: lines.filter(isProse), after: [] };
   return { before: lines.slice(0, first).filter(isProse), after: lines.slice(last + 1).filter(isProse) };
 }
