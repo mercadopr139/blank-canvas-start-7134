@@ -20,6 +20,8 @@ import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { CalendarDays, Activity, Users, Star, Bus, DoorOpen, Sparkles } from "lucide-react";
 import ProgramReportSheet from "@/components/admin/ProgramReportSheet";
 import SmileLabGrantReportSheet from "@/components/admin/SmileLabGrantReportSheet";
+import ProgramSnapshotSheet from "@/components/admin/ProgramSnapshotSheet";
+import { Camera } from "lucide-react";
 import SmileLabJournalTab from "@/components/admin/SmileLabJournalTab";
 import { getCurrentAttendanceYear, programYearRange, shortProgramYear } from "@/lib/programYear";
 import {
@@ -69,6 +71,7 @@ const AdminProgramIntelligence = ({ program }: { program: ProgramConfig }) => {
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [reportOpen, setReportOpen] = useState(false);
+  const [snapshotOpen, setSnapshotOpen] = useState(false);
   const { from, to, label } = useMemo(() => rangeFor(preset, customFrom, customTo), [preset, customFrom, customTo]);
 
   const { data: rows = [], isLoading, isError, error } = useQuery({
@@ -163,9 +166,16 @@ const AdminProgramIntelligence = ({ program }: { program: ProgramConfig }) => {
           <h2 className="text-2xl font-bold">{program.name} — Intelligence</h2>
           <p className="text-neutral-400 text-sm mt-1">{program.name} only — the numbers for a period, and the day-by-day attendance behind them.</p>
         </div>
-        <Button onClick={() => setReportOpen(true)} disabled={stats.checkIns === 0} className={`${program.tw.button} font-semibold gap-2`}>
-          <Sparkles className="h-4 w-4" /> Grant report
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {program.reportSheet !== "smile-lab" && (
+            <Button onClick={() => setSnapshotOpen(true)} disabled={stats.checkIns === 0} variant="outline" className="bg-transparent border-white/20 text-white/85 hover:bg-white/10 hover:text-white font-semibold gap-2" title="The period's figures as blocks you can switch off, plus the attendance report">
+              <Camera className="h-4 w-4" /> Snapshot
+            </Button>
+          )}
+          <Button onClick={() => setReportOpen(true)} disabled={stats.checkIns === 0} className={`${program.tw.button} font-semibold gap-2`}>
+            <Sparkles className="h-4 w-4" /> Grant report
+          </Button>
+        </div>
       </div>
 
       {/* ── By the numbers ── */}
@@ -286,6 +296,9 @@ const AdminProgramIntelligence = ({ program }: { program: ProgramConfig }) => {
         <SmileLabGrantReportSheet open={reportOpen} onClose={() => setReportOpen(false)} initialRange={{ from, to }} />
       ) : (
         <ProgramReportSheet program={program} open={reportOpen} onClose={() => setReportOpen(false)} period={label} stats={stats} breakdown={breakdown} moments={moments} />
+      )}
+      {program.reportSheet !== "smile-lab" && snapshotOpen && (
+        <ProgramSnapshotSheet program={program} open={snapshotOpen} onClose={() => setSnapshotOpen(false)} from={from} to={to} period={label} stats={stats} breakdown={breakdown} rows={rows} moments={moments} />
       )}
     </div>
   );
