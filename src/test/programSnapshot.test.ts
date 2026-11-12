@@ -13,7 +13,7 @@ const checkIns: SnapshotCheckIn[] = [
   ci("a", "2026-10-13", 14, "Marcus", "Rivera"),
 ];
 
-const snap = buildSnapshot({
+const snapInput = {
   stats: { sessionsHeld: 4, sessionsPlanned: 5, checkIns: 9, students: 4, avgPerSession: 2.3, bus: 7, dismissed: 2 },
   breakdown: {
     Grade: { "10th": 3, "11th": 1 },
@@ -28,8 +28,9 @@ const snap = buildSnapshot({
   previous: { sessionsHeld: 3, sessionsPlanned: 3, checkIns: 5, students: 3, avgPerSession: 1.7, bus: 5, dismissed: 0 },
   moments: [{ week: "Oct 6–10", notes: "Marcus led warm-ups." }],
   hasGoingHome: true,
-  names: "full",
-});
+  names: "full" as const,
+};
+const snap = buildSnapshot(snapInput);
 
 describe("the Snapshot", () => {
   it("reaches, rates and counts new students", () => {
@@ -41,6 +42,9 @@ describe("the Snapshot", () => {
 
   it("turns the breakdown into rows with percents, and the minority and disadvantaged headlines", () => {
     expect(snap.sex).toEqual([{ label: "Female", n: 2, pct: 50 }, { label: "Male", n: 2, pct: 50 }]);
+    // Grades in school order, not by count.
+    expect(buildSnapshot({ ...snapInput, breakdown: { ...snapInput.breakdown, Grade: { "12th": 9, "10th": 12, "9th": 10, "11th": 5, "Not given": 1 } } }).grade.map((g) => g.label))
+      .toEqual(["9th", "10th", "11th", "12th", "Not given"]);
     expect(snap.cte[0]).toEqual({ label: "Welding", n: 2, pct: 50 });
     expect(snap.minority).toEqual({ n: 2, recorded: 3, pct: 67 });
     expect(snap.disadvantaged).toEqual({ n: 3, of: 4, pct: 75 });

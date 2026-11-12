@@ -87,6 +87,11 @@ export interface Snapshot {
 const pct = (n: number, d: number) => (d ? Math.round((n / d) * 100) : 0);
 const rows = (counts: Record<string, number> | undefined, total: number): CountRow[] =>
   Object.entries(counts ?? {}).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([label, n]) => ({ label, n, pct: pct(n, total) }));
+/** Grades in school order — 9th, 10th, 11th, 12th — not by count (Josh, 2026-11-12); "Not given" last. */
+const gradeRows = (counts: Record<string, number> | undefined, total: number): CountRow[] => {
+  const num = (s: string) => (s === "Not given" ? Infinity : parseInt(s, 10) || 0);
+  return rows(counts, total).sort((a, b) => num(a.label) - num(b.label));
+};
 
 const timeOf = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }) : null);
 
@@ -138,7 +143,7 @@ export function buildSnapshot(input: SnapshotInput): Snapshot {
     sessions: { held, planned: stats.sessionsPlanned, checkIns: stats.checkIns, avg: stats.avgPerSession, bus: stats.bus, dismissed: stats.dismissed },
     rate: { consistent, of: total, pct: pct(consistent, total), threshold },
     newReturning: { fresh, returning: total - fresh },
-    grade: rows(breakdown["Grade"], total),
+    grade: gradeRows(breakdown["Grade"], total),
     cte: rows(breakdown["CTE program"], total),
     sex: rows(breakdown["Sex"], total),
     race: rows(breakdown["Race / ethnicity"], total),
