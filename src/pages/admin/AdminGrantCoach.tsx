@@ -255,6 +255,13 @@ const AdminGrantCoach = () => {
                       {p.total > 0 && <span>{p.done} of {p.total} done</span>}
                     </p>
                   </div>
+                  {/* The money, quietly, so a review of the list reads the asks at a glance (Josh, 2026-11-12). */}
+                  {(f.amount_awarded != null || f.amount_requested != null) && (
+                    <div className="shrink-0 text-right">
+                      <p className="text-sm font-semibold tabular-nums text-white/80">${Number(f.amount_awarded ?? f.amount_requested).toLocaleString()}</p>
+                      <p className="text-[10px] uppercase tracking-wide text-white/35">{f.amount_awarded != null ? "awarded" : "requested"}</p>
+                    </div>
+                  )}
                   <ChevronRight className="w-5 h-5 text-white/30 shrink-0" />
                 </button>
               );
