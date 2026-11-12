@@ -1,8 +1,9 @@
 // A program's Intelligence page.
 //
-// The numbers a funder asks for, over a period you pick: sessions held,
-// check-ins, distinct students, average per session (and bus vs dismissed
-// where the program has that choice), and who the students are. Then each
+// The numbers a funder asks for, over a period you pick — the same six
+// tiles as the Snapshot (Josh, 2026-11-12): students reached, sessions
+// held, check-ins, average per session, minority, economically
+// disadvantaged — and who the students are. Then each
 // student's attendance, the day-by-day calendar, and Weekly Standout
 // Moments. This program only: the cross-program youth served figure lives on
 // its own page under Attendance. The report button writes from what is on
@@ -17,10 +18,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
-import { CalendarDays, Activity, Users, Star, Bus, DoorOpen, Sparkles } from "lucide-react";
+import { CalendarDays, Activity, Users, Star, Globe, Wallet, Sparkles } from "lucide-react";
 import ProgramReportSheet from "@/components/admin/ProgramReportSheet";
 import SmileLabGrantReportSheet from "@/components/admin/SmileLabGrantReportSheet";
 import ProgramSnapshotSheet from "@/components/admin/ProgramSnapshotSheet";
+import { snapshotDisadvantaged, snapshotMinority } from "@/lib/programSnapshot";
 import { Camera } from "lucide-react";
 import SmileLabJournalTab from "@/components/admin/SmileLabJournalTab";
 import { getCurrentAttendanceYear, programYearRange, shortProgramYear } from "@/lib/programYear";
@@ -134,6 +136,8 @@ const AdminProgramIntelligence = ({ program }: { program: ProgramConfig }) => {
 
   const stats = useMemo(() => hawkPeriodStats(rows, from, to, overrides, hawkTodayET(), program.defaultWeekdays, program.scheduleDates), [rows, from, to, overrides, program.defaultWeekdays, program.scheduleDates]);
   const breakdown = useMemo(() => hawkBreakdown(rows, { cte: program.hasCte, grade: program.grades.length > 0 }), [rows, program.hasCte, program.grades.length]);
+  const minority = useMemo(() => snapshotMinority(breakdown), [breakdown]);
+  const disadvantaged = useMemo(() => snapshotDisadvantaged(breakdown, stats.students), [breakdown, stats.students]);
 
   // Per student: sessions attended out of sessions held, and how they went home.
   const students = useMemo(() => {
@@ -221,14 +225,14 @@ const AdminProgramIntelligence = ({ program }: { program: ProgramConfig }) => {
 
       {isError && <p className="text-rose-300 text-sm">Couldn't load attendance: {(error as Error)?.message}</p>}
 
-      {/* Headline figures */}
-      <div className={`grid grid-cols-2 sm:grid-cols-3 gap-3 ${program.hasGoingHome ? "lg:grid-cols-6" : "lg:grid-cols-4"}`}>
+      {/* Headline figures — the Snapshot's six tiles, in its order */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 lg:grid-cols-6">
+        <Stat icon={<Users className="h-4 w-4" />} label="Students reached" value={stats.students} />
         <Stat icon={<CalendarDays className="h-4 w-4" />} label="Sessions held" value={stats.sessionsHeld} sub={`of ${stats.sessionsPlanned} planned`} />
         <Stat icon={<Activity className="h-4 w-4" />} label="Check-ins" value={stats.checkIns} />
-        <Stat icon={<Users className="h-4 w-4" />} label="Students reached" value={stats.students} />
         <Stat icon={<Star className="h-4 w-4" />} label="Avg / session" value={stats.avgPerSession} />
-        {program.hasGoingHome && <Stat icon={<Bus className="h-4 w-4" />} label="Bus" value={stats.bus} sub={`${pct(stats.bus, stats.checkIns)}% of check-ins`} />}
-        {program.hasGoingHome && <Stat icon={<DoorOpen className="h-4 w-4" />} label="Dismissed" value={stats.dismissed} sub={`${pct(stats.dismissed, stats.checkIns)}% of check-ins`} />}
+        <Stat icon={<Globe className="h-4 w-4" />} label="Minority" value={`${minority.pct}%`} sub={`${minority.n} of ${minority.recorded} with a race recorded`} />
+        <Stat icon={<Wallet className="h-4 w-4" />} label="Econ. disadvantaged" value={`${disadvantaged.pct}%`} sub={`${disadvantaged.n} of ${disadvantaged.of} students`} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -320,7 +324,7 @@ const SectionLabel = ({ program, tag, title, tone }: { program: ProgramConfig; t
   );
 };
 
-const Stat = ({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: number; sub?: string }) => (
+const Stat = ({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: number | string; sub?: string }) => (
   <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
     <div className="flex items-center gap-1.5 text-white/40 text-[11px] uppercase tracking-wide mb-1">{icon}{label}</div>
     <div className="text-2xl font-extrabold text-white tabular-nums">{value}</div>

@@ -83,6 +83,20 @@ const gradeRows = (counts: Record<string, number> | undefined, total: number): C
   return rows(counts, total).sort((a, b) => num(a.label) - num(b.label));
 };
 
+/** Minority: students with a race recorded other than White, out of those with one recorded. Shared with the Intelligence page's tiles. */
+export const snapshotMinority = (breakdown: HawkBreakdown) => {
+  const race = breakdown["Race / ethnicity"] ?? {};
+  const recorded = Object.entries(race).filter(([k]) => k !== "Not given").reduce((s, [, n]) => s + n, 0);
+  const n = recorded - (race[NON_MINORITY_RACE] ?? 0);
+  return { n, recorded, pct: pct(n, recorded) };
+};
+/** Economically disadvantaged: the academy's marker is free or reduced lunch, any "Yes…" answer. */
+export const snapshotDisadvantaged = (breakdown: HawkBreakdown, total: number) => {
+  const dis = breakdown["Economically disadvantaged youth"] ?? {};
+  const n = Object.entries(dis).filter(([k]) => /^yes/i.test(k)).reduce((s, [, c]) => s + c, 0);
+  return { n, of: total, pct: pct(n, total) };
+};
+
 const timeOf = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }) : null);
 
 export function buildSnapshot(input: SnapshotInput): Snapshot {
@@ -97,12 +111,6 @@ export function buildSnapshot(input: SnapshotInput): Snapshot {
     s.dates.add(c.date);
     byStudent.set(c.identity, s);
   }
-
-  const race = breakdown["Race / ethnicity"] ?? {};
-  const recorded = Object.entries(race).filter(([k]) => k !== "Not given").reduce((s, [, n]) => s + n, 0);
-  const minority = recorded - (race[NON_MINORITY_RACE] ?? 0);
-  const dis = breakdown["Economically disadvantaged youth"] ?? {};
-  const yes = Object.entries(dis).filter(([k]) => /^yes/i.test(k)).reduce((s, [, n]) => s + n, 0);
 
   const prev = input.previous;
   const comparison = prev ? [
@@ -131,8 +139,8 @@ export function buildSnapshot(input: SnapshotInput): Snapshot {
     cte: rows(breakdown["CTE program"], total),
     sex: rows(breakdown["Sex"], total),
     race: rows(breakdown["Race / ethnicity"], total),
-    minority: { n: minority, recorded, pct: pct(minority, recorded) },
-    disadvantaged: { n: yes, of: total, pct: pct(yes, total) },
+    minority: snapshotMinority(breakdown),
+    disadvantaged: snapshotDisadvantaged(breakdown, total),
     comparison,
     moments: input.moments,
     attendance: { sessions, students },
