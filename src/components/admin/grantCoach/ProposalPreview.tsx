@@ -40,7 +40,7 @@ const longDate = (ymd: string) => { const [y, m, d] = ymd.split("-").map(Number)
 const heading = (label: string) => label.replace(/^\d+[.)]\s*/, "").trim();
 
 /** A textarea that grows with its text and looks like the page it sits on. */
-function Area({ value, onChange, className = "", placeholder, mono = false }: { value: string; onChange: (v: string) => void; className?: string; placeholder?: string; mono?: boolean }) {
+function Area({ value, onChange, className = "", placeholder }: { value: string; onChange: (v: string) => void; className?: string; placeholder?: string }) {
   const rows = Math.max(1, value.split("\n").reduce((n, l) => n + Math.max(1, Math.ceil(l.length / 95)), 0));
   return (
     <textarea
@@ -49,7 +49,7 @@ function Area({ value, onChange, className = "", placeholder, mono = false }: { 
       rows={rows}
       placeholder={placeholder}
       spellCheck
-      className={`w-full resize-none bg-transparent border border-transparent hover:border-sky-300/60 focus:border-sky-400 focus:bg-sky-50 rounded px-1 -mx-1 outline-none leading-relaxed ${mono ? "font-mono text-[12px]" : "text-[13.5px]"} text-neutral-900 ${className}`}
+      className={`w-full resize-none bg-transparent border border-transparent hover:border-sky-300/60 focus:border-sky-400 focus:bg-sky-50 rounded px-1 -mx-1 outline-none leading-relaxed text-[13.5px] text-neutral-900 ${className}`}
     />
   );
 }
@@ -148,7 +148,7 @@ export default function ProposalPreview({ open, onOpenChange, folder, setup: sav
                   {cost ? (
                     <>
                       <p className="text-[11px] text-neutral-400">Written as lines; printed as the table below.</p>
-                      <Area value={text} onChange={(v) => setAnswers((a) => ({ ...a, [r.id]: v }))} mono />
+                      <Area value={text} onChange={(v) => setAnswers((a) => ({ ...a, [r.id]: v }))} />
                       {check && <p className="text-[12px] text-amber-700 inline-flex items-start gap-1.5"><AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" /> {check}</p>}
                       {cost.lineCount > 0 && (
                         <div className="pt-1">
