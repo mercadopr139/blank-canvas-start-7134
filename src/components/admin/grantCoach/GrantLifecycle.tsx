@@ -90,6 +90,21 @@ export default function GrantLifecycle({ folder, draftFolder, items, docs, repor
   const open = live.filter((i) => i.status !== "done").length;
 
   const submit = () => run("submit", async () => {
+    // The pipeline adds up each submitted folder's Requesting figure (Josh, 2026-11-12: the Lions $20,000 was missing
+    // from "Asked" because the tile was never filled). A grant cannot go in at $0: ask for the amount when it is blank.
+    let amount: number | null = folder.amount_requested;
+    if (amount == null) {
+      const got = await ask.prompt({
+        title: "How much is this application asking for?",
+        body: "The folder's Requesting amount is blank. The pipeline adds it into Asked, and the cost estimate is checked against it.",
+        fields: [{ key: "amount", label: "Amount requested", placeholder: "e.g. 20,000" }],
+        confirmLabel: "Save and continue",
+      });
+      if (!got) return;
+      const n = Number(String(got.amount ?? "").replace(/[^0-9.]/g, ""));
+      if (!n || !Number.isFinite(n)) { toast.error("Enter the amount as a number, e.g. 20000."); return; }
+      amount = Math.round(n);
+    }
     const ok = await ask.confirm({
       title: "Mark this application submitted?",
       body: open
@@ -98,7 +113,7 @@ export default function GrantLifecycle({ folder, draftFolder, items, docs, repor
       confirmLabel: "It's submitted",
     });
     if (!ok) return;
-    await patch({ status: "submitted", submitted_at: new Date().toISOString() });
+    await patch({ status: "submitted", submitted_at: new Date().toISOString(), ...(folder.amount_requested == null ? { amount_requested: amount } : {}) });
     toast.success("Submitted. Grant Coach waits with you; mark it Awarded or Declined when you hear.");
   });
 
