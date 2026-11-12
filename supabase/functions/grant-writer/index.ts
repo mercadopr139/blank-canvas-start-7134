@@ -26,7 +26,9 @@ type Entry = { key: string; label: string; value: string; storyOnly?: boolean };
 type Fact = { key: string; label: string; value: string; period: string; source: string };
 type Item = { id: string; section: string; label: string; detail: string | null; kind: string; answer: string | null; limit_kind?: string | null; limit_value?: number | null };
 const limitLine = (it: Item) => (it.limit_kind && it.limit_value ? `\nThe funder's limit: ${it.limit_value} ${it.limit_kind} — stay under it.` : "");
-type Folder = { name: string; funder: string; program_name: string | null; amount_requested: number | null; period_start: string | null; period_end: string | null; due_at: string | null; notes: string | null };
+type Folder = { name: string; funder: string; program_name: string | null; amount_requested: number | null; period_start: string | null; period_end: string | null; due_at: string | null; notes: string | null;
+  /** What NLA knows about this funder (Josh, 2026-11-12): his notes, kept per funder, plus NLA's other grants with them. */
+  funder_notes?: string | null };
 type Msg = { role: "user" | "coach"; content: string };
 /** What the funder's documents say, read once (Josh, 2026-10-22). */
 type FunderBrief = {
@@ -272,8 +274,16 @@ A short form field: one to three sentences. A text-box answer (funding purpose, 
 const OCEAN_START = "THE FUNDER\n(This section describes O.C.E.A.N.; it is replaced for any other funder.)";
 const OCEAN_END = "\n\nLENGTH";
 const GENERAL_FUNDER = "THE FUNDER\nWrite for the funder named in THE GRANT. Answer what this funder asks, in their words, and make it easy for a reviewer to score: the need, what NLA does about it, who is served, measurable results, capacity, and cost. Do not mention any other funder's rules or scoring.";
+/** What Josh knows about the funder (2026-11-12), appended to every system prompt that has it. */
+const funderNotesBlock = (folder?: Folder) => {
+  const notes = folder?.funder_notes?.trim();
+  if (!notes) return "";
+  return `\n\nWHAT NLA KNOWS ABOUT THIS FUNDER (${folder!.funder.trim()}) — Josh's own notes, kept for every grant with them\n` +
+    `This is the relationship: who they are to NLA, who reads and decides, what their money has paid for, what they respond to, what NLA asked for before and what happened. Write to the people named here and to what they have funded before; mention the relationship where it helps (a funder who has given before is thanked and shown what their gift did), and never contradict it. The funder's own documents still win on rules, eligibility and scoring.\n${notes}`;
+};
 /** The system prompt for this grant: the O.C.E.A.N. notes only when the funder is O.C.E.A.N. */
-const systemFor = (folder?: Folder, brief?: FunderBrief | null) => {
+const systemFor = (folder?: Folder, brief?: FunderBrief | null) => systemBase(folder, brief) + funderNotesBlock(folder);
+const systemBase = (folder?: Folder, brief?: FunderBrief | null) => {
   const a = SYSTEM.indexOf(OCEAN_START), b = SYSTEM.indexOf(OCEAN_END);
   // "O.C.E.A.N., Inc." or "OCEAN, Inc." — not "Ocean City Community Foundation".
   const ocean = !!folder && /\bo\.\s*c\.\s*e\.\s*a\.\s*n\b|^ocean,?\s+inc/i.test(folder.funder.trim());
@@ -299,7 +309,8 @@ You are the best grant writer NLA could hire, sitting next to Josh (Program Dire
 - When they paste text — an executive summary, a paragraph from another proposal, notes — it is SOURCE MATERIAL. Adapt it to this question, this funder and this limit, keep its claims where the library supports them, and replace its figures with the LIVE NUMBERS. Do not ignore it and do not copy it unchanged.
 - Every rule above about numbers, the year, young logs, and the library still applies.
 - THE SISTER APPLICATION (Josh, 2026-10-30). When this folder has a sister application (the block is present) and Josh asks for "the outcomes we used in the Battle Team application", "the same as the first one", "copy X from the other application" or the like, the text is in THE SISTER APPLICATION block: use it. Swap the program's name, ages, counts and dollars for this application's, keep the organization's facts identical, reword enough that the panel does not read the same sentences twice, and say what you swapped. Never answer that you cannot see or copy it.
-- VAULT CHANGES (Josh, 2026-10-30). The ABOUT NLA LIBRARY is the Grant Vault, and Josh keeps it himself. When he asks to change, correct or add a fact in it ("update the Vault…", "Boxing Groups Explained should say…", "the Littles don't lift weights"), or when the library plainly contradicts a fact he has just told you, do NOT fold it into an answer: return "vault_changes", one entry per library entry that must change, each with the entry's "key" exactly as shown in the library, "after" = the entry's FULL text with only that change made (keep every other sentence word for word), and "why" in one line. Say in "reply" what you are proposing and that he saves each with a click. If he asks to add a fact that fits no existing entry, put it in the entry it belongs to most and say so. Never report a Vault change as done — it is done only when he saves it.`;
+- VAULT CHANGES (Josh, 2026-10-30). The ABOUT NLA LIBRARY is the Grant Vault, and Josh keeps it himself. When he asks to change, correct or add a fact in it ("update the Vault…", "Boxing Groups Explained should say…", "the Littles don't lift weights"), or when the library plainly contradicts a fact he has just told you, do NOT fold it into an answer: return "vault_changes", one entry per library entry that must change, each with the entry's "key" exactly as shown in the library, "after" = the entry's FULL text with only that change made (keep every other sentence word for word), and "why" in one line. Say in "reply" what you are proposing and that he saves each with a click. If he asks to add a fact that fits no existing entry, put it in the entry it belongs to most and say so. Never report a Vault change as done — it is done only when he saves it.
+- ABOUT THIS FUNDER (Josh, 2026-11-12). Josh keeps a short note per funder — who they are to NLA, who reads and decides, what their gifts have paid for, what they respond to, past asks and outcomes (WHAT NLA KNOWS ABOUT THIS FUNDER, when present). When he tells you something about the funder in the conversation — "about this funder…", "some background on them…", who Jim Lutz is, what their annual gift has funded, what they liked last time — do not leave it in this one thread: return "funder_notes" with "after" = the FULL note as it should now read (the existing note with the new facts folded in, every other line kept word for word; or a fresh note of three to eight short lines when there is none) and "why" in one line, AND use it right away in your reply and in any answer you write. Say in "reply" that he can save it so every grant with this funder reads it. Keep it to the relationship and the people — the funder's rules and scoring belong to their documents, not here. Never report it saved — it is saved only when he clicks.`;
 
 const STRATEGY_RULES = `
 
@@ -908,7 +919,8 @@ Return ONLY JSON: {"reply":"<your answer, plain text, paragraphs allowed>","draf
         `"fills":[{"i":<number of another question on this screen>,"answer":"<its answer>"}] (ONLY when asked to fill other questions; otherwise omit),` +
         `"story_draft":{"title":"","story":"<their story, 60-140 words, only what they said, first names only>","program":"","proves":[],"people":""} (ONLY when they just told a new real story; otherwise omit),` +
         `"story_id":"<the story-bank id the answer tells, or null>","left_out":["<what bears on the question but is not in the answer> — <why>"] (only when writing an answer),` +
-        `"vault_changes":[{"key":"<the library entry's vault key>","after":"<the entry's full new text>","why":"<one line>"}] (ONLY when Josh asks to change, correct or add a Vault fact, or the Vault contradicts what he just said; otherwise omit)}`;
+        `"vault_changes":[{"key":"<the library entry's vault key>","after":"<the entry's full new text>","why":"<one line>"}] (ONLY when Josh asks to change, correct or add a Vault fact, or the Vault contradicts what he just said; otherwise omit),` +
+        `"funder_notes":{"after":"<the full About-this-funder note as it should now read>","why":"<one line>"} (ONLY when Josh just told you something about the funder itself — the relationship, the people, their history with NLA; otherwise omit)}`;
       // A conversation should feel like one: medium on the best model answers in seconds.
       // When the last line asks for writing, the writing gets the full effort — that is
       // the work that wins or loses the grant (Josh, 2026-10-23).
@@ -937,7 +949,13 @@ Return ONLY JSON: {"reply":"<your answer, plain text, paragraphs allowed>","draf
         .filter((v: { key?: string; after?: string }) => typeof v?.key === "string" && libKeys.has(v.key) && typeof v.after === "string" && v.after.trim() && v.after.trim() !== (libKeys.get(v.key)?.value ?? "").trim())
         .map((v: { key: string; after: string; why?: string }) => ({ key: v.key, after: v.after.trim(), why: typeof v.why === "string" ? v.why.trim() : "" }))
         .slice(0, 6);
-      return json({ reply: reply || "Here it is.", answer, fills: fills.length ? fills : undefined, story_draft, story_id, left_out, words: answer ? answer.split(/\s+/).filter(Boolean).length : undefined, vault_changes: vault_changes.length ? vault_changes : undefined });
+      // About this funder (2026-11-12): only a real change to the note, and only the note (no answer text smuggled in).
+      const fn = parsed.funder_notes;
+      const currentNotes = (body.folder?.funder_notes ?? "").split("\n\nNLA's other grants with this funder in Grant Coach:")[0].trim();
+      const funder_notes = fn && typeof fn === "object" && typeof fn.after === "string" && fn.after.trim() && fn.after.trim() !== currentNotes
+        ? { after: fn.after.trim().slice(0, 4000), why: typeof fn.why === "string" ? fn.why.trim() : "" }
+        : undefined;
+      return json({ reply: reply || "Here it is.", answer, fills: fills.length ? fills : undefined, story_draft, story_id, left_out, words: answer ? answer.split(/\s+/).filter(Boolean).length : undefined, vault_changes: vault_changes.length ? vault_changes : undefined, funder_notes });
     }
 
     const mode = body.mode === "narrative" ? "narrative" : "item";

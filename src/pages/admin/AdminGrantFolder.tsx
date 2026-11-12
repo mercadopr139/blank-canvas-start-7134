@@ -22,6 +22,8 @@ import { GRANT_DOCUMENTS_BUCKET } from "@/lib/grantCoach/orgDocuments";
 import { gatherLiveFacts, factYearLabel } from "@/lib/grantCoach/liveFacts";
 import { loadLibrary, type CaseBrief, type FunderBrief as FunderBriefT } from "@/lib/grantCoach/writer";
 import FunderBrief, { readAndSaveBrief } from "@/components/admin/grantCoach/FunderBrief";
+import AboutFunder, { useFunderNotes, useFunderFolders } from "@/components/admin/grantCoach/AboutFunder";
+import { funderHistoryText, FUNDER_HISTORY_HEADING } from "@/lib/grantCoach/funders";
 import type { Review } from "@/lib/grantCoach/review";
 import GrantApplication, { type AppItem } from "@/components/admin/grantCoach/GrantApplication";
 import GcCard, { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
@@ -185,9 +187,19 @@ const AdminGrantFolder = () => {
   const [actionsHost, setActionsHost] = useState<HTMLDivElement | null>(null);
   const [funderOpen, setFunderOpen] = useState<boolean | null>(null);
 
+  // What NLA knows about this funder (2026-11-12): Josh's notes plus the history, carried on the folder the writer sees.
+  const { data: funderRow } = useFunderNotes(folder?.funder);
+  const { data: funderFolders = [] } = useFunderFolders();
+  const funderNotes = () => {
+    const history = funderHistoryText(funderFolders, folder!.funder, folder!.id);
+    const notes = funderRow?.notes?.trim() || null;
+    if (!notes && !history) return null;
+    return [notes, history ? `${FUNDER_HISTORY_HEADING}\n${history}` : null].filter(Boolean).join("\n\n");
+  };
   const draftFolder = () => ({
     name: folder!.name, funder: folder!.funder, program_name: folder!.program_name, amount_requested: folder!.amount_requested,
     period_start: folder!.period_start, period_end: folder!.period_end, due_at: folder!.due_at, notes: folder!.notes,
+    funder_notes: funderNotes(),
   });
 
   /* Wipe this folder: its checklist, conversations, documents and files.
@@ -510,6 +522,8 @@ const AdminGrantFolder = () => {
             })()}
             {/* 2. The rules Grant Coach read from those documents. */}
             <FunderBrief folderId={id!} folder={draftFolder()} docs={docs} brief={folder.funder_brief ?? null} briefAt={folder.funder_brief_at ?? null} briefDocIds={folder.funder_brief_docs ?? []} />
+            {/* 3. What NLA knows about the funder — kept per funder, not per grant (2026-11-12). */}
+            <AboutFunder folderId={id!} funder={folder.funder} userId={user?.id ?? null} />
             <FoldRow icon={<Sparkles className="w-4 h-4" />} title="The numbers Grant Coach uses" blurb={factsLoading ? "reading…" : `${facts.length} facts · program year ${factYearLabel()} · pulled live from the back end`} open={factsOpen} onToggle={() => setFactsOpen((o) => !o)}>
               <p className="text-[12px] text-white/45 pb-2">Program year {factYearLabel()}, the last complete year, pulled live from the back end. Every number about NLA's youth in a draft comes from here, never from the website or the CPF proposal; the library supplies the story, not the statistics. Nothing is made up.</p>
               <ul className="space-y-2">

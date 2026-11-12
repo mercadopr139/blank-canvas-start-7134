@@ -9,7 +9,9 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, Loader2, Send, Sparkles, Library, Vault, Pencil } from "lucide-react";
+import { Check, Loader2, Send, Sparkles, Library, Vault, Pencil, Handshake } from "lucide-react";
+import { saveFunderNotes, FUNDER_HISTORY_HEADING } from "@/lib/grantCoach/funders";
+import { funderNotesQueryKey } from "@/components/admin/grantCoach/AboutFunder";
 import ResourcePanel from "@/components/admin/grantCoach/ResourcePanel";
 import { GC_BLUE, GC_SHADE } from "@/components/admin/grantCoach/GcCard";
 import { StoryDraftCard } from "@/components/admin/grantCoach/StoryBank";
@@ -23,7 +25,7 @@ import DraftDiff from "@/components/admin/grantCoach/DraftDiff";
 
 /** A Vault entry Grant Coach proposes to change (2026-10-30): the text as it stands, the new text, and whether Josh saved it. */
 export interface VaultChange { key: string; label: string; before: string; after: string; why: string; saved?: boolean }
-interface Msg { id: string; role: "user" | "coach"; content: string; payload: { story_draft?: StoryDraft; story_done?: boolean; /** A draft answer Grant Coach wrote; it goes to the box only when Josh clicks. */ draft?: string; draft_story_id?: string | null; draft_words?: number; /** Josh clicked Use this on it (2026-10-30): the card then shows his edits since. */ used?: boolean; /** Grant Coach's original text, kept when Josh edits the card (2026-10-30), so his edits stay marked. */ draft_base?: string; vault_changes?: VaultChange[] } | null }
+interface Msg { id: string; role: "user" | "coach"; content: string; payload: { story_draft?: StoryDraft; story_done?: boolean; /** A draft answer Grant Coach wrote; it goes to the box only when Josh clicks. */ draft?: string; draft_story_id?: string | null; draft_words?: number; /** Josh clicked Use this on it (2026-10-30): the card then shows his edits since. */ used?: boolean; /** Grant Coach's original text, kept when Josh edits the card (2026-10-30), so his edits stay marked. */ draft_base?: string; vault_changes?: VaultChange[]; /** About this funder (2026-11-12): the note Grant Coach proposes from what Josh just said; saved to the funder only when he clicks. */ funder_notes?: { before: string; after: string; why: string; saved?: boolean } } | null }
 interface Q { id: string; section: string; label: string; detail: string | null; kind: string; answer: string | null; limit_kind?: "words" | "characters" | null; limit_value?: number | null; needs_case?: boolean }
 
 interface Props {
@@ -119,10 +121,13 @@ Left out: ${left.join("; ")}` : "");
         const entry = library.find((e) => e.key === v.key);
         return entry ? [{ key: v.key, label: entry.label, before: entry.value, after: v.after, why: v.why }] : [];
       });
+      // The note as Josh keeps it today, without the history lines the page adds for the writer.
+      const notesBefore = (folder.funder_notes ?? "").split(`\n\n${FUNDER_HISTORY_HEADING}`)[0].trim();
       const payload: Msg["payload"] = {
         ...(res.story_draft ? { story_draft: res.story_draft } : {}),
         ...(res.answer ? { draft: res.answer, draft_story_id: res.story_id ?? null, draft_words: res.words } : {}),
         ...(vaultChanges.length ? { vault_changes: vaultChanges } : {}),
+        ...(res.funder_notes?.after?.trim() ? { funder_notes: { before: notesBefore, after: res.funder_notes.after.trim(), why: res.funder_notes.why ?? "" } } : {}),
       };
       await save("coach", reply, Object.keys(payload ?? {}).length ? payload : null);
       if (res.fills?.length) {
@@ -149,6 +154,21 @@ Left out: ${left.join("; ")}` : "");
     qc.invalidateQueries({ queryKey: ["grant-vault-raw"] });
     qc.invalidateQueries({ queryKey: ["grant-library"] });
     toast.success(`Saved to the Vault: ${v.label}. Every grant from now on reads it.`);
+  };
+  /** Save the proposed About-this-funder note: kept per funder, so every grant with them reads it from now on. */
+  const saveFunderNote = async (m: Msg) => {
+    const v = m.payload?.funder_notes;
+    if (!v) return;
+    try {
+      await saveFunderNotes(folder.funder, v.after, userId);
+    } catch (e) {
+      toast.error(`Couldn't save the funder note: ${(e as Error).message}`);
+      return;
+    }
+    await supabase.from("grant_messages" as never).update({ payload: { ...(m.payload ?? {}), funder_notes: { ...v, saved: true } } } as never).eq("id", m.id);
+    qc.invalidateQueries({ queryKey: key });
+    qc.invalidateQueries({ queryKey: funderNotesQueryKey(folder.funder) });
+    toast.success(`Saved. Every grant with ${folder.funder.trim()} reads this from now on.`);
   };
   /** Use this: the draft goes to the answer box, and the card remembers it was used, so it can show Josh's edits from here. */
   const takeDraft = async (m: Msg) => {
@@ -329,6 +349,23 @@ Left out: ${left.join("; ")}` : "");
                       <DraftDiff before={v.before} after={v.after} className="px-3 py-2 text-sm text-white whitespace-pre-wrap leading-relaxed" />
                     </div>
                   ))}
+                  {m.payload?.funder_notes && (() => {
+                    const v = m.payload.funder_notes;
+                    return (
+                      <div className="max-w-[92%] rounded-lg border bg-black/40 overflow-hidden" style={{ borderColor: `${GC_BLUE}66` }}>
+                        <div className="px-3 py-1.5 border-b flex items-center justify-between gap-2" style={{ borderColor: `${GC_BLUE}33`, backgroundColor: `${GC_BLUE}14` }}>
+                          <p className="text-[10px] font-black uppercase tracking-[0.18em] inline-flex items-center gap-1.5" style={{ color: GC_BLUE }}><Handshake className="w-3.5 h-3.5" /> About this funder · {folder.funder.trim()}</p>
+                          {v.saved ? (
+                            <p className="text-[11px] font-semibold text-emerald-300 inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Saved · every grant with them reads it</p>
+                          ) : (
+                            <button type="button" onClick={() => void saveFunderNote(m)} className="rounded-md px-2.5 py-1 text-[11px] font-bold hover:opacity-90" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}>Save for this funder</button>
+                          )}
+                        </div>
+                        {v.why && <p className="px-3 pt-2 text-[12px] text-white/55">{v.why}</p>}
+                        <DraftDiff before={v.before} after={v.after} className="px-3 py-2 text-sm text-white whitespace-pre-wrap leading-relaxed" />
+                      </div>
+                    );
+                  })()}
                   {m.payload?.story_draft && !m.payload.story_done && (
                     <StoryDraftCard draft={m.payload.story_draft} folderId={folderId} onSaved={() => void settle(m)} onDismiss={() => void settle(m)} />
                   )}

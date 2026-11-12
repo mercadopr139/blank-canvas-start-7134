@@ -13,6 +13,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { GRANT_DOCUMENTS_BUCKET } from "@/lib/grantCoach/orgDocuments";
 import { strategyTurn, type CaseBrief, type DraftFolder, type FunderBrief, type LibraryEntry } from "@/lib/grantCoach/writer";
+import { loadFunderNotes } from "@/lib/grantCoach/funders";
 import type { Fact } from "@/lib/grantCoach/liveFacts";
 
 /** The folder being cloned, as the page holds it. */
@@ -140,6 +141,8 @@ export async function startNext(input: {
   const folder: DraftFolder = {
     name: next.name, funder: source.funder, program_name: next.program, amount_requested: next.amount,
     period_start: source.period_start, period_end: source.period_end, due_at: source.due_at, notes: null,
+    // What NLA knows about this funder (2026-11-12) — the same funder, so the same note.
+    funder_notes: (await loadFunderNotes(source.funder).catch(() => null))?.notes ?? null,
   };
   stage(`Writing the case for ${next.program}…`);
   try {

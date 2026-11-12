@@ -43,6 +43,8 @@ export async function loadLibrary(): Promise<LibraryEntry[]> {
 export interface DraftFolder {
   name: string; funder: string; program_name: string | null; amount_requested: number | null;
   period_start: string | null; period_end: string | null; due_at: string | null; notes: string | null;
+  /** What NLA knows about this funder (2026-11-12): Josh's notes, kept per funder, plus NLA's other grants with them. */
+  funder_notes?: string | null;
 }
 export interface DraftItem {
   id: string; section: string; label: string; detail: string | null; kind: string; answer: string | null;
@@ -116,6 +118,8 @@ export interface DraftResult {
   story_draft?: StoryDraft;
   /** chat: Vault entries Grant Coach proposes to change (2026-10-30) — saved only when Josh clicks. */
   vault_changes?: { key: string; after: string; why: string }[];
+  /** chat: the About-this-funder notes Grant Coach proposes (2026-11-12), the full text — saved only when Josh clicks. */
+  funder_notes?: { after: string; why: string };
 }
 
 /** Read the questions off uploaded portal screenshots (storage paths, in order). */
