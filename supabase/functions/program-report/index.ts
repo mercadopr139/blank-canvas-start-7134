@@ -32,7 +32,7 @@ const HAWK_FACTS =
   "ABOUT HAWK SQUAD (established facts — use freely, never contradict):\n" +
   "- Hawk Squad is a partnership between Cape May County Technical High School (CMT, 'Cape May Tech') and No Limits Academy (NLA), a youth boxing non-profit in Cape May County, NJ. It launched on September 19, 2022.\n" +
   "- Tagline: 'The Ultimate Afterschool Experience.' Branding is Hawk Squad green and gold, with the hawk.\n" +
-  "- CMT students (grades 9–12, enrolled in the school's career and technical education programmes) come to NLA after school, usually Tuesday and Thursday. The school bus brings them; some students are dismissed directly from NLA with a parent's signed permission instead of riding the bus back.\n" +
+  "- CMT students (grades 9–12, enrolled in the school's career and technical education programmes) come to NLA after school, usually Tuesday and Thursday. The school bus brings them and takes them back.\n" +
   "- On arrival, students check in at the Learning Center, where they receive a snack and homework support or tutoring as needed.\n" +
   "- Then it is structured, choice-based programming: social time in the Teen Center; the game room (arcade games, pool, air hockey); skill-based competition and open gym in the Performance Center (basketball, football, other sports); individualized training in the fitness facility built to develop physical strength, psychological resilience, and mental endurance; and boxing.\n" +
   "- The programme is designed for social-emotional, mental, and physical well-being: a consistent, positive place to decompress, connect, and grow, with mentorship and social connection at its core.\n" +
@@ -80,7 +80,7 @@ const NARRATIVE_FORMAT =
 
 type Stats = {
   sessionsHeld?: number; sessionsPlanned?: number; checkIns?: number; students?: number;
-  avgPerSession?: number; bus?: number; dismissed?: number;
+  avgPerSession?: number;
 };
 type Breakdown = Record<string, Record<string, number>>;
 
@@ -89,8 +89,7 @@ const statsBlock = (s: Stats | undefined): string =>
   `- Sessions held: ${s?.sessionsHeld ?? 0}${s?.sessionsPlanned ? ` (of ${s.sessionsPlanned} planned)` : ""}\n` +
   `- Total check-ins: ${s?.checkIns ?? 0}\n` +
   `- Distinct students reached: ${s?.students ?? 0}\n` +
-  `- Average students per session: ${s?.avgPerSession ?? 0}\n` +
-  `- Went home on the school bus: ${s?.bus ?? 0} check-ins; dismissed from NLA with permission: ${s?.dismissed ?? 0} check-ins\n`;
+  `- Average students per session: ${s?.avgPerSession ?? 0}\n`;
 
 const breakdownBlock = (b: Breakdown | undefined): string => {
   if (!b) return "";

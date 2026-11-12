@@ -126,7 +126,6 @@ const ProgramReportSheet = ({ program, open, onClose, period, stats, breakdown, 
                 {[
                   ["Sessions held", `${stats.sessionsHeld}${stats.sessionsPlanned ? ` of ${stats.sessionsPlanned}` : ""}`],
                   ["Check-ins", stats.checkIns], ["Students", stats.students], ["Avg / session", stats.avgPerSession],
-                  ["Bus", stats.bus], ["Dismissed", stats.dismissed],
                 ].map(([l, v]) => (
                   <div key={String(l)}><span className="text-white/45">{l}:</span> <span className="font-semibold">{v}</span></div>
                 ))}

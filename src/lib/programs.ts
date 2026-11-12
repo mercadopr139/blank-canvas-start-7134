@@ -161,7 +161,8 @@ export const HAWK_SQUAD: ProgramConfig = {
   storagePrefix: "hawk-squad",
   grades: ["9th", "10th", "11th", "12th"],
   hasCte: true,
-  hasGoingHome: true,
+  // Off since 2026-11-12 (Josh): bus vs dismissed is no longer recorded at check-in or reported anywhere.
+  hasGoingHome: false,
   dismissalWaiverKey: "hawk_dismissal",
   momentsStart: "2026-10-05",
   momentsDueFrom: 5,
