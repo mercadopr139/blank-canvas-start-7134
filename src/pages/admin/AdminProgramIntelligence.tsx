@@ -139,14 +139,13 @@ const AdminProgramIntelligence = ({ program }: { program: ProgramConfig }) => {
   const minority = useMemo(() => snapshotMinority(breakdown), [breakdown]);
   const disadvantaged = useMemo(() => snapshotDisadvantaged(breakdown, stats.students), [breakdown, stats.students]);
 
-  // Per student: sessions attended out of sessions held, and how they went home.
+  // Per student: sessions attended out of sessions held.
   const students = useMemo(() => {
-    const m = new Map<string, { name: string; photo: string | null; grade: string | null; dates: Set<string>; bus: number; dismissed: number }>();
+    const m = new Map<string, { name: string; photo: string | null; grade: string | null; dates: Set<string> }>();
     rows.forEach((r) => {
       const id = hawkIdentity(r);
-      const s = m.get(id) ?? { name: `${r.reg?.child_first_name ?? ""} ${r.reg?.child_last_name ?? ""}`.trim() || "Unknown", photo: r.reg?.child_headshot_url ?? null, grade: r.reg?.grade_level ?? null, dates: new Set<string>(), bus: 0, dismissed: 0 };
+      const s = m.get(id) ?? { name: `${r.reg?.child_first_name ?? ""} ${r.reg?.child_last_name ?? ""}`.trim() || "Unknown", photo: r.reg?.child_headshot_url ?? null, grade: r.reg?.grade_level ?? null, dates: new Set<string>() };
       s.dates.add(r.check_in_date);
-      if (r.going_home === "dismissed") s.dismissed++; else s.bus++;
       m.set(id, s);
     });
     return [...m.values()].sort((a, b) => b.dates.size - a.dates.size || a.name.localeCompare(b.name));
@@ -262,7 +261,6 @@ const AdminProgramIntelligence = ({ program }: { program: ProgramConfig }) => {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold truncate">{s.name}{s.grade && <span className="ml-2 text-xs text-white/40">{s.grade}</span>}</p>
-                        {program.hasGoingHome && <p className="text-[11px] text-white/40">{s.bus} bus · {s.dismissed} dismissed</p>}
                       </div>
                       <div className="w-24 text-right">
                         <p className="text-sm font-bold tabular-nums">{s.dates.size}<span className="text-white/30 font-normal"> / {stats.sessionsHeld}</span></p>
