@@ -7,7 +7,7 @@
 // (pasted dates, "not answered", "NLA's copy of the online application").
 import jsPDF from "jspdf";
 import nlaLogo from "@/assets/nla-logo.png";
-import { costProse, money, type ProposalSection, type ProposalSetup } from "@/lib/grantCoach/proposal";
+import { closingText, costProse, money, type ProposalSection, type ProposalSetup } from "@/lib/grantCoach/proposal";
 
 export interface Letterhead { org: string; address: string; phone: string | null; website: string | null; ein: string | null }
 export interface ProposalPdfInput {
@@ -148,7 +148,7 @@ export async function buildProposalPdf(input: ProposalPdfInput): Promise<jsPDF> 
   // ── Closing ──
   need(LEAD * 7);
   y += 6;
-  para(`Thank you for considering this request. ${setup.signer.trim() ? `${setup.signer.trim().split(",")[0]} is` : "We are"} available for any questions and for an interview.`);
+  para(closingText(setup));
   para("Sincerely,");
   y += LEAD * 1.4;
   if (setup.signer.trim()) {

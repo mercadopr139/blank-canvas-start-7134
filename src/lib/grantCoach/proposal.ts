@@ -22,9 +22,15 @@ export interface ProposalSetup {
   subject: string;
   /** "Josh Mercado, Program Director" */
   signer: string;
+  /** The closing paragraph before "Sincerely"; empty = the page's default. */
+  closing?: string;
 }
 
-export const EMPTY_SETUP: ProposalSetup = { to_name: "", to_title: "", to_org: "", to_address: "", subject: "", signer: "" };
+export const EMPTY_SETUP: ProposalSetup = { to_name: "", to_title: "", to_org: "", to_address: "", subject: "", signer: "", closing: "" };
+
+/** The closing paragraph as printed: Josh's own, or the default built from the signer. */
+export const closingText = (setup: ProposalSetup) =>
+  setup.closing?.trim() || `Thank you for considering this request. ${setup.signer.trim() ? `${setup.signer.trim().split(",")[0]} is` : "We are"} available for any questions and for an interview.`;
 
 /** The setup with the blanks filled from what the folder and the Vault already know. */
 export function defaultSetup(saved: Partial<ProposalSetup> | null | undefined, folder: { name: string; funder: string; amount_requested: number | null; program_name: string | null }, signerFromVault: string | null): ProposalSetup {

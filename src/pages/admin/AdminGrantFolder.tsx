@@ -25,6 +25,7 @@ import FunderBrief, { readAndSaveBrief } from "@/components/admin/grantCoach/Fun
 import AboutFunder, { useFunderNotes, useFunderFolders } from "@/components/admin/grantCoach/AboutFunder";
 import { funderHistoryText, FUNDER_HISTORY_HEADING } from "@/lib/grantCoach/funders";
 import ProposalSetupRow from "@/components/admin/grantCoach/ProposalSetup";
+import ProposalPreview from "@/components/admin/grantCoach/ProposalPreview";
 import { asDelivery, defaultSetup, proposalSections, DELIVERY_LABEL, type Delivery, type ProposalSetup } from "@/lib/grantCoach/proposal";
 import { buildProposalPdf, proposalPdfFileName } from "@/lib/grantCoach/proposalPdf";
 import { todayNY } from "@/lib/programYear";
@@ -313,11 +314,32 @@ const AdminGrantFolder = () => {
   const lib = (k: string) => library.find((e) => e.key === k)?.value?.trim() || null;
   const setup = (): ProposalSetup => defaultSetup(folder?.proposal ?? null, { name: folder?.name ?? "", funder: folder?.funder ?? "", amount_requested: folder?.amount_requested ?? null, program_name: folder?.program_name ?? null }, lib("signer_name"));
   const [printingProposal, setPrintingProposal] = useState(false);
-  const printProposal = async () => {
+  const [proposalOpen, setProposalOpen] = useState(false);
+  const letterhead = () => ({ org: lib("legal_name") ?? "No Limits Academy Inc.", address: lib("address_mailing") ?? lib("address_physical") ?? "", phone: lib("phone"), website: lib("website"), ein: lib("ein") });
+  const proposalEnclosures = () => proposalSections(items.filter((i) => i.status !== "na").map((i) => ({
+    label: i.label, detail: i.detail, kind: i.kind, answer: i.answer, status: i.status,
+    attachment: i.attachment_id ? docs.find((d) => d.id === i.attachment_id) ?? null : null,
+  }))).enclosures;
+  /** Print proposal opens the draft first (Josh, 2026-11-12: "I want to see the draft so I can make edits. Then save it."). */
+  const printProposal = () => {
+    if (!items.some((i) => i.status !== "na" && i.answer?.trim() && !["upload", "acknowledgment", "signature"].includes(i.kind))) { toast.error("Nothing to print yet: write the sections first."); return; }
+    setProposalOpen(true);
+  };
+  /** Save the edits made on the page: each changed section back to its row, the setup to the folder. */
+  const saveProposalEdits = async (edits: { rows: { id: string; answer: string }[]; setup: ProposalSetup }) => {
+    for (const r of edits.rows) {
+      const { error } = await supabase.from("grant_checklist_items" as never).update({ answer: r.answer.trim() || null, updated_at: new Date().toISOString() } as never).eq("id", r.id);
+      if (error) { toast.error(`Couldn't save a section: ${error.message}`); throw new Error(error.message); }
+    }
+    await patchFolder({ proposal: edits.setup });
+    qc.invalidateQueries({ queryKey: ["grant-items", id] });
+    if (edits.rows.length) toast.success(`${edits.rows.length} section${edits.rows.length === 1 ? "" : "s"} saved to the folder.`);
+  };
+  const downloadProposal = async (state: { answers: Record<string, string>; setup: ProposalSetup }) => {
     if (!folder) return;
     const live = items.filter((i) => i.status !== "na");
     const { sections, enclosures, missing } = proposalSections(live.map((i) => ({
-      label: i.label, detail: i.detail, kind: i.kind, answer: i.answer, status: i.status,
+      label: i.label, detail: i.detail, kind: i.kind, answer: i.id in state.answers ? state.answers[i.id] : i.answer, status: i.status,
       attachment: i.attachment_id ? docs.find((d) => d.id === i.attachment_id) ?? null : null,
     })));
     if (!sections.length) { toast.error("Nothing to print yet: write the sections first."); return; }
@@ -326,10 +348,7 @@ const AdminGrantFolder = () => {
       const uploads = live.filter((i) => i.kind === "upload");
       const { pdfs } = await planMerge(uploads.map((i) => ({ label: i.label, doc: i.attachment_id ? docs.find((d) => d.id === i.attachment_id) ?? null : null })));
       const ymd = todayNY();
-      const pdf = await buildProposalPdf({
-        folder, setup: setup(), sections, enclosures, date: ymd,
-        letterhead: { org: lib("legal_name") ?? "No Limits Academy Inc.", address: lib("address_mailing") ?? lib("address_physical") ?? "", phone: lib("phone"), website: lib("website"), ein: lib("ein") },
-      });
+      const pdf = await buildProposalPdf({ folder, setup: state.setup, sections, enclosures, date: ymd, letterhead: letterhead() });
       const merged = await mergePdfs(pdf.output("arraybuffer"), pdfs);
       const blob = new Blob([merged as BlobPart], { type: "application/pdf" });
       const href = URL.createObjectURL(blob);
@@ -751,6 +770,20 @@ const AdminGrantFolder = () => {
 
       </div>
       {dialog}
+      {delivery === "proposal" && (
+        <ProposalPreview
+          open={proposalOpen}
+          onOpenChange={setProposalOpen}
+          folder={folder}
+          setup={setup()}
+          letterhead={letterhead()}
+          rows={items.filter((i) => i.status !== "na").map((i) => ({ id: i.id, label: i.label, kind: i.kind, answer: i.answer, status: i.status }))}
+          enclosures={proposalEnclosures()}
+          date={todayNY()}
+          onSave={saveProposalEdits}
+          onDownload={downloadProposal}
+        />
+      )}
       {nextOpen && (
         <StartNextDialog open={nextOpen} onOpenChange={setNextOpen} source={folder} docs={docs} items={items} library={library} getFacts={async () => (facts.length ? facts : (await refetchFacts()).data ?? [])} userId={user?.id ?? null} />
       )}
