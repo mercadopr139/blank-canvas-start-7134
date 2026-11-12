@@ -1,14 +1,14 @@
 // A program's Snapshot (2026-11-12): the arithmetic behind the blocks and the attendance report.
 import { describe, expect, it } from "vitest";
-import { availableBlocks, buildSnapshot, formatName, previousPeriod, type SnapshotCheckIn } from "@/lib/programSnapshot";
+import { availableBlocks, buildSnapshot, formatName, previousPeriod, SNAPSHOT_BLOCKS, type SnapshotCheckIn } from "@/lib/programSnapshot";
 
-const ci = (identity: string, date: string, hour: number, first: string, last: string, going: "bus" | "dismissed" = "bus"): SnapshotCheckIn =>
+const ci = (identity: string, date: string, hour: number, first: string, last: string): SnapshotCheckIn =>
   // October is Eastern Daylight Time, UTC−4.
-  ({ identity, date, at: `${date}T${String(hour + 4).padStart(2, "0")}:15:00Z`, going_home: going, first, last, grade: "10th" });
+  ({ identity, date, at: `${date}T${String(hour + 4).padStart(2, "0")}:15:00Z`, first, last, grade: "10th" });
 
 const checkIns: SnapshotCheckIn[] = [
-  ci("a", "2026-10-06", 14, "Marcus", "Rivera"), ci("b", "2026-10-06", 14, "Jade", "Owens", "dismissed"), ci("c", "2026-10-06", 15, "Eli", "Park"),
-  ci("a", "2026-10-07", 14, "Marcus", "Rivera"), ci("b", "2026-10-07", 14, "Jade", "Owens", "dismissed"),
+  ci("a", "2026-10-06", 14, "Marcus", "Rivera"), ci("b", "2026-10-06", 14, "Jade", "Owens"), ci("c", "2026-10-06", 15, "Eli", "Park"),
+  ci("a", "2026-10-07", 14, "Marcus", "Rivera"), ci("b", "2026-10-07", 14, "Jade", "Owens"),
   ci("a", "2026-10-08", 14, "Marcus", "Rivera"), ci("b", "2026-10-08", 14, "Jade", "Owens"), ci("d", "2026-10-08", 14, "Noor", "Haddad"),
   ci("a", "2026-10-13", 14, "Marcus", "Rivera"),
 ];
@@ -23,21 +23,21 @@ const snapInput = {
     "Economically disadvantaged youth": { Yes: 3, No: 1 },
   },
   checkIns,
-  priorIdentities: new Set(["a", "b"]),
   registered: 8,
   previous: { sessionsHeld: 3, sessionsPlanned: 3, checkIns: 5, students: 3, avgPerSession: 1.7, bus: 5, dismissed: 0 },
   moments: [{ week: "Oct 6–10", notes: "Marcus led warm-ups." }],
-  hasGoingHome: true,
   names: "full" as const,
 };
 const snap = buildSnapshot(snapInput);
 
 describe("the Snapshot", () => {
-  it("reaches, rates and counts new students", () => {
+  it("reaches and counts sessions, with the average per session and no bus/dismissed split", () => {
     expect(snap.reached).toEqual({ students: 4, registered: 8, pct: 50 });
-    // 4 sessions held: Marcus 4/4 and Jade 3/4 are at 75%+; Eli and Noor are not.
-    expect(snap.rate).toEqual({ consistent: 2, of: 4, pct: 50, threshold: 75 });
-    expect(snap.newReturning).toEqual({ fresh: 2, returning: 2 });
+    expect(snap.sessions).toEqual({ held: 4, planned: 5, checkIns: 9, avg: 2.3 });
+    // Taken out for good (Josh, 2026-11-12): attended 75%+, new vs returning, bus vs dismissed.
+    expect(SNAPSHOT_BLOCKS.map((b) => b.key)).not.toContain("rate");
+    expect(SNAPSHOT_BLOCKS.map((b) => b.key)).not.toContain("newReturning");
+    expect(JSON.stringify(snap)).not.toMatch(/bus|dismissed/i);
   });
 
   it("turns the breakdown into rows with percents, and the minority and disadvantaged headlines", () => {
@@ -56,13 +56,13 @@ describe("the Snapshot", () => {
   });
 
   it("builds the attendance report: each session in order with who came, then each student's total", () => {
-    expect(snap.attendance.sessions.map((s) => [s.date, s.count, s.bus, s.dismissed])).toEqual([
-      ["2026-10-06", 3, 2, 1], ["2026-10-07", 2, 1, 1], ["2026-10-08", 3, 3, 0], ["2026-10-13", 1, 1, 0],
+    expect(snap.attendance.sessions.map((s) => [s.date, s.count])).toEqual([
+      ["2026-10-06", 3], ["2026-10-07", 2], ["2026-10-08", 3], ["2026-10-13", 1],
     ]);
     expect(snap.attendance.sessions[0].people.map((p) => p.name)).toEqual(["Jade Owens", "Marcus Rivera", "Eli Park"]);
     expect(snap.attendance.sessions[0].people[0].time).toBe("2:15 PM");
-    expect(snap.attendance.students[0]).toEqual({ name: "Marcus Rivera", attended: 4, of: 4, pct: 100, bus: 4, dismissed: 0 });
-    expect(snap.attendance.students[1]).toEqual({ name: "Jade Owens", attended: 3, of: 4, pct: 75, bus: 1, dismissed: 2 });
+    expect(snap.attendance.students[0]).toEqual({ name: "Marcus Rivera", attended: 4, of: 4, pct: 100 });
+    expect(snap.attendance.students[1]).toEqual({ name: "Jade Owens", attended: 3, of: 4, pct: 75 });
   });
 
   it("initials the last name when the report leaves the school", () => {
@@ -74,7 +74,7 @@ describe("the Snapshot", () => {
   it("offers only the blocks a program has data for", () => {
     expect(availableBlocks({ hasCte: false, hasGrades: true, hasPrevious: false, hasMoments: true })).not.toContain("cte");
     expect(availableBlocks({ hasCte: false, hasGrades: true, hasPrevious: false, hasMoments: true })).not.toContain("comparison");
-    expect(availableBlocks({ hasCte: true, hasGrades: true, hasPrevious: true, hasMoments: true })).toHaveLength(13);
+    expect(availableBlocks({ hasCte: true, hasGrades: true, hasPrevious: true, hasMoments: true })).toHaveLength(11);
   });
 
   it("finds the previous period of the same length", () => {

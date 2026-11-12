@@ -33,7 +33,6 @@ const table = (name: string) => supabase.from(name as never) as never as { selec
 
 const ProgramSnapshotSheet = ({ program, open, onClose, from, to, period, stats, breakdown, rows, moments }: Props) => {
   const regCols = "id, youth_link_id, child_first_name, child_last_name, grade_level";
-  const goingHome = program.hasGoingHome ? ", going_home" : "";
   const filtered = (q: Q) => (program.attendanceFilter ? q.eq(program.attendanceFilter.column, program.attendanceFilter.value) : q);
 
   // The period's check-ins with their times, for the attendance report.
@@ -41,26 +40,15 @@ const ProgramSnapshotSheet = ({ program, open, onClose, from, to, period, stats,
     queryKey: ["program-snapshot-checkins", program.key, from, to],
     enabled: open,
     queryFn: async (): Promise<SnapshotCheckIn[]> => {
-      const { data, error } = await filtered(table(program.tables.attendance).select(`registration_id, check_in_date, check_in_at${goingHome}, ${program.tables.registrations}(${regCols})`).gte("check_in_date", from).lte("check_in_date", to));
+      const { data, error } = await filtered(table(program.tables.attendance).select(`registration_id, check_in_date, check_in_at, ${program.tables.registrations}(${regCols})`).gte("check_in_date", from).lte("check_in_date", to));
       if (error) throw new Error(error.message);
       return ((data as Array<Record<string, unknown>>) ?? []).map((r) => {
         const reg = (r[program.tables.registrations] as { youth_link_id: string | null; child_first_name: string; child_last_name: string; grade_level: string | null } | null) ?? null;
         return {
           identity: reg?.youth_link_id ?? (r.registration_id as string), date: r.check_in_date as string, at: (r.check_in_at as string) ?? null,
-          going_home: (r.going_home as "bus" | "dismissed" | undefined) ?? null, first: reg?.child_first_name ?? "", last: reg?.child_last_name ?? "", grade: reg?.grade_level ?? null,
+          first: reg?.child_first_name ?? "", last: reg?.child_last_name ?? "", grade: reg?.grade_level ?? null,
         };
       });
-    },
-  });
-
-  // Who had checked in before the period began: the returning students.
-  const { data: prior = new Set<string>() } = useQuery({
-    queryKey: ["program-snapshot-prior", program.key, from],
-    enabled: open,
-    queryFn: async () => {
-      const { data, error } = await filtered(table(program.tables.attendance).select(`registration_id, ${program.tables.registrations}(youth_link_id)`).lt("check_in_date", from));
-      if (error) throw new Error(error.message);
-      return new Set(((data as Array<Record<string, unknown>>) ?? []).map((r) => ((r[program.tables.registrations] as { youth_link_id: string | null } | null)?.youth_link_id) ?? (r.registration_id as string)));
     },
   });
 
@@ -70,10 +58,10 @@ const ProgramSnapshotSheet = ({ program, open, onClose, from, to, period, stats,
     queryKey: ["program-snapshot-previous", program.key, prev.from, prev.to],
     enabled: open,
     queryFn: async (): Promise<HawkPeriodStats | null> => {
-      const { data, error } = await filtered(table(program.tables.attendance).select(`registration_id, check_in_date${goingHome}, ${program.tables.registrations}(id, youth_link_id)`).gte("check_in_date", prev.from).lte("check_in_date", prev.to));
+      const { data, error } = await filtered(table(program.tables.attendance).select(`registration_id, check_in_date, ${program.tables.registrations}(id, youth_link_id)`).gte("check_in_date", prev.from).lte("check_in_date", prev.to));
       if (error) throw new Error(error.message);
       const list = ((data as Array<Record<string, unknown>>) ?? []).map((r) => ({
-        registration_id: r.registration_id as string, check_in_date: r.check_in_date as string, going_home: (r.going_home as "bus" | "dismissed") ?? "bus",
+        registration_id: r.registration_id as string, check_in_date: r.check_in_date as string, going_home: "bus",
         reg: (r[program.tables.registrations] as HawkIntelRow["reg"]) ?? null,
       })) as HawkIntelRow[];
       if (!list.length) return null;
@@ -99,7 +87,7 @@ const ProgramSnapshotSheet = ({ program, open, onClose, from, to, period, stats,
   const blocks = useMemo(() => new Set(available.filter((k) => !off.has(k))), [available, off]);
   const toggle = (k: SnapshotBlockKey) => setOff((o) => { const n = new Set(o); if (n.has(k)) n.delete(k); else n.add(k); return n; });
 
-  const snapshot = useMemo(() => buildSnapshot({ stats, breakdown, checkIns, priorIdentities: prior, registered, previous, moments, hasGoingHome: program.hasGoingHome, names }), [stats, breakdown, checkIns, prior, registered, previous, moments, program.hasGoingHome, names]);
+  const snapshot = useMemo(() => buildSnapshot({ stats, breakdown, checkIns, registered, previous, moments, names }), [stats, breakdown, checkIns, registered, previous, moments, names]);
   const on = (k: SnapshotBlockKey) => blocks.has(k);
   const printedOn = hawkTodayET();
   const [downloading, setDownloading] = useState(false);
@@ -140,9 +128,11 @@ const ProgramSnapshotSheet = ({ program, open, onClose, from, to, period, stats,
   const s = snapshot;
   const tiles: Array<{ label: string; value: string; sub?: string }> = [];
   if (on("reached")) tiles.push({ label: "Students reached", value: String(s.reached.students), sub: s.reached.registered != null ? `of ${s.reached.registered} registered · ${s.reached.pct}%` : undefined });
-  if (on("sessions")) { tiles.push({ label: "Sessions held", value: String(s.sessions.held), sub: s.sessions.planned ? `of ${s.sessions.planned} planned` : undefined }); tiles.push({ label: "Check-ins", value: String(s.sessions.checkIns), sub: `${s.sessions.avg} per session` }); if (program.hasGoingHome) tiles.push({ label: "Bus / dismissed", value: `${s.sessions.bus} / ${s.sessions.dismissed}`, sub: "check-ins" }); }
-  if (on("rate")) tiles.push({ label: `Attended ${s.rate.threshold}%+`, value: `${s.rate.pct}%`, sub: `${s.rate.consistent} of ${s.rate.of} students` });
-  if (on("newReturning")) tiles.push({ label: "New / returning", value: `${s.newReturning.fresh} / ${s.newReturning.returning}`, sub: "first check-in in this period, or before" });
+  if (on("sessions")) {
+    tiles.push({ label: "Sessions held", value: String(s.sessions.held), sub: s.sessions.planned ? `of ${s.sessions.planned} planned` : undefined });
+    tiles.push({ label: "Check-ins", value: String(s.sessions.checkIns), sub: "in the period" });
+    tiles.push({ label: "Average per session", value: String(s.sessions.avg), sub: `${s.sessions.checkIns} check-ins over ${s.sessions.held} session${s.sessions.held === 1 ? "" : "s"}` });
+  }
   if (on("minority")) tiles.push({ label: "Minority", value: `${s.minority.pct}%`, sub: `${s.minority.n} of ${s.minority.recorded} with a race recorded` });
   if (on("disadvantaged")) tiles.push({ label: "Economically disadvantaged", value: `${s.disadvantaged.pct}%`, sub: `${s.disadvantaged.n} of ${s.disadvantaged.of} students` });
 
@@ -229,24 +219,24 @@ const ProgramSnapshotSheet = ({ program, open, onClose, from, to, period, stats,
                       <p className="text-[11px] text-neutral-500">{s.attendance.sessions.length} sessions · {s.sessions.checkIns} check-ins · {s.reached.students} students</p>
                     </div>
                     <table className="w-full text-[12px]">
-                      <thead><tr className="text-white" style={{ backgroundColor: program.brand.primary }}><th className="text-left px-2 py-1 font-bold">Session</th><th className="text-right px-2 py-1">Checked in</th>{program.hasGoingHome && <><th className="text-right px-2 py-1">Bus</th><th className="text-right px-2 py-1">Dismissed</th></>}</tr></thead>
+                      <thead><tr className="text-white" style={{ backgroundColor: program.brand.primary }}><th className="text-left px-2 py-1 font-bold">Session</th><th className="text-right px-2 py-1">Checked in</th></tr></thead>
                       <tbody>
-                        {s.attendance.sessions.map((ss, i) => <tr key={ss.date} className={i % 2 ? "bg-neutral-100" : ""}><td className="px-2 py-1">{longDay(ss.date)}</td><td className="px-2 py-1 text-right tabular-nums">{ss.count}</td>{program.hasGoingHome && <><td className="px-2 py-1 text-right tabular-nums">{ss.bus}</td><td className="px-2 py-1 text-right tabular-nums">{ss.dismissed}</td></>}</tr>)}
-                        <tr className="bg-neutral-100 font-bold"><td className="px-2 py-1">Total</td><td className="px-2 py-1 text-right tabular-nums">{s.sessions.checkIns}</td>{program.hasGoingHome && <><td className="px-2 py-1 text-right tabular-nums">{s.sessions.bus}</td><td className="px-2 py-1 text-right tabular-nums">{s.sessions.dismissed}</td></>}</tr>
+                        {s.attendance.sessions.map((ss, i) => <tr key={ss.date} className={i % 2 ? "bg-neutral-100" : ""}><td className="px-2 py-1">{longDay(ss.date)}</td><td className="px-2 py-1 text-right tabular-nums">{ss.count}</td></tr>)}
+                        <tr className="bg-neutral-100 font-bold"><td className="px-2 py-1">Total</td><td className="px-2 py-1 text-right tabular-nums">{s.sessions.checkIns}</td></tr>
+                        <tr className="font-bold"><td className="px-2 py-1">Average per session</td><td className="px-2 py-1 text-right tabular-nums">{s.sessions.avg}</td></tr>
                       </tbody>
                     </table>
                     <div className="space-y-3">
                       {s.attendance.sessions.map((ss) => (
                         <div key={ss.date}>
-                          <div className="flex items-baseline justify-between"><p className="text-[12.5px] font-bold">{longDay(ss.date)}</p><p className="text-[11px] text-neutral-500">{ss.count} checked in{program.hasGoingHome ? ` · ${ss.bus} bus · ${ss.dismissed} dismissed` : ""}</p></div>
-                          <div className="grid grid-cols-3 gap-x-4 text-[11.5px]">{ss.people.map((p, i) => <div key={i} className="flex justify-between gap-2 border-b border-neutral-100 py-0.5"><span className="truncate">{p.name}</span><span className="text-neutral-500 shrink-0">{[p.time, program.hasGoingHome ? (p.goingHome === "dismissed" ? "D" : "B") : null].filter(Boolean).join(" · ")}</span></div>)}</div>
+                          <div className="flex items-baseline justify-between"><p className="text-[12.5px] font-bold">{longDay(ss.date)}</p><p className="text-[11px] text-neutral-500">{ss.count} checked in</p></div>
+                          <div className="grid grid-cols-3 gap-x-4 text-[11.5px]">{ss.people.map((p, i) => <div key={i} className="flex justify-between gap-2 border-b border-neutral-100 py-0.5"><span className="truncate">{p.name}</span><span className="text-neutral-500 shrink-0">{p.time}</span></div>)}</div>
                         </div>
                       ))}
-                      {program.hasGoingHome && <p className="text-[10px] italic text-neutral-500">B = rode the bus · D = dismissed from NLA</p>}
                     </div>
                     <table className="w-full text-[12px]">
-                      <thead><tr className="text-white" style={{ backgroundColor: program.brand.primary }}><th className="text-left px-2 py-1 font-bold">Student</th><th className="text-right px-2 py-1">Sessions</th><th className="text-right px-2 py-1">Of</th><th className="text-right px-2 py-1">Rate</th>{program.hasGoingHome && <th className="text-right px-2 py-1">Bus / dism.</th>}</tr></thead>
-                      <tbody>{s.attendance.students.map((st, i) => <tr key={st.name + i} className={i % 2 ? "bg-neutral-100" : ""}><td className="px-2 py-1">{st.name}</td><td className="px-2 py-1 text-right tabular-nums">{st.attended}</td><td className="px-2 py-1 text-right tabular-nums">{st.of}</td><td className="px-2 py-1 text-right tabular-nums">{st.pct}%</td>{program.hasGoingHome && <td className="px-2 py-1 text-right tabular-nums">{st.bus} / {st.dismissed}</td>}</tr>)}</tbody>
+                      <thead><tr className="text-white" style={{ backgroundColor: program.brand.primary }}><th className="text-left px-2 py-1 font-bold">Student</th><th className="text-right px-2 py-1">Sessions</th><th className="text-right px-2 py-1">Of</th><th className="text-right px-2 py-1">Rate</th></tr></thead>
+                      <tbody>{s.attendance.students.map((st, i) => <tr key={st.name + i} className={i % 2 ? "bg-neutral-100" : ""}><td className="px-2 py-1">{st.name}</td><td className="px-2 py-1 text-right tabular-nums">{st.attended}</td><td className="px-2 py-1 text-right tabular-nums">{st.of}</td><td className="px-2 py-1 text-right tabular-nums">{st.pct}%</td></tr>)}</tbody>
                     </table>
                   </div>
                 )}

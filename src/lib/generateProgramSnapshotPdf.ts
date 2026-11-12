@@ -67,11 +67,9 @@ export function buildProgramSnapshotPdf(opts: SnapshotPdfOptions): jsPDF {
   if (on("reached")) tiles.push(["Students reached", String(s.reached.students), s.reached.registered != null ? `of ${s.reached.registered} registered · ${s.reached.pct}%` : undefined]);
   if (on("sessions")) {
     tiles.push(["Sessions held", String(s.sessions.held), s.sessions.planned ? `of ${s.sessions.planned} planned` : undefined]);
-    tiles.push(["Check-ins", String(s.sessions.checkIns), `${s.sessions.avg} per session`]);
-    if (program.hasGoingHome) tiles.push(["Bus / dismissed", `${s.sessions.bus} / ${s.sessions.dismissed}`, "check-ins"]);
+    tiles.push(["Check-ins", String(s.sessions.checkIns), "in the period"]);
+    tiles.push(["Average per session", String(s.sessions.avg), `${s.sessions.checkIns} check-ins over ${s.sessions.held} session${s.sessions.held === 1 ? "" : "s"}`]);
   }
-  if (on("rate")) tiles.push([`Attended ${s.rate.threshold}%+`, `${s.rate.pct}%`, `${s.rate.consistent} of ${s.rate.of} students`]);
-  if (on("newReturning")) tiles.push(["New / returning", `${s.newReturning.fresh} / ${s.newReturning.returning}`, "first check-in in this period, or before"]);
   if (on("minority")) tiles.push(["Minority", `${s.minority.pct}%`, `${s.minority.n} of ${s.minority.recorded} with a race recorded`]);
   if (on("disadvantaged")) tiles.push(["Economically disadvantaged", `${s.disadvantaged.pct}%`, `${s.disadvantaged.n} of ${s.disadvantaged.of} students`]);
   if (tiles.length) {
@@ -174,14 +172,10 @@ export function buildProgramSnapshotPdf(opts: SnapshotPdfOptions): jsPDF {
 
     // Summary: one row per session.
     sectionTitle("Every session");
-    const gh = program.hasGoingHome;
-    header(gh ? [["Session", M + 6, "left"], ["Checked in", R - 150, "right"], ["Bus", R - 80, "right"], ["Dismissed", R - 6, "right"]] : [["Session", M + 6, "left"], ["Checked in", R - 6, "right"]]);
-    s.attendance.sessions.forEach((ss, i) => row(gh
-      ? [[longDay(ss.date), M + 6, "left"], [String(ss.count), R - 150, "right"], [String(ss.bus), R - 80, "right"], [String(ss.dismissed), R - 6, "right"]]
-      : [[longDay(ss.date), M + 6, "left"], [String(ss.count), R - 6, "right"]], false, i % 2 === 1));
-    row(gh
-      ? [["Total", M + 6, "left"], [String(s.sessions.checkIns), R - 150, "right"], [String(s.sessions.bus), R - 80, "right"], [String(s.sessions.dismissed), R - 6, "right"]]
-      : [["Total", M + 6, "left"], [String(s.sessions.checkIns), R - 6, "right"]], true, true);
+    header([["Session", M + 6, "left"], ["Checked in", R - 6, "right"]]);
+    s.attendance.sessions.forEach((ss, i) => row([[longDay(ss.date), M + 6, "left"], [String(ss.count), R - 6, "right"]], false, i % 2 === 1));
+    row([["Total", M + 6, "left"], [String(s.sessions.checkIns), R - 6, "right"]], true, true);
+    row([["Average per session", M + 6, "left"], [String(s.sessions.avg), R - 6, "right"]], true, false);
     y += 10;
 
     // Each session's roll.
@@ -189,7 +183,7 @@ export function buildProgramSnapshotPdf(opts: SnapshotPdfOptions): jsPDF {
     for (const ss of s.attendance.sessions) {
       need(40);
       setType(10, DARK, "bold"); doc.text(longDay(ss.date), M, y + 10);
-      setType(9, GRAY); doc.text(`${ss.count} checked in${gh ? ` · ${ss.bus} bus · ${ss.dismissed} dismissed` : ""}`, R, y + 10, { align: "right" });
+      setType(9, GRAY); doc.text(`${ss.count} checked in`, R, y + 10, { align: "right" });
       y += 16;
       // Three names across.
       const cols = 3, cw = TEXT_W / cols;
@@ -198,22 +192,17 @@ export function buildProgramSnapshotPdf(opts: SnapshotPdfOptions): jsPDF {
         const x = M + (i % cols) * cw;
         const ry = y + 10;
         setType(9, DARK); doc.text(doc.splitTextToSize(p.name, cw - 70)[0] as string, x, ry);
-        setType(8, GRAY); doc.text([p.time, gh ? (p.goingHome === "dismissed" ? "D" : "B") : null].filter(Boolean).join(" · "), x + cw - 8, ry, { align: "right" });
+        if (p.time) { setType(8, GRAY); doc.text(p.time, x + cw - 8, ry, { align: "right" }); }
         if (i % cols === cols - 1 || i === ss.people.length - 1) y += 14;
       });
       y += 8;
     }
-    if (gh) { setType(8, GRAY, "italic"); need(12); doc.text("B = rode the bus · D = dismissed from NLA", M, y + 8); y += 16; }
 
     // Each student's total.
     y += 6;
     sectionTitle("Each student");
-    header(gh
-      ? [["Student", M + 6, "left"], ["Sessions", R - 150, "right"], ["Of", R - 110, "right"], ["Rate", R - 70, "right"], ["Bus / dism.", R - 6, "right"]]
-      : [["Student", M + 6, "left"], ["Sessions", R - 90, "right"], ["Of", R - 50, "right"], ["Rate", R - 6, "right"]]);
-    s.attendance.students.forEach((st, i) => row(gh
-      ? [[st.name, M + 6, "left"], [String(st.attended), R - 150, "right"], [String(st.of), R - 110, "right"], [`${st.pct}%`, R - 70, "right"], [`${st.bus} / ${st.dismissed}`, R - 6, "right"]]
-      : [[st.name, M + 6, "left"], [String(st.attended), R - 90, "right"], [String(st.of), R - 50, "right"], [`${st.pct}%`, R - 6, "right"]], false, i % 2 === 1));
+    header([["Student", M + 6, "left"], ["Sessions", R - 90, "right"], ["Of", R - 50, "right"], ["Rate", R - 6, "right"]]);
+    s.attendance.students.forEach((st, i) => row([[st.name, M + 6, "left"], [String(st.attended), R - 90, "right"], [String(st.of), R - 50, "right"], [`${st.pct}%`, R - 6, "right"]], false, i % 2 === 1));
   }
 
   // ── Source line and footer ──
