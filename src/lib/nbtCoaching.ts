@@ -1,61 +1,29 @@
-// What the Non-Battle Team generator is allowed to know before it writes.
+// What the Non-Battle Team generator is allowed to know before it writes, and
+// the checks that refuse a day the room cannot run.
 //
-// Three separate pieces of context, kept here because they are pure arithmetic
-// over data we already hold, and because deciding what the AI sees is a
-// coaching decision that deserves tests rather than a hopeful object literal
-// built inline in a click handler.
+// Kept here because they are pure arithmetic over data we already hold, and
+// because deciding what the AI sees is a coaching decision that deserves tests
+// rather than a hopeful object literal built inline in a click handler.
 //
-// 1. priorWeekBrief  — the lift, and its modification, earlier in this block.
-// 2. roomReport      — what the room actually managed, anonymised.
-// 3. carryOver       — where the last block finished, so a month is not a reset.
+// 1. dayForModel — a day handed back to be partly rewritten.
+// 2. roomReport  — what the room actually managed, anonymised.
+// 3–6. the room, the kit, the repeat, the reading — why a written day is refused.
 //
-// ONE GROUP since 2026-11-09 (Rev, through Josh): one lift for everyone, with
-// an easier and a harder version. A week written for two tracks is read the
-// same way — see liftOf() in nbt.ts.
+// What the lift is, and what it did last time, is the rotation's business
+// since 2026-11-18 — see src/lib/nbtRotation.ts. ONE GROUP since 2026-11-09:
+// one lift for everyone with a simplified line; a week written for two tracks
+// is read the same way — see liftOf() in nbt.ts.
 //
 // PRIVACY: roomReport deliberately returns counts and medians and never a name,
 // a registration id, or an individual's numbers. nbt_logs names children; the
 // generator is an outbound AI call and has no business knowing who anyone is.
 import {
-  DayKey, NbtDay, NbtLog, NbtWeek, heaviestSet, totalReps, isRoundsLine, liftOf,
+  DayKey, NbtDay, NbtLog, heaviestSet, totalReps, isRoundsLine, liftOf,
 } from "@/lib/nbt";
 import { roomFor, absentKit, KIT_PATTERNS, type Room } from "@/lib/nbtRooms";
 import { stationLines, workLines } from "@/lib/nbt";
 
-/* ───── 1. Earlier weeks of this block ───── */
-
-export interface PriorWeekBrief {
-  week: number;
-  pattern: string;
-  /** "Back Squat — 4 × 5": the lift everyone did. */
-  lift: string;
-  /** The modification either way, so it progresses with the lift instead of being a fresh guess. */
-  easier: string;
-  harder: string;
-  work: string;
-}
-
-const liftLine = (day: NbtDay | undefined) => {
-  const l = liftOf(day);
-  if (!l.name) return "—";
-  return l.detail ? `${l.name} — ${l.detail}` : l.name;
-};
-
-/** A week of this block, described for the model: the lift and how it was modified. */
-export const priorWeekBrief = (week: NbtWeek, dayKey: DayKey): PriorWeekBrief | null => {
-  const day = week.days?.[dayKey];
-  if (!day) return null;
-  const work = [day.work?.title, day.work?.emphasis].filter(Boolean).join(" — ");
-  const l = liftOf(day);
-  return {
-    week: week.week_in_block,
-    pattern: day.lift?.pattern ?? "",
-    lift: liftLine(day),
-    easier: l.easier || "—",
-    harder: l.harder || "—",
-    work: work || "—",
-  };
-};
+/* ───── 1. A day handed back ───── */
 
 /**
  * A day as the generator writes it, for handing one back to be partly
@@ -81,13 +49,6 @@ export const dayForModel = (day: NbtDay) => {
     reset: day.reset ?? [],
   };
 };
-
-export const priorWeekBriefs = (weeks: NbtWeek[], dayKey: DayKey, beforeWeekNo: number) =>
-  weeks
-    .filter((w) => w.week_in_block < beforeWeekNo)
-    .sort((a, b) => a.week_in_block - b.week_in_block)
-    .map((w) => priorWeekBrief(w, dayKey))
-    .filter((b): b is PriorWeekBrief => b !== null);
 
 /* ───── 2. What the room actually did ───── */
 
@@ -218,9 +179,10 @@ export const FACILITY: Partial<Record<DayKey, Facility>> = {
  *
  * "running clock" and "run through" are excluded deliberately — both are normal
  * gym language for something done standing still, and refusing them would fail
- * good Tuesday sessions.
+ * good Tuesday sessions. Rev's "suicides" (2026-11-18) are a sprint in place
+ * with a burpee at the whistle, so the word no longer means floor.
  */
-const TRAVELS = /\b(?:jogs?|jogging|laps?|shuttles?|suicides?)\b|\brun(?:s|ning)?\b(?!\s+(?:clock|through))/i;
+const TRAVELS = /\b(?:jogs?|jogging|laps?|shuttles?)\b|\brun(?:s|ning)?\b(?!\s+(?:clock|through))/i;
 
 /** A run word, for the days where running is allowed but bounded. */
 const RUN_WORD = /\b(?:runs?|running|jogs?|jogging|sprints?)\b/i;
@@ -365,7 +327,7 @@ const ALIASES: Array<[RegExp, string]> = [
 
 /** Lowercase, aliases applied, hyphens to spaces, simple plurals dropped. */
 const normalise = (s: string) => {
-  let t = s.toLowerCase().replace(/[()\[\],:;/]/g, " ").replace(/[-–—]/g, " ");
+  let t = s.toLowerCase().replace(/[()[\],:;/]/g, " ").replace(/[-–—]/g, " ");
   ALIASES.forEach(([re, to]) => { t = t.replace(re, to); });
   return t
     .split(/\s+/)
@@ -509,51 +471,3 @@ export const dayProblem = (day: NbtDay, dayKey: DayKey): string | null =>
   liftRepeated(day) ??
   unreadableLine(day);
 
-/* ───── 5. Where the last block finished ───── */
-
-export interface CarryOver {
-  weekStart: string;
-  pattern: string;
-  lift: string;
-  easier: string;
-  harder: string;
-  work: string;
-  /** Consecutive weeks that pattern has now been trained. Drives "time to advance". */
-  weeksOnPattern: number;
-}
-
-/**
- * The last written week of the PREVIOUS block, for this day.
- *
- * Without it every month restarted from scratch: four good weeks of building a
- * squat, then a clean slate and a fresh movement. Strength does not work on a
- * calendar month, so week 1 of a new block is handed where the last one ended
- * and told to continue rather than reset.
- */
-export const carryOver = (prevWeeks: NbtWeek[], dayKey: DayKey): CarryOver | null => {
-  const written = prevWeeks
-    .filter((w) => w.days?.[dayKey]?.lift?.pattern)
-    .sort((a, b) => a.week_in_block - b.week_in_block);
-  if (written.length === 0) return null;
-
-  const last = written[written.length - 1];
-  const brief = priorWeekBrief(last, dayKey);
-  if (!brief) return null;
-
-  // How long this pattern has run without interruption, counting back.
-  let weeksOnPattern = 0;
-  for (let i = written.length - 1; i >= 0; i--) {
-    if (written[i].days?.[dayKey]?.lift?.pattern === brief.pattern) weeksOnPattern += 1;
-    else break;
-  }
-
-  return {
-    weekStart: last.week_start,
-    pattern: brief.pattern,
-    lift: brief.lift,
-    easier: brief.easier,
-    harder: brief.harder,
-    work: brief.work,
-    weeksOnPattern,
-  };
-};

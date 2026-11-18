@@ -31,7 +31,7 @@ import { fetchLiftNote } from "@/lib/liftNote";
 import ExercisePictures from "@/components/strength/ExercisePictures";
 import StationPictures from "@/components/strength/StationPictures";
 import { stationPictures } from "@/lib/nbtStations";
-import { stationLines } from "@/lib/nbt";
+import { stationLines, stationSeconds } from "@/lib/nbt";
 
 const NbtBoard = () => {
   const navigate = useNavigate();
@@ -625,7 +625,7 @@ const NbtBoard = () => {
                       ))}
                     </div>
                     <div className="shrink-0 px-[0.9em] pb-[0.6em]">
-                      <StationClock storageKey={`nbt-stations:${weekStart}:${dayKey}`} stations={Math.max(1, showing)} seconds={120} color={NBT_AMBER} />
+                      <StationClock storageKey={`nbt-stations:${weekStart}:${dayKey}`} stations={Math.max(1, showing)} seconds={stationSeconds(header)} color={NBT_AMBER} />
                       {/* Coach only: the whole card off the wall for tonight. */}
                       {isAdmin && (
                         <div className="mt-[0.4em] flex justify-end">

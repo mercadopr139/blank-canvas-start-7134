@@ -15,6 +15,12 @@ import { parseBulletLine, type Level } from "@/lib/bulletText";
 // lift as the lift, Bravo's as the easier version) and the NBT Intelligence
 // page still reports them. Charlie, the third track, was retired 2026-10-03;
 // an athlete filed as charlie is read as Bravo.
+//
+// REV'S ROTATION since 2026-11-18 (src/lib/nbtRotation.ts): the lift is one
+// of eight movements in Rev's order, one per session, each continuing from
+// the last time it ran — the days no longer own a pattern. The stations are
+// fixed roles per room, three minutes each, picked from Rev's lists. The lift
+// has one simplified line ("easier"); "harder" is history, read if present.
 export const TRACKS = ["alpha", "bravo"] as const;
 export type Track = (typeof TRACKS)[number];
 
@@ -67,10 +73,11 @@ export type DayKey = WeekdayKey;
 
 export interface DayMeta { key: DayKey; label: string; title: string; weekday: number }
 
+// The title is the room (Rev's rotation, 2026-11-18): the lift moves across the days, the room does not.
 export const DAYS: readonly DayMeta[] = [
-  { key: "monday", label: "Monday", title: "Squat + Push", weekday: 1 },
-  { key: "tuesday", label: "Tuesday", title: "Athletic + Overhead", weekday: 2 },
-  { key: "thursday", label: "Thursday", title: "Hinge + Pull", weekday: 4 },
+  { key: "monday", label: "Monday", title: "Performance Center", weekday: 1 },
+  { key: "tuesday", label: "Tuesday", title: "Boxing Facility", weekday: 2 },
+  { key: "thursday", label: "Thursday", title: "Performance Center", weekday: 4 },
 ];
 
 export { WEEKDAY_KEYS, DAY_LABELS } from "@/lib/programWeek";
@@ -336,6 +343,12 @@ export const withLift = <D extends { lift: NbtDay["lift"] }>(day: D, lift: Parti
     ...day,
     lift: { ...rest, main: { name: next.name, detail: next.detail }, easier: next.easier, harder: next.harder },
   };
+};
+
+/** Seconds a station runs, read off its header: "6 stations · 3 min each · …" → 180. Two minutes before 2026-11-18. */
+export const stationSeconds = (header: string | undefined) => {
+  const m = (header ?? "").match(/(\d+)\s*min each/i);
+  return m ? Number(m[1]) * 60 : 120;
 };
 
 /* ───── The board's clock ─────

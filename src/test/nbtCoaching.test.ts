@@ -1,11 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { NbtDay, NbtLog, NbtWeek, Track } from "@/lib/nbt";
+import { NbtDay, NbtLog, Track } from "@/lib/nbt";
 import {
-  priorWeekBrief, priorWeekBriefs, roomReport, carryOver, spaceViolation, liftRepeated, unreadableLine, dayProblem, dayForModel, THIN_ROOM,
+  roomReport, spaceViolation, liftRepeated, unreadableLine, dayProblem, dayForModel, THIN_ROOM,
 } from "@/lib/nbtCoaching";
 
-// One group since 2026-11-09: one lift for everyone, with an easier and a
-// harder version, then the work block.
+// One group since 2026-11-09: one lift for everyone with a simplified line
+// (and, on days written before 2026-11-18, a harder one), then the work block.
 const day = (pattern: string, lift: string, work: string[] = [], title = "Engine"): NbtDay => ({
   focus: "f",
   prep: ["p"],
@@ -34,10 +34,6 @@ const twoTracks = (pattern: string, b: string, a: string, work = "Engine"): NbtD
   reset: ["r"],
 });
 
-const week = (n: number, start: string, d: Partial<Record<"monday" | "tuesday" | "thursday", NbtDay>>): NbtWeek => ({
-  id: `w${n}`, block_id: "b", week_start: start, week_in_block: n, days: d,
-});
-
 const log = (
   date: string, level: Track, lift: string, weight: number, reps: number,
   result: number | null, unit: string | null, who: string
@@ -54,44 +50,6 @@ const log = (
   work_result: result,
   work_unit: unit as NbtLog["work_unit"],
   notes: null,
-});
-
-describe("priorWeekBrief — the lift and its modification", () => {
-  const w = week(1, "2026-11-02", { monday: day("Squat", "Back Squat") });
-
-  it("names the lift with its dose, and the easier and harder versions", () => {
-    const b = priorWeekBrief(w, "monday")!;
-    expect(b.lift).toBe("Back Squat — 4 × 5");
-    expect(b.easier).toBe("Goblet squat with a kettlebell — same sets, 8 reps");
-    expect(b.harder).toBe("Add a 3-second pause at the bottom");
-    expect(b.pattern).toBe("Squat");
-  });
-
-  it("reads a two-track week as one group: Alpha's lift, Bravo's as the easier version", () => {
-    const old = week(1, "2026-09-07", { monday: twoTracks("Squat", "Heavy Goblet", "Back Squat") });
-    const b = priorWeekBrief(old, "monday")!;
-    expect(b.lift).toBe("Back Squat — 4 × 5");
-    expect(b.easier).toBe("Heavy Goblet — 4 × 6");
-    expect(b.harder).toBe("—");
-  });
-
-  it("carries the circuit and its emphasis", () => {
-    expect(priorWeekBrief(w, "monday")!.work).toBe("Engine — intervals");
-  });
-
-  it("is null for a day that was never written", () => {
-    expect(priorWeekBrief(w, "thursday")).toBeNull();
-  });
-
-  it("only returns weeks earlier than the one being written", () => {
-    const weeks = [
-      week(1, "2026-09-07", { monday: day("Squat", "Back Squat") }),
-      week(2, "2026-09-14", { monday: day("Squat", "Back Squat") }),
-      week(3, "2026-09-21", { monday: day("Squat", "Back Squat") }),
-    ];
-    expect(priorWeekBriefs(weeks, "monday", 3).map((b) => b.week)).toEqual([1, 2]);
-    expect(priorWeekBriefs(weeks, "monday", 1)).toEqual([]);
-  });
 });
 
 describe("dayForModel — a day handed back to be partly rewritten", () => {
@@ -207,52 +165,6 @@ describe("roomReport — anonymised evidence", () => {
   });
 });
 
-describe("carryOver — a month is not a reset", () => {
-  const prev = [
-    week(1, "2026-08-03", { monday: day("Squat", "Back Squat") }),
-    week(2, "2026-08-10", { monday: day("Squat", "Back Squat") }),
-    week(3, "2026-08-17", { monday: day("Squat", "Back Squat") }),
-  ];
-
-  it("hands over where the block actually finished", () => {
-    const c = carryOver(prev, "monday")!;
-    expect(c.weekStart).toBe("2026-08-17");
-    expect(c.lift).toBe("Back Squat — 4 × 5");
-    expect(c.easier).toBe("Goblet squat with a kettlebell — same sets, 8 reps");
-    expect(c.harder).toBe("Add a 3-second pause at the bottom");
-  });
-
-  it("hands over a two-track month as one group — the first one-group week continues from it", () => {
-    const old = [week(4, "2026-10-26", { monday: twoTracks("Squat", "Heavy Goblet", "Back Squat") })];
-    const c = carryOver(old, "monday")!;
-    expect(c.lift).toBe("Back Squat — 4 × 5");
-    expect(c.easier).toBe("Heavy Goblet — 4 × 6");
-  });
-
-  it("counts how long the pattern has run, so six weeks can unlock a change", () => {
-    expect(carryOver(prev, "monday")!.weeksOnPattern).toBe(3);
-  });
-
-  it("stops counting at the point the pattern changed", () => {
-    const switched = [
-      week(1, "2026-08-03", { monday: day("Lunge", "Front Rack Lunge") }),
-      week(2, "2026-08-10", { monday: day("Squat", "Back Squat") }),
-      week(3, "2026-08-17", { monday: day("Squat", "Back Squat") }),
-    ];
-    expect(carryOver(switched, "monday")!.weeksOnPattern).toBe(2);
-  });
-
-  it("skips half-written weeks rather than handing over a blank", () => {
-    const gappy = [...prev, week(4, "2026-08-24", {})];
-    expect(carryOver(gappy, "monday")!.weekStart).toBe("2026-08-17");
-  });
-
-  it("is null when there is no previous block", () => {
-    expect(carryOver([], "monday")).toBeNull();
-    expect(carryOver(prev, "thursday")).toBeNull();
-  });
-});
-
 describe("spaceViolation — the room is a hard limit", () => {
   const withWork = (lines: string[]): NbtDay => day("Squat", "Back Squat", lines);
 
@@ -261,10 +173,14 @@ describe("spaceViolation — the room is a hard limit", () => {
       expect(spaceViolation(withWork(["Run 200m"]), "tuesday")).toMatch(/no room to run/i);
     });
 
-    it("refuses a jog, a lap, a shuttle and a suicide", () => {
-      ["Easy jog 3 min", "2 laps of the gym", "10 shuttles", "Suicides x4"].forEach((line) => {
+    it("refuses a jog, a lap and a shuttle", () => {
+      ["Easy jog 3 min", "2 laps of the gym", "10 shuttles"].forEach((line) => {
         expect(spaceViolation(withWork([line]), "tuesday")).not.toBeNull();
       });
+    });
+
+    it("allows Rev's suicides — a sprint in place with a burpee at the whistle (2026-11-18)", () => {
+      expect(spaceViolation(withWork(["Station 5 · The Open Floor (Full Body Cardio) — Suicides (sprint in place, burpee at the whistle) — steady"]), "tuesday")).toBeNull();
     });
 
     it("refuses running hidden in the warm-up rather than the circuit", () => {

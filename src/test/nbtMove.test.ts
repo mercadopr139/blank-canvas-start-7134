@@ -43,7 +43,7 @@ describe("NBT workout — pushed to another night", () => {
       "monday", "tuesday", "wednesday", "thursday",
     ]);
     expect(dayMeta("wednesday")).toEqual({ key: "wednesday", label: "Wednesday", title: "", weekday: 3 });
-    expect(dayMeta("thursday").title).toBe("Hinge + Pull");
+    expect(dayMeta("thursday").title).toBe("Performance Center");
   });
 
   it("dates any weekday, not only programme days", () => {

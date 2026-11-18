@@ -1,7 +1,8 @@
 // The station clock for Tuesday's Cardio Stations, and the lift clock above
 // it (Josh, 2026-10-20).
 //
-// Five stations, two minutes each. The coach taps Start; the clock counts
+// Five or six stations, three minutes each since 2026-11-18 (two before; the
+// wall reads the minutes off the header). The coach taps Start; the clock counts
 // down in digits a kid can read from fifty feet; the last ten seconds go
 // amber; at zero the board sounds and flashes and stops. The coach taps Next
 // station to reset for the next one — nothing rolls on by itself, the
@@ -86,10 +87,10 @@ const StationClock = ({
 
   const warning = running && left <= 10;
   const tone = clock.rang ? "#f87171" : warning ? "#fbbf24" : color;
-  const title = words ? (done ? words.done : words.title) : done ? "All five done" : `Station ${clock.station} of ${stations}`;
+  const title = words ? (done ? words.done : words.title) : done ? `All ${stations} done` : `Station ${clock.station} of ${stations}`;
   const hint = words
     ? (done ? "" : clock.rang ? words.rang : running ? words.running : clock.seconds > 0 ? "Paused." : words.idle)
-    : done ? "Rack it, water, wrap hands — box." : clock.rang ? "Time. Rotate on the whistle." : running ? "2 minutes, own pace." : clock.seconds > 0 ? "Paused." : "Tap Start when the groups are set.";
+    : done ? "Rack it, water, wrap hands — box." : clock.rang ? "Time. Rotate on the whistle." : running ? `${Math.round(seconds / 60)} minutes, own pace.` : clock.seconds > 0 ? "Paused." : "Tap Start when the groups are set.";
   const btn = "h-[2.4em] px-[1.1em] rounded-[0.5em] font-black text-[0.95em] transition-opacity hover:opacity-90 inline-flex items-center gap-[0.4em]";
 
   return (

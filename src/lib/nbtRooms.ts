@@ -52,8 +52,9 @@ export const ROOMS: Record<RoomKey, Room> = {
       one("bike", "the assault bikes", 6),
       one("rower", "the rowers", 6),
       one("skier", "the ski ergs", 2),
-      // There is one push sled. One sled does not work for a group, so it is
-      // not in the inventory on purpose (Josh, 2026-10-03) — writing it is refused.
+      // The one push sled (Rev, 2026-11-18): the push station only, two athletes
+      // taking turns. It was kept out of the room from 2026-10-03 until then.
+      one("sled", "the push sled", 1),
       one("box", "the plyo boxes", 4),
       plenty("wallBall", "the wall-ball targets"),
       plenty("barbell", "barbells and plates"),
@@ -192,7 +193,7 @@ export const roomBrief = (dayKey: DayKey): string => {
     absent.length ? "NOT IN THIS ROOM — never write them: " + absent.join(", ") + "." : "",
     HAND_WEIGHTS,
     "Plyo boxes, dumbbells and kettlebells can be carried over from the other room during prep; say so in the prep when a session needs them.",
-    "Never a sled or prowler push: there is one sled and it does not work for a group.",
+    kitIn(room, "sled") ? "The one push sled is for the push station only — two athletes take turns on it; never a sled anywhere else in the day." : "",
   ];
   return lines.filter(Boolean).join("\n");
 };

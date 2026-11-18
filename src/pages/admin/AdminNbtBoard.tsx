@@ -1,9 +1,10 @@
 // NBT S&C Board — the coach's side.
 //
-// A month is the unit, not a week. The programming rules forbid random weeks:
-// primary movements hold across a block while the challenge rises. So this
-// builds a whole month at once, feeding each week the earlier weeks of the same
-// block, and the coach reviews before any of it reaches the gym screen.
+// A week at a time, inside a month's block. Since 2026-11-18 the lift is
+// Rev's rotation — eight movements in his order, one per session, each
+// continuing from the last time it ran — and the stations are picked from his
+// lists (src/lib/nbtRotation.ts). The generator writes the words around them,
+// and the coach reviews before any of it reaches the gym screen.
 import { useEffect, useMemo, useState } from "react";
 import { levelIndent, levelDot, levelText } from "@/lib/bulletText";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -19,11 +20,14 @@ import { toast } from "sonner";
 import {
   DAYS, DayKey, stationLines, withStations, workLines, liftOf, withLift, NbtBlock, NbtWeek, NbtDay, NbtLog, toDateString, firstOfMonth, monthLabel, mondaysInMonth, dateOfDay, mondayOf, addDays, NBT_AMBER, readableLines, minutesOf, totalMinutes, weekDays,
 } from "@/lib/nbt";
-import { priorWeekBriefs, roomReport, carryOver, dayProblem, dayForModel } from "@/lib/nbtCoaching";
+import { roomReport, dayProblem, dayForModel } from "@/lib/nbtCoaching";
+import {
+  type RotationLift, type LastTime, easierFor, lastLiftBefore, lastStationsBefore, lastTimeOf, liftsAfter, nextLift, pickStations, roomOf, rotationEntry, stationLinesFor,
+} from "@/lib/nbtRotation";
 import { WEEKDAY_KEYS, DAY_LABELS, weekdayOf, programDaysForNights, placeOnNight } from "@/lib/programWeek";
 import { syncLiftColumns, syncSummary } from "@/lib/liftPlanSync";
 import { AlertTriangle, Mail } from "lucide-react";
-import { roomBrief } from "@/lib/nbtRooms";
+import { roomBrief, type RoomKey } from "@/lib/nbtRooms";
 import { prettyRange } from "@/lib/strength";
 import { LiveSwitch } from "@/components/practice/LiveSwitch";
 import NbtEditDay from "@/components/nbt/NbtEditDay";
@@ -51,6 +55,9 @@ const stationsOf = (day: NbtDay) => {
 
 /** The wall's card header shade — every card on the NBT wall wears it. */
 const CARD_HEADER = { background: "#3c3527", borderColor: `${NBT_AMBER}66` } as const;
+/** What the rotation decided for one session: the lift, what it did last time, and its stations (header first). */
+interface Slot { lift: RotationLift; lastTime: LastTime | null; stations: string[] }
+
 /** The small outline button on a card: Rewrite lift · Rewrite stations. */
 const PART_BTN = "inline-flex items-center gap-1 rounded border border-white/20 px-1.5 py-0.5 text-[10px] font-semibold text-white/55 hover:text-white hover:border-white/50 disabled:opacity-40 transition-colors";
 /** A control in a card header. */
@@ -176,6 +183,8 @@ export const NbtWeekBuilder = ({
 
   const block = data?.block ?? null;
   const weeks = useMemo(() => data?.weeks ?? [], [data]);
+  /** Every written week we know of — last month's and this one's — for the rotation to read. */
+  const allWeeks = useMemo(() => [...(history?.prevWeeks ?? []), ...weeks], [history, weeks]);
   // The nights this week lifts (Josh, 2026-11-02): a saved week keeps its own; a new week
   // starts from the practice plan's nights; otherwise the programme's Mon/Tue/Thu.
   const thisWeekRow = weeks.find((w) => w.week_start === weekStart) ?? null;
@@ -204,29 +213,26 @@ export const NbtWeekBuilder = ({
     blockFocus: string,
     weekNo: number,
     dayKey: DayKey,
-    prior: NbtWeek[],
+    /** What the rotation decided: the lift, what it did last time, and the stations. */
+    slot: Slot,
     attempt = 0,
     /** Rewriting one part of a day that exists: the lift (with its warm-up), or the stations. */
     only?: { part: "lift" | "work"; keepDay: NbtDay },
     /** Why the last attempt was thrown away, so the next one can fix it. */
     retryNote?: string
   ): Promise<NbtDay> => {
-    // The lift, and its easier and harder versions, from every earlier week in this block.
-    const priorWeeks = priorWeekBriefs(prior, dayKey, weekNo);
     // Anonymised medians of what the room managed. Names never leave the app.
     const room = roomReport(history?.logs ?? [], dayKey, toDateString(new Date()));
-    // Where last month finished, so the first week this day is written continues
-    // rather than resets. That is usually week 1 — but a day skipped in week 1
-    // (a two-night week) is first written in week 2, and still has to carry on.
-    const carry = priorWeeks.length === 0 ? carryOver(history?.prevWeeks ?? [], dayKey) : null;
 
     try {
       const { data: res, error } = await supabase.functions.invoke("nbt-workout", {
         body: {
           // The room and its kit, from the one inventory the checks also read.
-          dayKey, weekInBlock: weekNo, blockFocus, priorWeeks, roomKit: roomBrief(dayKey),
+          dayKey, weekInBlock: weekNo, blockFocus, roomKit: roomBrief(dayKey),
+          lift: { name: slot.lift.name, pattern: slot.lift.pattern, easier: easierFor(slot.lift, dayKey) },
+          ...(slot.lastTime ? { lastTime: slot.lastTime } : {}),
+          stations: { header: slot.stations[0], lines: slot.stations.slice(1) },
           ...(room ? { room } : {}),
-          ...(carry ? { carryOver: carry } : {}),
           ...(only ? { onlyBlock: only.part, keepDay: dayForModel(only.keepDay) } : {}),
           ...(retryNote ? { retryNote } : {}),
         },
@@ -247,7 +253,7 @@ export const NbtWeekBuilder = ({
       // the identical prompt would only reproduce the same mistake.
       await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
       return generateDay(
-        blockFocus, weekNo, dayKey, prior, attempt + 1, only, (e as Error)?.message
+        blockFocus, weekNo, dayKey, slot, attempt + 1, only, (e as Error)?.message
       );
     }
   };
@@ -280,17 +286,31 @@ export const NbtWeekBuilder = ({
   };
 
   /**
-   * Write ONE week — three days, in parallel — with every earlier week of the
-   * block as context, so the movements hold and only the challenge changes.
-   * A built or rebuilt week lands as a draft; the coach locks it to put it on
-   * the wall. (Josh, 2026-10-03: per week, like everything else.)
+   * Write ONE week — its nights in parallel, once the rotation has decided
+   * each one. The lifts continue from the last session written before this
+   * week, in night order; each station's pick avoids what that station had
+   * last time in its room, this week's earlier night included. A built or
+   * rebuilt week lands as a draft; the coach locks it to put it on the wall.
+   * (Josh, 2026-10-03: per week, like everything else.)
    */
-  const writeWeek = async (b: NbtBlock, weekNo: number, context: NbtWeek[]): Promise<NbtWeek> => {
+  const writeWeek = async (b: NbtBlock, weekNo: number): Promise<NbtWeek> => {
     const blockFocus = focus.trim() || b.focus || "";
+    const weekMonday = mondays[weekNo - 1];
+    // This week is being replaced, so it is not its own history.
+    const known = allWeeks.filter((w) => w.week_start !== weekMonday);
+    const lifts = liftsAfter(lastLiftBefore(known, weekMonday), plan.length);
+    const lastLines: Partial<Record<RoomKey, string[]>> = {};
     // One day per night picked: each night takes a programme day (its own, or the next
     // unused in Monday → Tuesday → Thursday order) and is filed on the night it runs.
+    const slots: Slot[] = plan.map(([night, programDay], i) => {
+      const date = dateOfDay(weekMonday, night);
+      const room = roomOf(programDay);
+      const stations = stationLinesFor(pickStations(room, lifts[i], lastLines[room] ?? lastStationsBefore(known, room, date)));
+      lastLines[room] = stations;
+      return { lift: lifts[i], lastTime: lastTimeOf(known, lifts[i], date), stations };
+    });
     const built = await Promise.all(
-      plan.map(([, programDay]) => generateDay(blockFocus, weekNo, programDay, context))
+      plan.map(([, programDay], i) => generateDay(blockFocus, weekNo, programDay, slots[i]))
     );
     const days: NbtWeek["days"] = {};
     built.forEach((day, i) => { const [night, programDay] = plan[i]; days[night] = placeOnNight(day, programDay, night); });
@@ -319,14 +339,12 @@ export const NbtWeekBuilder = ({
     setProgress(`Writing week ${weekNo}…`);
     try {
       const b = await ensureBlock();
-      // Earlier weeks of this block are the context; this week is replaced.
-      const context = weeks.filter((w) => w.week_in_block < weekNo);
-      await writeWeek(b, weekNo, context);
+      const saved = await writeWeek(b, weekNo);
       refresh();
       toast.success(`Week ${weekNo} is written. Lock it when it's ready for the wall.`);
       // The practice plan follows: an S&C column on every night this week lifts (Josh, 2026-11-02).
       try {
-        const synced = await syncLiftColumns(mondays[weekNo - 1], "non_battle_team", plan.map(([night, programDay]) => ({ night, line: DAYS.find((d) => d.key === programDay)?.title ?? "S&C" })));
+        const synced = await syncLiftColumns(mondays[weekNo - 1], "non_battle_team", plan.map(([night]) => ({ night, line: liftOf(saved.days?.[night]).name || "S&C" })));
         qc.invalidateQueries({ queryKey: ["practice-blocks"] });
         qc.invalidateQueries({ queryKey: ["board-blocks"] });
         const line = syncSummary(synced, "S&C");
@@ -376,6 +394,22 @@ export const NbtWeekBuilder = ({
    * Whatever was not asked for is put back from what we sent, so a model that
    * ignores the instruction still cannot disturb it. (Josh, 2026-10-03.)
    */
+  /**
+   * The rotation's answer for a day that already exists: the lift it holds
+   * (or the next in Rev's order if it holds none), what that lift did last
+   * time, and its stations — picked again when asked, else as they stand.
+   */
+  const slotFor = (week: NbtWeek, dayKey: DayKey, current: NbtDay, freshStations: boolean): Slot => {
+    const date = dateOfDay(week.week_start, dayKey);
+    const room = roomOf(dayKey, current);
+    const lift = rotationEntry(liftOf(current).name) ?? nextLift(lastLiftBefore(allWeeks, date));
+    const have = stationLines(current);
+    const stations = freshStations || !have.length
+      ? stationLinesFor(pickStations(room, lift, have.length ? have : lastStationsBefore(allWeeks, room, date)))
+      : have;
+    return { lift, lastTime: lastTimeOf(allWeeks, lift, date), stations };
+  };
+
   const regeneratePart = async (week: NbtWeek, dayKey: DayKey, part: "lift" | "work") => {
     const current = week.days?.[dayKey];
     if (!current) return;
@@ -384,8 +418,8 @@ export const NbtWeekBuilder = ({
       const day = await generateDay(
         block?.focus ?? "",
         week.week_in_block,
-        dayKey,
-        weeks,
+        current.movedFrom ?? dayKey,
+        slotFor(week, dayKey, current, part === "work"),
         0,
         { part, keepDay: current }
       );
@@ -409,9 +443,11 @@ export const NbtWeekBuilder = ({
 
   /** Rewrite one day, keeping the rest of the month exactly as it is. */
   const regenerateDay = async (week: NbtWeek, dayKey: DayKey) => {
+    const current = week.days?.[dayKey];
+    if (!current) return;
     setBusy(`${week.id}-${dayKey}`);
     try {
-      const day = await generateDay(block?.focus ?? "", week.week_in_block, dayKey, weeks);
+      const day = await generateDay(block?.focus ?? "", week.week_in_block, current.movedFrom ?? dayKey, slotFor(week, dayKey, current, true));
       await saveDay(week, dayKey, day);
       toast.success(`${dayKey} rewritten.`);
     } catch (e) {
@@ -441,7 +477,7 @@ export const NbtWeekBuilder = ({
         <div>
           <h2 className="text-2xl font-bold">NBT Workout Plan</h2>
           <p className="text-neutral-400 text-sm mt-1">
-            Monday, Tuesday and Thursday for the Non-Battle Team — one group: a warm-up, one lift, the stations. One week at a time, each week seeing the last.
+            Monday, Tuesday and Thursday for the Non-Battle Team — one group: a warm-up, one lift from Rev's eight in rotation, the stations. Each session takes the lift after the last.
           </p>
         </div>
         )}
@@ -504,8 +540,8 @@ export const NbtWeekBuilder = ({
               </p>
             ) : (
               <p className="text-[11px] text-neutral-500">
-                One line for the whole month. Each week sees the ones before it, so the movements hold
-                across the month and only the challenge changes.
+                One line for the whole month. The lift rotates through Rev's eight, one a session, and
+                each comes back where it left off; the stations draw from his lists.
               </p>
             )}
           </div>
@@ -528,7 +564,7 @@ export const NbtWeekBuilder = ({
                 );
               })}
               <span className="text-[11px] text-neutral-500">
-                {liftNights.length < 3 ? `${liftNights.length === 1 ? "one session" : "two sessions"} this week · ${DAYS.filter((d) => !plan.some(([, p]) => p === d.key)).map((d) => d.title).join(" and ")} skipped` : `${liftNights.length} sessions`}
+                {liftNights.length < 3 ? `${liftNights.length === 1 ? "one session" : "two sessions"} this week · ${DAYS.filter((d) => !plan.some(([, p]) => p === d.key)).map((d) => d.label).join(" and ")} skipped` : `${liftNights.length} sessions`}
                 {pickedNights && thisWeekRow && " · rebuild to apply"}
               </span>
             </div>
@@ -543,6 +579,8 @@ export const NbtWeekBuilder = ({
                 const w = weeks.find((x) => x.week_start === monday);
                 const isThisWeek = monday === thisWeekStart;
                 const isLinked = monday === linkedWeek;
+                // The lifts this week would get, continuing from the last session written before it.
+                const coming = liftsAfter(lastLiftBefore(allWeeks.filter((x) => x.week_start !== monday), monday), plan.length).map((l) => l.name).join(" · ");
                 if (!w) {
                   return (
                     <div
@@ -552,7 +590,7 @@ export const NbtWeekBuilder = ({
                       <Sparkles className="h-8 w-8 mx-auto mb-3 text-white/30" />
                       <p className="font-bold mb-1">Not written yet</p>
                       <p className="text-neutral-400 text-sm mb-5 max-w-md mx-auto">
-                        Squat and push, athletic and overhead, hinge and pull — one session for each night picked above: the warm-up, one lift for the whole group, and the stations, in one go.
+                        This week's lifts, in Rev's rotation: <span className="text-white font-semibold">{coming}</span> — one session for each night picked above: the warm-up, the lift, and the stations, in one go.
                       </p>
                       <Button
                         onClick={() => buildWeek(weekNo)}

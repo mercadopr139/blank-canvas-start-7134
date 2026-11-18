@@ -9,7 +9,7 @@
 export interface StationPicture { n: string; place: string; moves: string[]; /** The plan's coaching cue ("hips snap, flat back"), if any. */ cue?: string }
 
 /** Lines that are a direction or a machine everyone knows, not a move to copy. */
-const NO_PICTURE = /^(run|jog|walk|rest|recover|repeat|baseline to baseline|sideline to sideline|and back|back)$/i;
+const NO_PICTURE = /^(run|jog|walk|rest|recover|repeat|baseline to baseline|sideline to sideline|and back|back|machine of choice|coach'?s choice)$/i;
 /** What a station machine is called in the picture libraries. */
 const MACHINE: [RegExp, string][] = [
   [/^(row|rowing|rower|erg)$/i, "rowing machine"],

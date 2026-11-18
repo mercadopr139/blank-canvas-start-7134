@@ -14,9 +14,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
-  NBT_AMBER, type DayKey, type NbtBlock, type NbtDay, type NbtWeek, type GroupLift, dayMeta, liftOf, withLift, workLines,
+  NBT_AMBER, type DayKey, type NbtBlock, type NbtDay, type NbtWeek, type GroupLift, dayMeta, dateOfDay, liftOf, withLift, workLines,
 } from "@/lib/nbt";
-import { priorWeekBriefs, dayProblem, dayForModel } from "@/lib/nbtCoaching";
+import { dayProblem, dayForModel } from "@/lib/nbtCoaching";
+import { easierFor, lastLiftBefore, lastStationsBefore, lastTimeOf, nextLift, pickStations, roomOf, rotationEntry, stationLinesFor } from "@/lib/nbtRotation";
 import { roomBrief } from "@/lib/nbtRooms";
 import { todayNY } from "@/lib/programYear";
 import BulletEditor from "@/components/practice/BulletEditor";
@@ -106,13 +107,23 @@ export const NbtEditTonight = ({
         .select("*")
         .eq("block_id", week.block_id);
       const weeks = (rows ?? []) as unknown as NbtWeek[];
+      // The rotation decides the lift: the one this day holds, or the next in Rev's order.
+      const programDay = draft.movedFrom ?? dayKey;
+      const date = dateOfDay(week.week_start, dayKey);
+      const room = roomOf(dayKey, draft);
+      const lift = rotationEntry(liftOf(draft).name) ?? nextLift(lastLiftBefore(weeks, date));
+      const have = stationLines(draft);
+      const lines = have.length ? have : stationLinesFor(pickStations(room, lift, lastStationsBefore(weeks, room, date)));
+      const lastTime = lastTimeOf(weeks, lift, date);
       const { data: res, error } = await supabase.functions.invoke("nbt-workout", {
         body: {
-          dayKey,
+          dayKey: programDay,
           weekInBlock: week.week_in_block,
           blockFocus: block?.focus ?? "",
-          priorWeeks: priorWeekBriefs(weeks, dayKey, week.week_in_block),
-          roomKit: roomBrief(dayKey),
+          roomKit: roomBrief(programDay),
+          lift: { name: lift.name, pattern: lift.pattern, easier: easierFor(lift, programDay) },
+          ...(lastTime ? { lastTime } : {}),
+          stations: { header: lines[0], lines: lines.slice(1) },
           onlyBlock: "lift",
           keepDay: dayForModel(draft),
           ...(instruction ? { instruction } : {}),

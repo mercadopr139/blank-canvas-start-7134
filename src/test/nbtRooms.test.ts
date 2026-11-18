@@ -30,8 +30,8 @@ describe("The two rooms", () => {
     expect(kitIn(pc, "rack")).toMatchObject({ count: 3 });
     expect(kitIn(pc, "bench")).toMatchObject({ count: 3 });
     expect(kitIn(pc, "skier")).toMatchObject({ count: 2 });
-    // One sled does not work for a group: it is deliberately not in the room.
-    expect(kitIn(pc, "sled")).toBeUndefined();
+    // The one sled is in the room for the push station (Rev, 2026-11-18).
+    expect(kitIn(pc, "sled")).toMatchObject({ count: 1 });
     expect(kitIn(pc, "box")).toMatchObject({ count: 4 });
     expect(kitIn(pc, "barbell")).toMatchObject({ count: "plenty" });
     expect(kitIn(pc, "handWeight")).toMatchObject({ count: "plenty" });
@@ -40,7 +40,7 @@ describe("The two rooms", () => {
     expect(kitIn(bf, "rack")).toMatchObject({ count: 6 });
     expect(kitIn(bf, "bench")).toMatchObject({ count: 6 });
     expect(absentKit(bf).sort()).toEqual(["bike", "rower", "skier", "sled"]);
-    expect(absentKit(pc)).toEqual(["sled"]);
+    expect(absentKit(pc)).toEqual([]);
   });
 
   it("describe themselves for the generator from the same inventory", () => {
@@ -53,8 +53,8 @@ describe("The two rooms", () => {
     expect(mon).toMatch(/75 ft baseline to baseline, 56 ft sideline to sideline/);
     expect(mon).toMatch(/never in metres, yards or feet/);
     expect(mon).toMatch(/baseline to baseline and back \(150 ft\).*sideline to sideline and back \(112 ft\)/);
-    expect(mon).toMatch(/Never a sled/);
-    expect(mon).toMatch(/NOT IN THIS ROOM.*the sled/);
+    expect(mon).toMatch(/push sled is for the push station only/);
+    expect(mon).not.toMatch(/NOT IN THIS ROOM/);
   });
 
   it("describe one group sharing the room — no tracks (2026-11-09)", () => {
@@ -117,9 +117,9 @@ describe("One group shares the room", () => {
     expect(courtAxisClash(oneWay)).toBeNull();
   });
 
-  it("refuses a sled push anywhere — one sled does not work for a group", () => {
-    expect(missingKit(day("Back Squat", ["Sled push 35 ft up and back"]), "thursday")).toMatch(/no sleds.*Sled push/);
-    expect(missingKit(day("Back Squat", ["Prowler push"]), "monday")).toMatch(/no sleds/);
+  it("allows the sled on the court — the push station has it (Rev, 2026-11-18)", () => {
+    expect(missingKit(day("Back Squat", ["Station 3 · The Mats (Push) — Sled push"]), "thursday")).toBeNull();
+    expect(missingKit(day("Back Squat", ["Prowler push"]), "monday")).toBeNull();
   });
 });
 
