@@ -313,6 +313,14 @@ const OUTCOMES =
 
 export const ORG_SECTIONS: OrgSection[] = [
   {
+    // The Introduction (Josh, 2026-11-19): the paragraph every application opens with. No facts of its own — it is written from the sections below it.
+    key: "intro",
+    title: "The Introduction",
+    blurb: "The one paragraph a stranger reads first: a registered nonprofit, who it serves, the meals, the partners. Verbatim in every grant until you change it.",
+    snapshot: "intro",
+    fields: [],
+  },
+  {
     key: "served",
     title: "Who we serve",
     blurb: "The need and the youth: the statement of need, the service area, the target population. The year's approved paragraph carries the counts and shares.",
@@ -411,6 +419,7 @@ export const ORG_SECTIONS: OrgSection[] = [
   {
     key: "funding",
     title: "Funding history",
+    snapshot: "sustainability",
     blurb: "What NLA has received, and from whom — asked by every funder, especially a returning one — and what happens when a grant ends.",
     fields: [
       { key: "ocean_prior", label: "Previously received O.C.E.A.N. funding?", kind: "yesno", required: true, seed: "Yes" },

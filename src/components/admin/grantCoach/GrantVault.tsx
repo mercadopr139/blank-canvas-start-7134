@@ -262,7 +262,7 @@ export default function GrantVault() {
       <GcCard
         icon={<Library className="w-4 h-4" />}
         title="Grant Vault · one source of truth"
-        blurb={`Everything a funder asks, in the order they ask it. Each section opens with the approved paragraph for ${shortYear(snap.shown)}, locked word for word, and the facts it draws on sit under it. Click a title to read it; Copy works without opening.`}
+        blurb={`Everything a funder asks, in the order they ask it. Each section opens with its standard paragraph for ${shortYear(snap.shown)} — approved word for word, dropped into any question with one click — and the facts it draws on sit under it. Click a title to read it; Copy works without opening.`}
         right={
           <Button size="sm" variant="outline" className={outline} disabled={!snap.approved.length} onClick={() => copyText(snapshotText(snap.approved), `The ${shortYear(snap.shown)} story`)}>
             <Copy className="w-3.5 h-3.5 mr-1.5" /> Copy the year
@@ -282,7 +282,7 @@ export default function GrantVault() {
             </button>
           ))}
           <span className="text-white/45">
-            {allApproved ? "All four paragraphs approved." : `${snap.approved.length} of ${snap.sections.length} paragraphs approved — only approved ones are copied or used by Grant Coach.`}
+            {allApproved ? `All ${snap.sections.length} standard paragraphs approved.` : `${snap.approved.length} of ${snap.sections.length} standard paragraphs approved — only approved ones are offered on a question or used by Grant Coach.`}
             {" · "}{completeness.done} of {completeness.total} required facts filled.
           </span>
           <div className="ml-auto flex items-center gap-2">

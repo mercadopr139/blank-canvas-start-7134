@@ -20,7 +20,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Check, Copy, Loader2, Upload, X, FileQuestion, Globe, History, BookHeart, Award, RefreshCw, Sparkles, Eye, Printer, MoreHorizontal, Trash2, AlertCircle, Pencil, Vault, Paperclip, ExternalLink,
+  Check, Copy, Loader2, Upload, X, FileQuestion, Globe, History, BookHeart, Award, RefreshCw, Sparkles, Eye, Printer, MoreHorizontal, Trash2, AlertCircle, Pencil, Vault, Paperclip, ExternalLink, Library,
 } from "lucide-react";
 import AttachPicker from "@/components/admin/grantCoach/AttachPicker";
 import { attachedAnswer, openFolderDoc, readAttachment, readLabel, type FolderDoc } from "@/lib/grantCoach/attachments";
@@ -37,6 +37,7 @@ import type { Review } from "@/lib/grantCoach/review";
 import { loadStories, usableStories } from "@/lib/grantCoach/stories";
 import type { Fact } from "@/lib/grantCoach/liveFacts";
 import { vaultAnswer, documentAnswer, needsFrom, isFactRow, vaultCatalog, pieceIsEmpty, sameValue, LEAVE_BLANK, type VaultPart } from "@/lib/grantCoach/answers";
+import { approvedSnapshotForWriter, standardParagraphs, isStandardKey, type StandardParagraph } from "@/lib/grantCoach/snapshot";
 import { readDocxText } from "@/lib/grantCoach/readDocx";
 import GcCard, { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
 import { loadMemory, remember, forget, shouldRemember, type MemoryRow } from "@/lib/grantCoach/memory";
@@ -198,6 +199,12 @@ export default function GrantApplication({ folderId, folder, items, library, get
     }
   }, [folder, library, patch, refresh, caseBrief, stories, funderBrief, sibling]);
 
+  // The approved standard paragraphs (Josh, 2026-11-19): offered on every question, matched by the
+  // classifier, and filled verbatim like any other Vault fact under their "standard:" keys.
+  const { data: snapshot = null } = useQuery({ queryKey: ["grant-standard-paragraphs"], queryFn: approvedSnapshotForWriter, staleTime: 5 * 60_000 });
+  const standard = useMemo(() => standardParagraphs(snapshot), [snapshot]);
+  const vaultAll = useMemo<Record<string, string | null>>(() => ({ ...vault, ...Object.fromEntries(standard.map((p) => [p.key, p.body])) }), [vault, standard]);
+
   /** Match rows to the Vault, fill what the Vault holds, and write everything else. */
   const answerRows = useCallback(async (rows: AppItem[]) => {
     if (!rows.length) return;
@@ -207,8 +214,8 @@ export default function GrantApplication({ folderId, folder, items, library, get
     if (unmatched.length) {
       setStage("Matching the questions to your Grant Vault…");
       const got = await matchToVault(
-        unmatched.map((r, i) => ({ i, screen: sectionTitle(r.section), text: r.label, help: r.detail ?? "", kind: r.kind })),
-        vaultCatalog(),
+        unmatched.map((r, i) => ({ i, screen: sectionTitle(r.section), text: r.label, help: r.detail ?? "", kind: r.kind, limit: r.limit_value ? `${r.limit_value} ${r.limit_kind ?? "characters"}` : "" })),
+        vaultCatalog(standard),
         memory.filter((m) => m.folder_id !== folderId).map((m) => ({ id: m.id, question: m.question, funder: m.funder })),
       );
       matches = new Map(got.map((m) => [unmatched[m.i]?.id, m]).filter(([id]) => !!id) as [string, typeof got[number]][]);
@@ -225,8 +232,8 @@ export default function GrantApplication({ folderId, folder, items, library, get
       if (r.answer_source === "portal" && r.answer?.trim()) {
         // Already typed into the portal: keep it. A gap in the Vault is filled from it;
         // a difference is shown, never overwritten.
-        if (key && !key.startsWith("doc:") && !part) {
-          const inVault = vaultAnswer(key, null, vault);
+        if (key && !key.startsWith("doc:") && !isStandardKey(key) && !part) {
+          const inVault = vaultAnswer(key, null, vaultAll);
           if (!inVault) {
             const { error } = await supabase.from("grant_org_fields" as never).upsert({ key, value: r.answer.trim(), updated_at: new Date().toISOString(), updated_by: userId } as never, { onConflict: "key" } as never);
             if (!error) filledVault += 1;
@@ -245,8 +252,8 @@ export default function GrantApplication({ folderId, folder, items, library, get
         const d = documentAnswer(key.slice(4), docsOnFile);
         await patch(r.id, { vault_key: key, answer: d.answer, needs: d.needs, answer_source: "vault", status: d.answer ? "in_progress" : "todo" });
       } else if (key) {
-        const value = vaultAnswer(key, part, vault) ?? (pieceIsEmpty(key, part, vault) ? LEAVE_BLANK : null);
-        const label = ORG_FIELDS.find((f) => f.key === key)?.label ?? key;
+        const value = vaultAnswer(key, part, vaultAll) ?? (pieceIsEmpty(key, part, vaultAll) ? LEAVE_BLANK : null);
+        const label = ORG_FIELDS.find((f) => f.key === key)?.label ?? standard.find((p) => p.key === key)?.title ?? key;
         await patch(r.id, value
           ? { vault_key: key, vault_part: part, answer: value, needs: null, answer_source: "vault", status: "in_progress" }
           : { vault_key: key, vault_part: part, answer: null, needs: `Not in your Grant Vault yet (${label}). Type it below; it saves to the Vault for every grant after this.`, answer_source: "vault", status: "todo" });
@@ -284,7 +291,7 @@ export default function GrantApplication({ folderId, folder, items, library, get
       await pool(toWrite, WRITERS_AT_ONCE, async ({ row, past }) => { try { await writeOne(row, facts, undefined, past); } catch { failed += 1; } });
       if (failed) toast.error(`${failed} answer${failed === 1 ? "" : "s"} didn't come back. Use "Answer the rest" to try again.`);
     }
-  }, [docsOnFile, vault, patch, refresh, getFacts, writeOne, qc, userId, memory, memoryById, folderId, caseLocked, sibling]);
+  }, [docsOnFile, vaultAll, standard, patch, refresh, getFacts, writeOne, qc, userId, memory, memoryById, folderId, caseLocked, sibling]);
 
   /** Everything that came in from the tile: files and/or text. */
   /** A read that found nothing, or failed: it stays in the tile until it is tried again or dismissed. */
@@ -447,6 +454,23 @@ export default function GrantApplication({ folderId, folder, items, library, get
   const waiting = live.filter((i) => !i.answer?.trim() && !writing.has(i.id) && !(i.vault_key && i.needs) && !(i.needs_case && !caseLocked));
 
   const needYou = live.filter((i) => i.needs);
+
+  /**
+   * A standard paragraph, verbatim, into the answer (Josh, 2026-11-19). On an empty row it IS the
+   * answer and the row keeps the paragraph's key — it reads "standard paragraph", is never offered
+   * for Save to the Vault, and is carried as is into a sister application. On a row with an answer
+   * it is added underneath, as Josh's own text.
+   */
+  const putStandard = async (r: AppItem, p: StandardParagraph, mode: "replace" | "append") => {
+    const current = r.answer?.trim() ?? "";
+    const append = mode === "append" && !!current;
+    await patch(r.id, {
+      answer: append ? `${current}\n\n${p.body}` : p.body,
+      vault_key: append ? r.vault_key ?? null : p.key, vault_part: null,
+      answer_source: append ? "you" : "vault", status: "in_progress", needs: null, pasted_at: null, score_note: null, left_out: [], story_id: append ? r.story_id ?? null : null,
+    });
+    toast.success(`${p.title} is in${append ? ", under what was there" : ""}. Approve it when it reads right.`);
+  };
 
   const approveAllFacts = async () => {
     for (const it of readyFacts) { await patch(it.id, { status: "done" }); await remember({ ...it, status: "done" }, ctx); }
@@ -763,6 +787,8 @@ export default function GrantApplication({ folderId, folder, items, library, get
                   <QuestionRow
                     key={r.id}
                     item={r}
+                    standard={standard}
+                    onUseStandard={(p, mode) => putStandard(r, p, mode)}
                     number={numberOf.get(r.id)}
                     pastFunder={r.memory_id ? memoryById.get(r.memory_id)?.funder ?? null : null}
                     twin={(() => {
@@ -838,7 +864,7 @@ export default function GrantApplication({ folderId, folder, items, library, get
                     onSave={async (answer, toVault) => {
                       // Saved over Grant Coach's own answer: learn from the change now, before its draft is gone.
                       if ((r.answer_source === "coach" || r.answer_source === "memory") && isEdit(r.answer, answer)) learnFrom(r.label, r.answer!, answer);
-                      const vaultable = !!r.vault_key && !r.vault_key.startsWith("doc:") && !r.vault_part;
+                      const vaultable = !!r.vault_key && !r.vault_key.startsWith("doc:") && !isStandardKey(r.vault_key) && !r.vault_part;
                       if (toVault && vaultable) {
                         const { error } = await supabase.from("grant_org_fields" as never).upsert({ key: r.vault_key, value: answer, updated_at: new Date().toISOString(), updated_by: userId } as never, { onConflict: "key" } as never);
                         if (error) { toast.error(`Couldn't save to the Vault: ${error.message}`); return; }
@@ -932,7 +958,7 @@ export default function GrantApplication({ folderId, folder, items, library, get
 }
 
 /* ───── One question ───── */
-function QuestionRow({ item, number, pastFunder, twin, storyTitle, focused, forceOpen, onClosed, onApproveNext, renderChat, writing, busy, onApprove, onUnapprove, onCopy, onRemove, onSave, onRegenerate, onClear, folderId, folder, userId, folderDocs, attachment, onAttach }: {
+function QuestionRow({ item, number, pastFunder, twin, storyTitle, focused, forceOpen, onClosed, onApproveNext, renderChat, writing, busy, onApprove, onUnapprove, onCopy, onRemove, onSave, onRegenerate, onClear, folderId, folder, userId, folderDocs, attachment, onAttach, standard, onUseStandard }: {
   item: AppItem; number?: number; pastFunder?: string | null; storyTitle?: string | null; focused?: boolean; writing: boolean; busy: boolean;
   /** The sister application answered this too: which program it was for, and how much of this answer still matches it (2026-10-29). */
   twin?: { program: string | null; pct: number } | null;
@@ -942,6 +968,8 @@ function QuestionRow({ item, number, pastFunder, twin, storyTitle, focused, forc
   renderChat: (draft: string, fill: (text: string, storyId: string | null) => void) => ReactNode;
   onApprove: () => void; onUnapprove: () => void; onCopy: () => void; onRemove: () => void; onClear: () => void;
   onSave: (answer: string, toVault: boolean) => Promise<void>; onRegenerate: (instruction: string) => Promise<void>;
+  /** The approved standard paragraphs (2026-11-19): verbatim into the answer with one click. */
+  standard: StandardParagraph[]; onUseStandard: (p: StandardParagraph, mode: "replace" | "append") => Promise<void>;
 }) {
   const qc = useQueryClient();
   // One place to edit: the box. Open it by clicking the answer, the pencil, or
@@ -957,6 +985,8 @@ function QuestionRow({ item, number, pastFunder, twin, storyTitle, focused, forc
   const close = () => { setOpen(false); setFromCoach(null); onClosed?.(); };
 
   const fact = isFactRow(item);
+  /** The answer is a standard paragraph, as written: the sameness check and Save to the Vault stay out of its way. */
+  const standardRow = isStandardKey(item.vault_key);
   const approved = item.status === "done";
   const hasAnswer = !!item.answer?.trim();
   /* An "Upload" row: the answer is a file. Attach picks it (Vault, this folder,
@@ -1028,7 +1058,7 @@ function QuestionRow({ item, number, pastFunder, twin, storyTitle, focused, forc
       </div>
     );
   }
-  const vaultField = !!item.vault_key && !item.vault_key.startsWith("doc:") && !item.vault_part;
+  const vaultField = !!item.vault_key && !item.vault_key.startsWith("doc:") && !standardRow && !item.vault_part;
   // A Vault fact with nothing in the Vault: the box to type it in is open from the start.
   const typeIn = !hasAnswer && !!item.vault_key && !!item.needs && !item.vault_key.startsWith("doc:");
   const editing = open || typeIn;
@@ -1085,6 +1115,31 @@ function QuestionRow({ item, number, pastFunder, twin, storyTitle, focused, forc
     </DropdownMenu>
   );
 
+  /* Use a standard paragraph (Josh, 2026-11-19): the approved paragraphs, one click, verbatim.
+     In the box it joins the draft; on a closed row it becomes the answer, or goes under one. */
+  const standardMenu = !fact && standard.length > 0 ? (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button size="sm" variant="outline" onMouseDown={(e) => e.preventDefault()} disabled={busy} title="Drop an approved paragraph from the Vault in, word for word" className="bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white h-8"><Library className="w-4 h-4 mr-1" style={{ color: GC_BLUE }} /> Standard paragraph</Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="bg-neutral-900 border-white/[0.08] text-white w-80">
+        {standard.map((p) => (
+          <DropdownMenuItem
+            key={p.key}
+            onSelect={() => {
+              if (editing) { const cur = draft.trim(); onType(cur ? `${cur}\n\n${p.body}` : p.body); setFromCoach(null); toast.success(`${p.title} is in the box.`); }
+              else void onUseStandard(p, hasAnswer ? "append" : "replace");
+            }}
+            className="flex-col items-start gap-0.5 py-2 focus:bg-white/10 focus:text-white"
+          >
+            <span className="font-semibold">{p.title} <span className="font-normal text-white/40">· {p.words} words</span></span>
+            <span className="text-[11px] text-white/50 leading-snug whitespace-normal">{p.purpose}</span>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  ) : null;
+
   return (
     <div id={`q-${item.id}`} className={`scroll-mt-28 px-4 transition-shadow ${fact && !editing ? "py-2.5" : "py-4"} ${approved ? "bg-emerald-500/[0.04]" : ""} ${focused ? "ring-2 ring-inset ring-sky-400/80 bg-sky-400/[0.06]" : ""}`}>
       <div className="flex items-start gap-3">
@@ -1093,7 +1148,7 @@ function QuestionRow({ item, number, pastFunder, twin, storyTitle, focused, forc
             {number != null && <span className="tabular-nums text-[11px] font-normal text-white/30 mr-1.5">{number}</span>}
             {item.label}
             {!item.required && <span className="ml-1.5 text-[10px] text-white/30 uppercase">optional</span>}
-            {item.answer_source === "vault" && hasAnswer && <span className="ml-2 inline-flex items-center gap-1 text-[10px] text-white/35 uppercase tracking-wide"><Vault className="w-3 h-3" /> from your Vault</span>}
+            {item.answer_source === "vault" && hasAnswer && <span className="ml-2 inline-flex items-center gap-1 text-[10px] text-white/35 uppercase tracking-wide"><Vault className="w-3 h-3" /> {standardRow ? `standard paragraph · ${standard.find((p) => p.key === item.vault_key)?.title ?? "from your Vault"}` : "from your Vault"}</span>}
             {storyTitle && hasAnswer && <span className="ml-2 inline-flex items-center gap-1 text-[10px] text-white/45 uppercase tracking-wide"><BookHeart className="w-3 h-3" /> tells: {storyTitle}</span>}
             {item.answer_source === "memory" && hasAnswer && <span className="ml-2 inline-flex items-center gap-1 text-[10px] text-white/45 uppercase tracking-wide"><History className="w-3 h-3" /> {fact ? "from a past grant" : "adapted from a past grant"}{pastFunder ? ` · ${pastFunder}` : ""}</span>}
             {item.answer_source === "portal" && hasAnswer && <span className="ml-2 inline-flex items-center gap-1 text-[10px] text-white/45 uppercase tracking-wide"><Globe className="w-3 h-3" /> from the portal</span>}
@@ -1133,6 +1188,7 @@ function QuestionRow({ item, number, pastFunder, twin, storyTitle, focused, forc
                   <Button size="sm" onMouseDown={(e) => e.preventDefault()} onClick={() => void saveToVault()} disabled={!draft.trim()} title="Every grant from now on starts from the Vault" className="bg-transparent border border-white/20 text-white/85 hover:bg-white/10"><Vault className="w-4 h-4 mr-1.5" /> Save to the Vault</Button>
                 )}
                 {!typeIn && <Button size="sm" variant="outline" onMouseDown={(e) => e.preventDefault()} onClick={close} className="bg-transparent border-white/20 text-white/70 hover:bg-white/10 hover:text-white">Close</Button>}
+                {standardMenu}
                 <span className="text-[11px] text-white/35">{saving ? "Saving…" : "Saves as you go"}</span>
                 {/* The cost estimate adds up (2026-11-12): every line priced, the lines equal to the request. */}
                 {folder.delivery === "proposal" && isCostItem(item.label) && (() => { const c = costCheck(draft, folder.amount_requested); return (
@@ -1154,7 +1210,7 @@ function QuestionRow({ item, number, pastFunder, twin, storyTitle, focused, forc
           {twin && !writing && !hasAnswer && (
             <p className="mt-1.5 text-[12px] text-amber-300 inline-flex items-start gap-1.5"><AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" /> Written for {twin.program ?? "the first application"} the first time · Grant Coach writes it fresh for this one.</p>
           )}
-          {twin && !writing && hasAnswer && !fact && (
+          {twin && !writing && hasAnswer && !fact && !standardRow && (
             twin.pct < TOO_CLOSE ? (
               <p className="mt-1.5 text-[12px] text-emerald-300/80 inline-flex items-center gap-1.5"><Check className="w-3.5 h-3.5" /> {twin.pct}% matches the {twin.program ?? "first"} application · reads fresh</p>
             ) : (
@@ -1194,6 +1250,7 @@ function QuestionRow({ item, number, pastFunder, twin, storyTitle, focused, forc
             ) : hasAnswer ? (
               <Button size="sm" onClick={onApprove} className="bg-emerald-700 hover:bg-emerald-600 text-white h-8"><Check className="w-4 h-4 mr-1" /> Approve</Button>
             ) : null}
+            {!hasAnswer && standardMenu}
             {hasAnswer ? (
               <button type="button" onClick={() => setOpen(true)} title="Edit, or ask Grant Coach" className="p-2 rounded-md text-white/50 hover:text-white hover:bg-white/10"><Pencil className="w-4 h-4" /></button>
             ) : (

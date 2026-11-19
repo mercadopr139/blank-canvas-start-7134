@@ -2,9 +2,10 @@ import { describe, it, expect } from "vitest";
 import { SNAPSHOT_SECTIONS, shortYear, snapshotText, snapshotYear } from "@/lib/grantCoach/snapshot";
 
 describe("Program Year Snapshot", () => {
-  it("has the four approved sections, in order", () => {
-    expect(SNAPSHOT_SECTIONS.map((s) => s.key)).toEqual(["who_we_served", "what_we_do", "organization", "capacity"]);
-    expect(SNAPSHOT_SECTIONS.map((s) => s.sort)).toEqual([1, 2, 3, 4]);
+  it("has the six standard paragraphs, in the order a funder reads them (2026-11-19)", () => {
+    expect(SNAPSHOT_SECTIONS.map((s) => s.key)).toEqual(["intro", "who_we_served", "what_we_do", "organization", "capacity", "sustainability"]);
+    expect(SNAPSHOT_SECTIONS.map((s) => s.sort)).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(SNAPSHOT_SECTIONS.every((s) => s.purpose.length > 20)).toBe(true);
   });
 
   it("describes the last complete program year", () => {

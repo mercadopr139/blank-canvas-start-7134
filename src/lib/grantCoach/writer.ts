@@ -159,8 +159,8 @@ export interface VaultMatch { i: number; vault_key: string | null; part: string 
 
 /** Which Grant Vault field (or org document) each question wants. The app fills the value itself. */
 export async function matchToVault(
-  questions: { i: number; screen: string; text: string; help: string; kind: string }[],
-  catalog: { fields: { key: string; label: string; kind: string }[]; documents: { key: string; label: string }[] },
+  questions: { i: number; screen: string; text: string; help: string; kind: string; limit?: string }[],
+  catalog: { fields: { key: string; label: string; kind: string }[]; documents: { key: string; label: string }[]; paragraphs?: { key: string; title: string; purpose: string; words: number }[] },
   memory: { id: string; question: string; funder: string | null }[] = [],
 ): Promise<VaultMatch[]> {
   const { data, error } = await supabase.functions.invoke("grant-writer", { body: { mode: "classify", questions, catalog, memory } });

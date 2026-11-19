@@ -152,8 +152,8 @@ type Req = {
   /** read_screens: the application as text (pasted, or read from a Word file). */
   text?: string;
   /** classify: the questions read in, and what they may be matched to. */
-  questions?: { i: number; screen: string; text: string; help: string; kind: string }[];
-  catalog?: { fields: { key: string; label: string; kind: string }[]; documents: { key: string; label: string }[] };
+  questions?: { i: number; screen: string; text: string; help: string; kind: string; limit?: string }[];
+  catalog?: { fields: { key: string; label: string; kind: string }[]; documents: { key: string; label: string }[]; paragraphs?: { key: string; title: string; purpose: string; words: number }[] };
   /** item / strategy: the story bank — stories Josh may use in writing (never 'private' ones). */
   stories?: Story[];
   /** item: stories already told elsewhere in this application. */
@@ -218,7 +218,7 @@ const SYSTEM = `You are Grant Coach, the grant writer for No Limits Academy (NLA
 
 SOURCES, IN THIS ORDER (Josh, 2026-10-23)
 1. THE WEBSITE — what NLA is, what it offers, how the day runs, the mission's words. The substance and the voice come from here first. If the website describes a program, a schedule or a value, use its description.
-2. THE SNAPSHOT — the Program Year Snapshot Josh approved word for word (who NLA served, what NLA does, the organization, capacity and partners). Where the Snapshot states a figure or a sentence, use it AS WRITTEN: same number, same wording, same order, adapted only to the funder's length. Its figures were approved by Josh and may be cited even where a live number below is a partial-year log (e.g. "Daily attendance at NLA is 40–120 youth per night", "more than 1,200 hot meals are served each month"). Never contradict it.
+2. THE STANDARD PARAGRAPHS — the paragraphs Josh approved word for word (the Introduction, who NLA serves, the program, the organization, partners and capacity, sustainability). Where a standard paragraph states a figure or a sentence, use it AS WRITTEN: same number, same wording, same order. When a question asks for what a standard paragraph IS — "tell us about your organization" is the Introduction; "describe your program" is the program; "who do you serve" is who we serve — the answer is that paragraph VERBATIM, then only what the question asks beyond it. Never paraphrase a standard paragraph. If the funder's limit is shorter than the paragraph, cut whole sentences from the end; never reword the ones that stay. The figures were approved by Josh and may be cited even where a live number below is a partial-year log (e.g. "Daily attendance at NLA is 40–120 youth per night", "more than 1,200 hot meals are served each month"). Never contradict them.
 3. THE LIVE NUMBERS — every other figure. The website says "500+"; the live numbers say exactly how many, and for which year.
 4. THE ABOUT NLA LIBRARY (the Grant Vault) — the facts the website does not carry: EIN, board, budget, the 990, past grants, partner letters, and any correction Josh typed over the website's words.
 5. THE HOUSE EXAMPLE — Josh's own proposals: how the answer should read.
@@ -288,6 +288,7 @@ const PROPOSAL_RULES = `
 
 THIS GRANT IS A WRITTEN PROPOSAL, NOT A PORTAL
 The funder sent a letter asking for a proposal back; NLA prints it on its letterhead and mails or emails it. The rows in this folder are the SECTIONS of that one document, printed in order under the funder's own headings, with a date, the addressee, a subject line, a closing and a signature added by the page. So:
+- THE STANDARD PARAGRAPHS are sections too: where the funder asks who NLA is, that section IS the Introduction verbatim; a section that is a standard paragraph stays word for word.
 - Write every section as part of ONE document in one voice. Read ALREADY WRITTEN IN THIS FOLDER first: what another section already says is NOT said again. The thank-you for past support appears once, in the first section. The reporting promise ("will provide details on the use of funds") appears once, at the end of the last narrative section. NO section carries its own closing, its own "NLA is grateful to be considered", or a contact line — the page prints the closing, the signature and the contact section.
 - A section is prose: paragraphs, no numbered question text, no "Answer:", never the heading repeated inside the text. Short inline lead-ins ("Equipment, with safety paramount:") are fine.
 - THE COST ESTIMATE / BUDGET section is a TABLE the page draws and adds up. Write it as lines, nothing else: a heading line for each group (e.g. "Equipment purchase"), then one line per item under it in exactly this form: "- <item> — $<amount>". EVERY item line carries its own dollar figure; no bullet without a figure; the figures across every line add up EXACTLY to the amount requested; no "Total" line (the page adds it). One short sentence of prose before the lines is allowed (where the figures come from — e.g. NLA's board-approved operating budget) and one after (the balance of each line is met by other revenue). Nothing else.
@@ -357,7 +358,7 @@ const describeFolder = (f: Folder) =>
 const siteBlock = (body: Req) => body.siteText?.trim() ? block("THE WEBSITE — nolimitsboxingacademy.org as published (source 1: the substance and the voice; figures still come from LIVE NUMBERS)", body.siteText) : "";
 /** The approved Snapshot — source 2: its figures and sentences are used as written. */
 const snapshotBlock = (body: Req) => (body.snapshot?.sections ?? []).length
-  ? block(`THE SNAPSHOT — program year ${body.snapshot!.year}, approved by Josh word for word (source 2: use its figures and sentences as written; never contradict it)`, body.snapshot!.sections.map((x) => x.body.trim()).join("\n\n\n"))
+  ? block(`THE STANDARD PARAGRAPHS — program year ${body.snapshot!.year}, approved by Josh word for word (source 2: use their figures and sentences as written; a question that asks for what one of them is gets it verbatim; never contradict them)`, body.snapshot!.sections.map((x) => `[${x.title}]\n${x.body.trim()}`).join("\n\n\n"))
   : "";
 /** The sister application — NLA's other application to the same funder this cycle (2026-10-30): the writer and the chat may draw on it when Josh asks. */
 const sisters = (body: Req) => [body.sibling, ...(body.sibling?.others ?? [])].filter((x): x is NonNullable<Req["sibling"]> => !!x?.application?.length);
@@ -454,16 +455,20 @@ Deno.serve(async (req) => {
       if (!qs.length || !cat) return json({ error: "Send the questions and the catalog." }, 400);
       const fieldList = cat.fields.map((f) => `${f.key} — ${f.label} (${f.kind})`).join("\n");
       const docList = cat.documents.map((d) => `${d.key} — ${d.label}`).join("\n");
+      // The approved standard paragraphs (2026-11-19): matched like a fact, used verbatim.
+      const paras = Array.isArray(cat.paragraphs) ? cat.paragraphs : [];
+      const paraList = paras.map((p) => `${p.key} — ${p.title} (about ${p.words} words) — ${p.purpose}`).join("\n");
       const mem = Array.isArray(body.memory) ? body.memory.slice(0, 400) : [];
       const memList = mem.map((m) => `${m.id} — ${m.question}${m.funder ? " (asked by " + m.funder + ")" : ""}`).join("\n");
-      const qList = qs.map((q) => `${q.i}. [${q.kind}] ${q.screen ? q.screen + " · " : ""}${q.text}${q.help ? " (" + q.help + ")" : ""}`).join("\n");
+      const qList = qs.map((q) => `${q.i}. [${q.kind}${q.limit ? ` · limit ${q.limit}` : ""}] ${q.screen ? q.screen + " · " : ""}${q.text}${q.help ? " (" + q.help + ")" : ""}`).join("\n");
       const response = await anthropic.messages.create({
         model: "claude-sonnet-5",
         max_tokens: 6000,
         system: "You match the questions on a grant application to the fields of an organization's fact sheet. You are exact and conservative: a match only when the field holds precisely what the question asks for.",
         messages: [{ role: "user", content:
-          `THE FACT SHEET FIELDS (key — label (kind)):\n${fieldList}\n\nTHE ORGANIZATION'S DOCUMENTS (key — title):\n${docList}\n\nQUESTIONS ANSWERED AND APPROVED ON PAST GRANTS (id — question):\n${memList || "(none yet)"}\n\nTHE QUESTIONS:\n${qList}\n\n` +
+          `THE FACT SHEET FIELDS (key — label (kind)):\n${fieldList}\n\nTHE ORGANIZATION'S DOCUMENTS (key — title):\n${docList}\n\nTHE STANDARD PARAGRAPHS (key — title (length) — what it is for), approved boilerplate used verbatim:\n${paraList || "(none approved yet)"}\n\nQUESTIONS ANSWERED AND APPROVED ON PAST GRANTS (id — question):\n${memList || "(none yet)"}\n\nTHE QUESTIONS:\n${qList}\n\n` +
           `For each question give "vault_key": the ONE fact-sheet key whose value answers it as a fact (legal name, DBA, EIN, dates, fiscal year, year established, website, phone, addresses, contacts, signer, budget and revenue figures, yes/no history, counties), or null when the question needs writing (need, program design, outcomes, narratives) or is not on the sheet. Never match a written question to a long field like mission or need — those are written fresh. Exception: a question asking for the mission statement itself may use "mission".\n` +
+          `A STANDARD PARAGRAPH KEY ("standard:…") is a vault_key too: give it when the question asks for exactly what that paragraph is — an organization overview, background or "about you" is standard:intro; who you serve or your target population is standard:who_we_served; describe your program or services is standard:what_we_do; history, leadership or structure is standard:organization; capacity, partners or qualifications is standard:capacity; sustainability or funding after the grant is standard:sustainability — AND the question's limit, when it has one, allows at least that paragraph's length (a 500-character limit cannot take a 200-word paragraph: give null). A question that asks for the program AS PROPOSED FOR THIS GRANT (needs_case) is never a standard paragraph.\n` +
           `"part": when the portal splits a field, which piece it wants — street, street2, city, state, zip (for an address); name, first, last, title (for a "name and title" field); else null. "Street Address Line 2" is street2. Choose the mailing address for "mailing address", the program address for "physical/program/site address".\n` +
           `"document_key": for an upload slot, the document it asks for, or null.\n` +
           `"needs_case": true when the answer depends on WHICH program NLA proposes or what it will do with the money — program/project name, funding purpose, need, design, activities, who the program serves, outcomes, targets, evaluation, requested amount, total program cost, program start and end dates, service frequency, program staffing, budget justification. false for facts about the organization itself (name, EIN, address, contacts, mission, history, finances, certifications).\n` +
@@ -471,7 +476,7 @@ Deno.serve(async (req) => {
         ...thinking("low"),
       } as never);
       const parsed = extractJson(textOf(response as never));
-      const keys = new Set(cat.fields.map((f) => f.key));
+      const keys = new Set([...cat.fields.map((f) => f.key), ...paras.map((p) => p.key)]);
       const docs = new Set(cat.documents.map((d) => d.key));
       const parts = new Set(["street", "street2", "city", "state", "zip", "name", "first", "last", "title"]);
       const memIds = new Set(mem.map((m) => m.id));

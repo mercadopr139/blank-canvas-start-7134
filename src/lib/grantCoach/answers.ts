@@ -7,6 +7,7 @@
 // writer. (Josh, 2026-10-22: "facts come from data deterministically.")
 import { ORG_FIELDS, formatEin, orgFieldValue } from "@/lib/grantCoach/orgProfile";
 import { ORG_DOCUMENTS } from "@/lib/grantCoach/orgDocuments";
+import { isStandardKey, type StandardParagraph } from "@/lib/grantCoach/snapshot";
 
 export type VaultPart = "street" | "street2" | "city" | "state" | "zip" | "name" | "first" | "last" | "title";
 export const VAULT_PARTS: VaultPart[] = ["street", "street2", "city", "state", "zip", "name", "first", "last", "title"];
@@ -42,8 +43,9 @@ const usDate = (v: string) => {
   return m ? `${m[2]}/${m[3]}/${m[1]}` : v;
 };
 
-/** The Vault's answer for a question, or null when the Vault has nothing there yet. */
+/** The Vault's answer for a question, or null when the Vault has nothing there yet. A standard paragraph ("standard:intro") comes back verbatim. */
 export const vaultAnswer = (key: string, part: VaultPart | null | undefined, saved: Record<string, string | null>): string | null => {
+  if (isStandardKey(key)) return saved[key]?.trim() || null;
   const field = ORG_FIELDS.find((f) => f.key === key);
   if (!field) return null;
   let value = orgFieldValue(field, saved).trim();
@@ -88,12 +90,13 @@ export const needsFrom = (answer: string | null | undefined): string | null => {
   return found.length ? `Grant Coach needs: ${[...new Set(found)].join("; ")}.` : null;
 };
 
-/** A fact row is short and exact: it sits in the compact block, not a big card. */
+/** A fact row is short and exact: it sits in the compact block, not a big card. A standard paragraph is prose, so it keeps its card. */
 export const isFactRow = (it: { vault_key?: string | null; kind: string; limit_value?: number | null }) =>
-  !!it.vault_key || it.kind === "field" || it.kind === "choice" || it.kind === "acknowledgment" || it.kind === "signature" || it.kind === "upload";
+  (!!it.vault_key && !isStandardKey(it.vault_key)) || it.kind === "field" || it.kind === "choice" || it.kind === "acknowledgment" || it.kind === "signature" || it.kind === "upload";
 
-/** What the classifier is shown: every Vault field and document it may match a question to. */
-export const vaultCatalog = () => ({
+/** What the classifier is shown: every Vault field, document and approved standard paragraph it may match a question to. */
+export const vaultCatalog = (paragraphs: StandardParagraph[] = []) => ({
   fields: ORG_FIELDS.map((f) => ({ key: f.key, label: f.label, kind: f.kind })),
   documents: ORG_DOCUMENTS.map((d) => ({ key: d.key, label: d.title })),
+  paragraphs: paragraphs.map((p) => ({ key: p.key, title: p.title, purpose: p.purpose, words: p.words })),
 });

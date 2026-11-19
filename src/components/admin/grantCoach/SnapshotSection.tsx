@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import GcCard, { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
 import type { useAsk } from "@/components/admin/AskDialog";
 import {
-  loadSnapshot, snapshotYears, snapshotYear, shortYear, saveSection, approveSection, unlockSection,
+  loadSnapshot, snapshotYears, snapshotYear, shortYear, saveSection, approveSection, unlockSection, purposeOf,
   type SnapshotSection as SnapshotRow,
 } from "@/lib/grantCoach/snapshot";
 import { loadLibrary, redraftSnapshotSection } from "@/lib/grantCoach/writer";
@@ -143,6 +143,8 @@ export default function SnapshotSectionCard({ section, previous, userId, ask, on
       }
     >
       <div className="p-4 space-y-3">
+        {/* What the paragraph is for (2026-11-19): the same line the picker and the matcher read. */}
+        <p className="text-[12px] text-white/45">{purposeOf(section.section_key)} Verbatim on any question with "Standard paragraph".</p>
         {locked ? (
           <div className="whitespace-pre-wrap text-sm leading-relaxed text-white/90">{section.body}</div>
         ) : (
