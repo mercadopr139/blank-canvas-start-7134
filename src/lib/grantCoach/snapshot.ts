@@ -150,6 +150,30 @@ export async function approvedSnapshotForWriter(): Promise<WriterSnapshot | null
   }
 }
 
+/* ── Talk to Grant Coach on a paragraph (2026-11-19): the thread, kept per paragraph per year ── */
+
+export interface ParagraphMsg { id: string; role: "user" | "coach"; content: string; payload: { after?: string; why?: string; used?: boolean } | null }
+
+const msgTable = () => supabase.from("grant_paragraph_messages" as never);
+
+/** The thread under a paragraph, oldest first; [] when its table is not there yet (the migration is Josh's to apply). */
+export async function paragraphMessages(year: string, key: string): Promise<ParagraphMsg[]> {
+  const { data, error } = await (msgTable().select("id, role, content, payload").eq("program_year", year).eq("section_key", key).order("created_at") as unknown as Promise<{ data: ParagraphMsg[] | null; error: { message: string } | null }>);
+  if (error) return [];
+  return data ?? [];
+}
+
+/** Save one message of the thread; null when it could not be kept (the table missing) — the conversation still runs for the session. */
+export async function saveParagraphMessage(year: string, key: string, role: "user" | "coach", content: string, payload: ParagraphMsg["payload"], userId: string | null): Promise<string | null> {
+  const { data, error } = await (msgTable().insert({ program_year: year, section_key: key, role, content, payload: payload ?? {}, created_by: userId } as never).select("id").single() as unknown as Promise<{ data: { id: string } | null; error: { message: string } | null }>);
+  return error ? null : data?.id ?? null;
+}
+
+/** The change went into the box: the card remembers. */
+export async function markParagraphMessageUsed(id: string, payload: ParagraphMsg["payload"]): Promise<void> {
+  await (msgTable().update({ payload: { ...(payload ?? {}), used: true } } as never).eq("id", id) as unknown as Promise<unknown>);
+}
+
 /** A row matched to a standard paragraph carries this key: "standard:intro". It is a Vault key the fact-fill understands. */
 export const STANDARD_PREFIX = "standard:";
 export const isStandardKey = (key: string | null | undefined) => !!key && key.startsWith(STANDARD_PREFIX);

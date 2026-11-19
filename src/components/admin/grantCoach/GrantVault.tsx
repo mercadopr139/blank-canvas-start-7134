@@ -330,6 +330,7 @@ export default function GrantVault() {
               <SnapshotSectionCard
                 key={`${snapRow.program_year}-${snapRow.section_key}`}
                 section={snapRow}
+                others={snap.sections}
                 previous={snap.previous.find((p) => p.section_key === snapRow.section_key && p.status === "approved")?.body ?? null}
                 userId={user?.id ?? null}
                 ask={ask}

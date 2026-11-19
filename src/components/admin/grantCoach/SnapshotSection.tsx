@@ -8,7 +8,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Copy, Lock, LockOpen, Check, Sparkles, Loader2 } from "lucide-react";
+import { Copy, Lock, LockOpen, Check, Sparkles, Loader2, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import GcCard, { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
@@ -19,6 +19,7 @@ import {
 } from "@/lib/grantCoach/snapshot";
 import { loadLibrary, redraftSnapshotSection } from "@/lib/grantCoach/writer";
 import { gatherLiveFacts } from "@/lib/grantCoach/liveFacts";
+import ParagraphChat from "@/components/admin/grantCoach/ParagraphChat";
 
 const fmtDate = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", year: "numeric" }) : "";
@@ -63,8 +64,10 @@ const gistOf = (body: string, max = 170) => {
   return t.length > max ? t.slice(0, max).replace(/\s+\S*$/, "") + "…" : t;
 };
 
-export default function SnapshotSectionCard({ section, previous, userId, ask, onChanged, open, onToggle }: {
+export default function SnapshotSectionCard({ section, others, previous, userId, ask, onChanged, open, onToggle }: {
   section: SnapshotRow;
+  /** The year's other paragraphs, for the conversation: a sentence lives in one place. */
+  others: SnapshotRow[];
   previous: string | null;
   userId: string | null;
   ask: ReturnType<typeof useAsk>["ask"];
@@ -77,8 +80,23 @@ export default function SnapshotSectionCard({ section, previous, userId, ask, on
   const [text, setText] = useState(section.body);
   const [busy, setBusy] = useState<null | "save" | "approve" | "unlock" | "redraft">(null);
   const [changed, setChanged] = useState<string[]>([]);
+  const [talking, setTalking] = useState(false);
   useEffect(() => { setText(section.body); }, [section.body, section.status]);
   const dirty = text !== section.body;
+
+  /** Grant Coach's change goes into the box as a draft (2026-11-19); a locked paragraph is unlocked first. Approval stays Josh's. */
+  const useThis = async (after: string) => {
+    if (locked) {
+      await unlockSection(section, userId);
+      await saveSection({ ...section, status: "draft" }, after, userId);
+    } else {
+      await saveSection(section, after, userId);
+    }
+    setText(after);
+    setChanged([]);
+    onChanged();
+    toast.success(locked ? "Unlocked, with the change in the box. Approve it when it reads right." : "In the box. Approve it when it reads right.");
+  };
 
   const run = async (what: NonNullable<typeof busy>, fn: () => Promise<void>, done?: string) => {
     setBusy(what);
@@ -166,9 +184,12 @@ export default function SnapshotSectionCard({ section, previous, userId, ask, on
               </div>
             )}
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" className={outline} disabled={busy != null} onClick={redraft}>
-                {busy === "redraft" ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1.5" style={{ color: GC_BLUE }} />} Redraft with Grant Coach
-              </Button>
+              {/* Redraft is for a NEW year's empty paragraph: keep the words, update the figures. Anything else is a conversation (2026-11-19). */}
+              {!section.body.trim() && !!previous && (
+                <Button size="sm" variant="outline" className={outline} disabled={busy != null} onClick={redraft}>
+                  {busy === "redraft" ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1.5" style={{ color: GC_BLUE }} />} Redraft with Grant Coach
+                </Button>
+              )}
               <Button size="sm" variant="outline" className={outline} disabled={busy != null || !dirty} onClick={() => run("save", () => saveSection(section, text, userId), "Draft saved")}>
                 {busy === "save" && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />} Save draft
               </Button>
@@ -183,6 +204,15 @@ export default function SnapshotSectionCard({ section, previous, userId, ask, on
               </Button>
             </div>
           </>
+        )}
+        {/* Talk to Grant Coach (Josh, 2026-11-19): an editor's conversation under the paragraph, locked or not. */}
+        <div className="flex flex-wrap gap-2 pt-1">
+          <Button size="sm" variant="outline" className={outline} aria-pressed={talking} onClick={() => setTalking((t) => !t)}>
+            <MessageSquare className="w-3.5 h-3.5 mr-1.5" style={{ color: GC_BLUE }} /> {talking ? "Close the conversation" : "Talk to Grant Coach"}
+          </Button>
+        </div>
+        {talking && (
+          <ParagraphChat section={section} current={locked ? section.body : text} others={others} userId={userId} onUse={useThis} />
         )}
       </div>
     </GcCard>

@@ -111,7 +111,7 @@ async function createBest(anthropic: Anthropic, params: Record<string, any>) {
   throw lastError ?? new Error("No model answered.");
 }
 type Req = {
-  mode: "item" | "narrative" | "chat" | "read_screens" | "classify" | "strategy" | "story" | "review" | "review_chat" | "review_reject" | "read_document" | "funder_brief" | "snapshot" | "reporting_plan" | "report" | "fit" | "budget" | "learn";
+  mode: "item" | "narrative" | "chat" | "read_screens" | "classify" | "strategy" | "story" | "review" | "review_chat" | "review_reject" | "read_document" | "funder_brief" | "snapshot" | "paragraph_chat" | "reporting_plan" | "report" | "fit" | "budget" | "learn";
   /** Every call: what NLA is submitting with the answers — the attached files, read as written (2026-10-29). */
   attachments?: { label: string; title: string; text: string }[];
   /** review: memory (2026-10-29) — the last review, the questions changed since it, the notes Josh dismissed, and the focus. */
@@ -136,6 +136,9 @@ type Req = {
   title?: string;
   current?: string;
   previous?: string | null;
+  /** paragraph_chat (2026-11-19): what the paragraph is for, and the year's other paragraphs. */
+  purpose?: string;
+  others?: { title: string; body: string }[];
   folder: Folder;
   item?: Item;
   narrativeItems?: Item[];
@@ -507,6 +510,47 @@ Deno.serve(async (req) => {
     }
 
     // ── The Snapshot: one section redrafted for a new program year ──
+    // ── Talk to Grant Coach on a standard paragraph (Josh, 2026-11-19) ──
+    if (body.mode === "paragraph_chat") {
+      const current = String(body.current ?? "").trim();
+      const history = Array.isArray(body.messages) ? body.messages.filter((m) => m && typeof m.content === "string") : [];
+      if (!body.title) return json({ error: "Which paragraph?" }, 400);
+      if (!history.length) return json({ error: "Say something first." }, 400);
+      const others = (Array.isArray(body.others) ? body.others : []).filter((o) => o && typeof o.body === "string" && o.body.trim());
+      const context =
+        `THE PARAGRAPH: ${body.title} (program year ${body.year ?? ""}). WHAT IT IS FOR: ${body.purpose ?? ""}\n\nAS IT STANDS, JOSH'S WORDING:\n${current || "(empty)"}` +
+        (others.length ? block("THE OTHER STANDARD PARAGRAPHS (a sentence lives in ONE paragraph — if what Josh asks for already lives here, say where instead of repeating it)", others.map((o) => `[${o.title}]\n${o.body.trim()}`).join("\n\n\n")) : "") +
+        siteBlock(body) +
+        block("LIVE NUMBERS (as of today, from the back end)", describeFacts(body.facts ?? [])) +
+        block("ABOUT NLA LIBRARY", describeLibrary(body.library ?? []));
+      const response = await createBest(anthropic, {
+        max_tokens: 6000,
+        system: `You are Grant Coach, sitting with Josh (Program Director of No Limits Academy) over ONE standard paragraph of his grant library: approved boilerplate every application uses verbatim. You are its editor, not its author: Josh's wording is final until he asks for a change.
+- Answer exactly what he asks, in plain words, as an editor would: where a line should go and why, whether a number is too much, what a stranger reads first.
+- When he asks for a change — add a line, cut one, move one, say something differently — make ONLY that change. Every other sentence stays word for word, in its order. Put the whole paragraph with the change in "after" and say in "why", in one line, what you did and where.
+- Never add a figure, a name, a program or a claim that is not in the paragraph, THE OTHER STANDARD PARAGRAPHS, the LIVE NUMBERS, the website or the library. If he asks for one you cannot source, say so and ask him for it.
+- A sentence lives in ONE paragraph. If what he asks for already lives in another standard paragraph, say which one and where, and offer the briefest cross-reference instead of a repeat — unless he says to add it anyway.
+- Keep his voice: short declarative sentences, American English, the ALL-CAPS heading line kept as the first line.
+- When he only asks a question, answer it; leave "after" out.
+Return ONLY JSON: {"reply":"<plain text, paragraphs allowed>","after":"<the full paragraph with the change>" (only when a change is proposed; otherwise omit),"why":"<one line>" (only with after)}`,
+        messages: [
+          { role: "user", content: context + "\n\nThe conversation follows. Reply to the last message." },
+          { role: "assistant", content: "Ready." },
+          ...history.map((m) => ({ role: (m.role === "user" ? "user" : "assistant") as "user" | "assistant", content: m.content })),
+        ],
+        ...thinking("medium"),
+      });
+      const rawText = textOf(response as never);
+      // deno-lint-ignore no-explicit-any
+      let parsed: Record<string, any>;
+      try { parsed = extractJson(rawText); }
+      catch { parsed = { reply: rawText.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim() }; }
+      const reply = String(parsed.reply ?? "").trim();
+      if (!reply) throw new Error("Grant Coach came back with nothing. Try again.");
+      const after = typeof parsed.after === "string" && parsed.after.trim() && parsed.after.trim() !== current ? parsed.after.trim() : null;
+      return json({ reply, after, why: after && typeof parsed.why === "string" ? parsed.why.trim() : null, model: (response as { model?: string }).model ?? null });
+    }
+
     if (body.mode === "snapshot") {
       const current = String(body.current ?? body.previous ?? "").trim();
       if (!body.title) return json({ error: "Which section?" }, 400);

@@ -256,6 +256,21 @@ export async function readFunderBrief(folder: DraftFolder, docs: { title: string
   return data.brief as FunderBrief;
 }
 
+/* ── Talk to Grant Coach on one standard paragraph (2026-11-19) ── */
+
+/** An editor's answer about the paragraph, and — only when a change was asked for — the paragraph with that one change. */
+export async function paragraphChat(input: {
+  year: string; title: string; purpose: string; current: string;
+  others: { title: string; body: string }[];
+  messages: { role: "user" | "coach"; content: string }[];
+  library: LibraryEntry[]; facts: Fact[];
+}): Promise<{ reply: string; after: string | null; why: string | null }> {
+  const { data, error } = await supabase.functions.invoke("grant-writer", { body: { mode: "paragraph_chat", ...input, siteText: SITE_TEXT } });
+  if (error) throw await fail(error);
+  if (data?.error) throw new Error(data.error);
+  return { reply: String(data?.reply ?? ""), after: data?.after ? String(data.after) : null, why: data?.why ? String(data.why) : null };
+}
+
 /* ── The Snapshot: next year's section, redrafted from this year's ── */
 
 /** Redraft one Snapshot section: Josh's approved wording kept sentence for sentence; only figures the live numbers now state differently change. */
