@@ -152,7 +152,7 @@ export async function approvedSnapshotForWriter(): Promise<WriterSnapshot | null
 
 /* ── Talk to Grant Coach on a paragraph (2026-11-19): the thread, kept per paragraph per year ── */
 
-export interface ParagraphMsg { id: string; role: "user" | "coach"; content: string; payload: { after?: string; why?: string; used?: boolean } | null }
+export interface ParagraphMsg { id: string; role: "user" | "coach"; content: string; payload: { after?: string; why?: string; used?: boolean; /** The paragraph as it stood when this was asked, so the marks stay true after later edits. */ before?: string } | null }
 
 const msgTable = () => supabase.from("grant_paragraph_messages" as never);
 

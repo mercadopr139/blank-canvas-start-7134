@@ -8,7 +8,8 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Send, MessageSquare, Check, ArrowDownCircle } from "lucide-react";
+import { Loader2, Send, MessageSquare, Check, ArrowDownCircle, Pencil, Eye } from "lucide-react";
+import { Textarea as EditBox } from "@/components/ui/textarea";
 import { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
 import DraftDiff from "@/components/admin/grantCoach/DraftDiff";
 import {
@@ -32,6 +33,9 @@ export default function ParagraphChat({ section, current, others, userId, onUse 
   const [line, setLine] = useState("");
   const [thinking, setThinking] = useState(false);
   const [using, setUsing] = useState<string | null>(null);
+  /** A proposal being edited in place before it is used (Josh, 2026-11-19): the message id → the text as he has it. */
+  const [edits, setEdits] = useState<Record<string, string>>({});
+  const [editing, setEditing] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -70,7 +74,7 @@ export default function ParagraphChat({ section, current, others, userId, onUse 
         others: others.filter((o) => o.section_key !== section.section_key && o.body.trim()).map((o) => ({ title: o.title, body: o.body })),
         messages: history, library, facts,
       });
-      await keep("coach", res.reply, res.after ? { after: res.after, ...(res.why ? { why: res.why } : {}) } : null);
+      await keep("coach", res.reply, res.after ? { after: res.after, before: current, ...(res.why ? { why: res.why } : {}) } : null);
     } catch (e) {
       toast.error(`Grant Coach: ${(e as Error).message}`);
     } finally {
@@ -78,13 +82,19 @@ export default function ParagraphChat({ section, current, others, userId, onUse 
     }
   };
 
+  /** The proposal as Josh has it: his in-place edits over what Grant Coach proposed. */
+  const textOf = (m: ParagraphMsg) => edits[m.id] ?? m.payload?.after ?? "";
+
   const use = async (m: ParagraphMsg) => {
-    if (!m.payload?.after) return;
+    const after = textOf(m).trim();
+    if (!after) return;
     setUsing(m.id);
     try {
-      await onUse(m.payload.after);
-      if (!m.id.startsWith("tmp-")) await markParagraphMessageUsed(m.id, m.payload);
-      setMsgs((old) => old.map((x) => (x.id === m.id ? { ...x, payload: { ...(x.payload ?? {}), used: true } } : x)));
+      await onUse(after);
+      const payload = { ...(m.payload ?? {}), after };
+      if (!m.id.startsWith("tmp-")) await markParagraphMessageUsed(m.id, payload);
+      setMsgs((old) => old.map((x) => (x.id === m.id ? { ...x, payload: { ...payload, used: true } } : x)));
+      setEditing(null);
     } catch (e) {
       toast.error(`Couldn't put it in: ${(e as Error).message}`);
     } finally {
@@ -121,12 +131,33 @@ export default function ParagraphChat({ section, current, others, userId, onUse 
                         {m.payload.used ? (
                           <span className="text-[11px] font-semibold text-emerald-300 inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" /> In the box</span>
                         ) : (
-                          <button type="button" onClick={() => void use(m)} disabled={using != null} className="rounded-md px-2.5 py-1 text-[11px] font-bold hover:opacity-90 inline-flex items-center gap-1 disabled:opacity-50" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}>
-                            {using === m.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowDownCircle className="w-3.5 h-3.5" />} Use this
-                          </button>
+                          <span className="inline-flex items-center gap-1.5">
+                            {/* Edit the proposal in place before using it (Josh, 2026-11-19). */}
+                            <button type="button" onClick={() => setEditing((e) => (e === m.id ? null : m.id))} className="rounded-md px-2 py-1 text-[11px] font-semibold inline-flex items-center gap-1 border border-white/20 text-white/80 hover:bg-white/10 hover:text-white" title={editing === m.id ? "Show the marks again" : "Change the wording yourself before using it"}>
+                              {editing === m.id ? <><Eye className="w-3.5 h-3.5" /> Marks</> : <><Pencil className="w-3.5 h-3.5" /> Edit</>}
+                            </button>
+                            <button type="button" onClick={() => void use(m)} disabled={using != null || !textOf(m).trim()} className="rounded-md px-2.5 py-1 text-[11px] font-bold hover:opacity-90 inline-flex items-center gap-1 disabled:opacity-50" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}>
+                              {using === m.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowDownCircle className="w-3.5 h-3.5" />} Use this
+                            </button>
+                          </span>
                         )}
                       </div>
-                      <DraftDiff before={current} after={m.payload.after} className="px-3 py-2 text-sm text-white whitespace-pre-wrap leading-relaxed" />
+                      {editing === m.id && !m.payload.used ? (
+                        <EditBox
+                          value={textOf(m)}
+                          onChange={(e) => setEdits((all) => ({ ...all, [m.id]: e.target.value }))}
+                          rows={Math.min(28, Math.max(8, textOf(m).split("\n").length + 2))}
+                          autoFocus
+                          className="rounded-none border-0 border-t bg-black/30 text-sm leading-relaxed text-white"
+                          style={{ borderColor: `${GC_BLUE}33` }}
+                        />
+                      ) : (
+                        /* The marks against the paragraph as it stood when this was asked, not the box as it is now. */
+                        <DraftDiff before={m.payload.before ?? current} after={textOf(m)} className="px-3 py-2 text-sm text-white whitespace-pre-wrap leading-relaxed" />
+                      )}
+                      {edits[m.id] != null && edits[m.id] !== m.payload.after && !m.payload.used && (
+                        <p className="px-3 pb-2 text-[11px] text-amber-300">Edited by you · Use this puts your version in the box.</p>
+                      )}
                     </div>
                   )}
                 </>
