@@ -9,7 +9,8 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Send, MessageSquare, Check, ArrowDownCircle, Pencil, Eye } from "lucide-react";
-import { Textarea as EditBox } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
 import DraftDiff from "@/components/admin/grantCoach/DraftDiff";
 import {
@@ -35,7 +36,9 @@ export default function ParagraphChat({ section, current, others, userId, onUse 
   const [using, setUsing] = useState<string | null>(null);
   /** A proposal being edited in place before it is used (Josh, 2026-11-19): the message id → the text as he has it. */
   const [edits, setEdits] = useState<Record<string, string>>({});
+  /** The proposal open in the big editing pop-up (Josh, 2026-11-19: "I need to see the box to edit it"). */
   const [editing, setEditing] = useState<string | null>(null);
+  const [showMarks, setShowMarks] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -102,8 +105,48 @@ export default function ParagraphChat({ section, current, others, userId, onUse 
     }
   };
 
+  /* The big editing pop-up: the whole proposal in one tall box, the marks a toggle away, Use this at the bottom. */
+  const open = editing ? msgs.find((m) => m.id === editing) ?? null : null;
+  const editor = open && (
+    <Dialog open onOpenChange={(o) => { if (!o) setEditing(null); }}>
+      <DialogContent className="max-w-4xl w-[min(96vw,56rem)] bg-neutral-900 border-white/10 text-white p-0 gap-0 max-h-[92vh] flex flex-col">
+        <DialogHeader className="px-5 py-3 border-b border-white/10 space-y-0">
+          <DialogTitle className="text-white text-base">{section.title} · the paragraph with the change</DialogTitle>
+          <p className="text-[12px] text-white/50">{open.payload?.why ?? "Change anything, then Use this. Nothing is approved until you approve the draft."}</p>
+        </DialogHeader>
+        <div className="flex-1 min-h-0 overflow-y-auto p-4">
+          {showMarks ? (
+            <DraftDiff before={open.payload?.before ?? current} after={textOf(open)} className="text-[15px] text-white whitespace-pre-wrap leading-relaxed" />
+          ) : (
+            <Textarea
+              value={textOf(open)}
+              onChange={(e) => setEdits((all) => ({ ...all, [open.id]: e.target.value }))}
+              autoFocus
+              className="w-full min-h-[60vh] bg-black/40 border-white/15 text-[15px] leading-relaxed text-white"
+            />
+          )}
+        </div>
+        <div className="px-4 py-3 border-t border-white/10 flex flex-wrap items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => setShowMarks((s) => !s)} className="bg-transparent border-white/20 text-white/85 hover:bg-white/10 hover:text-white">
+            {showMarks ? <><Pencil className="w-3.5 h-3.5 mr-1.5" /> Edit</> : <><Eye className="w-3.5 h-3.5 mr-1.5" /> Show the marks</>}
+          </Button>
+          {edits[open.id] != null && edits[open.id] !== open.payload?.after && (
+            <span className="text-[11px] text-amber-300">Edited by you · Use this puts your version in the box</span>
+          )}
+          <span className="ml-auto inline-flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => setEditing(null)} className="bg-transparent border-white/20 text-white/70 hover:bg-white/10 hover:text-white">Cancel</Button>
+            <Button size="sm" onClick={() => void use(open)} disabled={using != null || !textOf(open).trim()} className="font-bold" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}>
+              {using === open.id ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <ArrowDownCircle className="w-4 h-4 mr-1.5" />} Use this
+            </Button>
+          </span>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
   return (
     <div className="rounded-xl border-2 overflow-hidden" style={{ borderColor: GC_BLUE, backgroundColor: "#0a2238", boxShadow: `0 0 0 4px ${GC_BLUE}26, 0 16px 40px -12px ${GC_BLUE}99` }}>
+      {editor}
       <div className="px-3 py-2 border-b flex items-center justify-between gap-2" style={{ backgroundColor: `${GC_BLUE}26`, borderColor: `${GC_BLUE}55` }}>
         <p className="text-[11px] font-black uppercase tracking-[0.18em] inline-flex items-center gap-1.5" style={{ color: GC_BLUE }}>
           <MessageSquare className="w-3.5 h-3.5" /> Talk to Grant Coach about this paragraph
@@ -133,8 +176,8 @@ export default function ParagraphChat({ section, current, others, userId, onUse 
                         ) : (
                           <span className="inline-flex items-center gap-1.5">
                             {/* Edit the proposal in place before using it (Josh, 2026-11-19). */}
-                            <button type="button" onClick={() => setEditing((e) => (e === m.id ? null : m.id))} className="rounded-md px-2 py-1 text-[11px] font-semibold inline-flex items-center gap-1 border border-white/20 text-white/80 hover:bg-white/10 hover:text-white" title={editing === m.id ? "Show the marks again" : "Change the wording yourself before using it"}>
-                              {editing === m.id ? <><Eye className="w-3.5 h-3.5" /> Marks</> : <><Pencil className="w-3.5 h-3.5" /> Edit</>}
+                            <button type="button" onClick={() => { setShowMarks(false); setEditing(m.id); }} className="rounded-md px-2 py-1 text-[11px] font-semibold inline-flex items-center gap-1 border border-white/20 text-white/80 hover:bg-white/10 hover:text-white" title="Open it big and change the wording yourself before using it">
+                              <Pencil className="w-3.5 h-3.5" /> Edit
                             </button>
                             <button type="button" onClick={() => void use(m)} disabled={using != null || !textOf(m).trim()} className="rounded-md px-2.5 py-1 text-[11px] font-bold hover:opacity-90 inline-flex items-center gap-1 disabled:opacity-50" style={{ backgroundColor: GC_BLUE, color: "#0a0a0a" }}>
                               {using === m.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowDownCircle className="w-3.5 h-3.5" />} Use this
@@ -142,19 +185,8 @@ export default function ParagraphChat({ section, current, others, userId, onUse 
                           </span>
                         )}
                       </div>
-                      {editing === m.id && !m.payload.used ? (
-                        <EditBox
-                          value={textOf(m)}
-                          onChange={(e) => setEdits((all) => ({ ...all, [m.id]: e.target.value }))}
-                          rows={Math.min(28, Math.max(8, textOf(m).split("\n").length + 2))}
-                          autoFocus
-                          className="rounded-none border-0 border-t bg-black/30 text-sm leading-relaxed text-white"
-                          style={{ borderColor: `${GC_BLUE}33` }}
-                        />
-                      ) : (
-                        /* The marks against the paragraph as it stood when this was asked, not the box as it is now. */
-                        <DraftDiff before={m.payload.before ?? current} after={textOf(m)} className="px-3 py-2 text-sm text-white whitespace-pre-wrap leading-relaxed" />
-                      )}
+                      {/* The marks against the paragraph as it stood when this was asked, not the box as it is now. */}
+                      <DraftDiff before={m.payload.before ?? current} after={textOf(m)} className="px-3 py-2 text-sm text-white whitespace-pre-wrap leading-relaxed" />
                       {edits[m.id] != null && edits[m.id] !== m.payload.after && !m.payload.used && (
                         <p className="px-3 pb-2 text-[11px] text-amber-300">Edited by you · Use this puts your version in the box.</p>
                       )}
