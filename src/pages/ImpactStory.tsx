@@ -26,9 +26,10 @@ const ImpactStory = () => {
   }];
   const bottomStats = [{
     icon: Heart,
-    value: "70%",
+    // 373 of the 518 youth registered in 2025–26 (the back end, 2026-11-20).
+    value: "72%",
     label: "Economically Disadvantaged",
-    description: "Registered youth"
+    description: "Registered youth, 2025–26"
   }, {
     icon: Utensils,
     value: "Meals Served",
@@ -370,6 +371,8 @@ const ImpactStory = () => {
               <DialogTitle className="text-2xl font-black text-foreground">
                 NLA Youth Demographics
               </DialogTitle>
+              {/* The 2025–26 registration forms, one person per youth, as the back end counts them (2026-11-20). */}
+              <p className="text-sm text-muted-foreground">518 youth registered in the 2025–26 program year</p>
             </DialogHeader>
             
             <div className="space-y-6 pt-4">
@@ -379,11 +382,11 @@ const ImpactStory = () => {
                 <ul className="space-y-2 text-muted-foreground">
                   <li className="flex items-start gap-2">
                     <span className="text-foreground mt-0.5">•</span>
-                    <span>Boys: 70%</span>
+                    <span>Boys: 69%</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-foreground mt-0.5">•</span>
-                    <span>Girls: 30%</span>
+                    <span>Girls: 31%</span>
                   </li>
                 </ul>
               </div>
@@ -394,7 +397,7 @@ const ImpactStory = () => {
                 <ul className="space-y-2 text-muted-foreground">
                   <li className="flex items-start gap-2">
                     <span className="text-foreground mt-0.5">•</span>
-                    <span>143 youth living in single-parent households headed by mothers</span>
+                    <span>147 youth (28%) live in a single-parent household, 131 of them headed by mothers</span>
                   </li>
                 </ul>
               </div>
@@ -405,31 +408,31 @@ const ImpactStory = () => {
                 <ul className="space-y-2 text-muted-foreground">
                   <li className="flex items-start gap-2">
                     <span className="text-foreground mt-0.5">•</span>
-                    <span>Caucasian: 36.8%</span>
+                    <span>White: 36%</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-foreground mt-0.5">•</span>
-                    <span>Hispanic/Latino: 30.0%</span>
+                    <span>Hispanic or Latino: 29%</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-foreground mt-0.5">•</span>
-                    <span>African American: 20.0%</span>
+                    <span>Black or African American: 23%</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-foreground mt-0.5">•</span>
-                    <span>Multiracial: 10.4%</span>
+                    <span>Two or more races: 10%</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-foreground mt-0.5">•</span>
-                    <span>Asian: 1.0%</span>
+                    <span>American Indian or Alaska Native: 1%</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-foreground mt-0.5">•</span>
-                    <span>Native Hawaiian/Other Pacific Islander: 0.9%</span>
+                    <span>Asian: under 1%</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-foreground mt-0.5">•</span>
-                    <span>American Indian/Alaska Native: 0.9%</span>
+                    <span>Native Hawaiian or Other Pacific Islander: under 1%</span>
                   </li>
                 </ul>
               </div>
