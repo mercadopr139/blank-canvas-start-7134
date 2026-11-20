@@ -18,18 +18,21 @@
 // Resources pop-up, so the two never show different things. Edits save to
 // grant_org_fields, which wins over the website seeds; every draft follows.
 //
-// THREE SHELVES, CARDS BY SUBJECT (Josh, 2026-11-20: "it has so much… I
-// think we need to regroup", then "I want this area to be so user friendly
-// that anyone can easily pull important NLA info from it"). Three kinds of
+// SHELVES AND CARDS BY SUBJECT (Josh, 2026-11-20: "it has so much… I think
+// we need to regroup", then "I want this area to be so user friendly that
+// anyone can easily pull important NLA info from it", then "read a section
+// and think, yup, that's where I will find the information"). Three kinds of
 // content had shared one list organized the way funders ask. The page is now
-// three shelves, top to bottom: THE PARAGRAPHS (the six standard paragraphs
-// — what he reuses: Copy, Talk to Grant Coach, the narrative), THE FACTS
-// (seven cards named for what is inside — "NLA on paper", "Who to call",
-// "The money" — each with one Copy for the whole card), THE BACKGROUND (the
-// long prose Grant Coach reads for story and voice, folded, labeled so a
-// figure in it never outranks a paragraph or the live numbers). Below an
-// amber line: "How Grant Coach writes", settings for the writer, not NLA
-// information. The cards are vaultShelves.ts; the fields and their saved
+// five shelves named for the question in his head: THE PARAGRAPHS (the six
+// standard paragraphs — what he reuses: Copy, Talk to Grant Coach, the
+// narrative), NLA ON PAPER, THE MONEY, WHAT WE DO AND WHO WE SERVE, OUR
+// STORY, OUR PEOPLE, OUR PARTNERS — each a few cards named for what is
+// inside, each card with one Copy for the whole of it; long prose carries a
+// "source material" tag so a figure in it never outranks a paragraph or the
+// live numbers. A shelf's title can be renamed in place (the pencil beside
+// it; kept in grant_org_fields under shelf_title:<key>). Below an amber line:
+// "How Grant Coach writes", settings for the writer, not NLA information.
+// The shelves and cards are vaultShelves.ts; the fields and their saved
 // values did not move.
 import { useMemo, useState, type KeyboardEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -44,7 +47,7 @@ import GcCard, { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
 import SnapshotSectionCard, { useSnapshot, copyText, outline } from "@/components/admin/grantCoach/SnapshotSection";
 import { useAsk } from "@/components/admin/AskDialog";
 import { ORG_SECTIONS, ORG_FIELDS, orgFieldValue, orgCompleteness, formatEin, type OrgField } from "@/lib/grantCoach/orgProfile";
-import { FACT_CARDS, BACKGROUND_CARDS, WRITER_CARDS, ALL_VAULT_CARDS, type VaultCardDef } from "@/lib/grantCoach/vaultShelves";
+import { VAULT_SHELVES, WRITER_CARDS, ALL_VAULT_CARDS, PARAGRAPHS_SHELF, shelfTitleKey, type VaultCardDef } from "@/lib/grantCoach/vaultShelves";
 import { shortYear, snapshotText } from "@/lib/grantCoach/snapshot";
 
 interface FieldRow { key: string; value: string | null; updated_at: string }
@@ -83,7 +86,15 @@ function useVault() {
     if (error) throw new Error(error.message);
     invalidate();
   };
-  return { saved, savedAt, isLoading, save, reset };
+  /** A row that is not a field — a renamed shelf title (2026-11-20); null drops it. */
+  const saveRaw = async (key: string, value: string | null) => {
+    const { error } = value === null
+      ? await supabase.from("grant_org_fields" as never).delete().eq("key", key)
+      : await supabase.from("grant_org_fields" as never).upsert({ key, value, updated_at: new Date().toISOString(), updated_by: user?.id ?? null } as never, { onConflict: "key" } as never);
+    if (error) throw new Error(error.message);
+    invalidate();
+  };
+  return { saved, savedAt, isLoading, save, reset, saveRaw };
 }
 
 interface FieldProps {
@@ -258,6 +269,7 @@ function VaultCard({ def, fields, props, open, onToggle }: {
       blurb={
         <span className="inline-flex items-center gap-2 flex-wrap">
           {needed > 0 && <span className="inline-flex items-center gap-1 font-bold uppercase tracking-wide text-amber-300"><AlertCircle className="w-3 h-3" /> {needed} needed</span>}
+          {def.source && <span className="font-bold uppercase tracking-wide rounded px-1 py-0.5 bg-white/10 text-white/60" title="Grant Coach reads this for story and voice. A figure here never outranks a standard paragraph or the live numbers.">Source material</span>}
           <span>{def.gist}</span>
         </span>
       }
@@ -279,14 +291,57 @@ function VaultCard({ def, fields, props, open, onToggle }: {
   );
 }
 
-/** A shelf's heading: its number, its name, one line on what sits there. */
-function Shelf({ n, title, blurb }: { n: number; title: string; blurb: string }) {
+/**
+ * A shelf's heading: its number, its name, one line on what sits there. The
+ * name can be changed in place (Josh, 2026-11-20: "I want the ability to
+ * manually edit the section title"): the pencil, Enter saves, Escape cancels,
+ * and a renamed shelf offers its shipped name back.
+ */
+function Shelf({ n, title, shipped, blurb, onRename }: {
+  n: number; title: string; shipped: string; blurb: string; onRename: (name: string | null) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(title);
+  const [busy, setBusy] = useState(false);
+  const save = async (name: string | null) => {
+    setBusy(true);
+    try { await onRename(name); setEditing(false); toast.success(name ? `Shelf renamed to "${name}"` : `Shelf named "${shipped}" again`); }
+    catch (e) { toast.error((e as Error).message); }
+    finally { setBusy(false); }
+  };
   return (
     <div className="pt-3">
-      <h2 className="text-base font-black uppercase tracking-wide inline-flex items-center gap-2" style={{ color: GC_BLUE }}>
-        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-black text-black" style={{ backgroundColor: GC_BLUE }}>{n}</span>
-        {title}
-      </h2>
+      <div className="flex items-center gap-2 flex-wrap group">
+        <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-black text-black" style={{ backgroundColor: GC_BLUE }}>{n}</span>
+        {editing ? (
+          <>
+            <Input
+              autoFocus
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void save(draft.trim() && draft.trim() !== shipped ? draft.trim() : null); } if (e.key === "Escape") setEditing(false); }}
+              className="h-8 w-72 text-sm font-black uppercase tracking-wide bg-neutral-950 border-white/20 text-white"
+              aria-label="Shelf title"
+            />
+            <Button size="sm" className="h-8 font-bold text-black hover:brightness-110" style={{ backgroundColor: GC_BLUE }} disabled={busy || !draft.trim()} onClick={() => void save(draft.trim() !== shipped ? draft.trim() : null)}>
+              {busy ? <Loader2 className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />}
+            </Button>
+            <button type="button" className="text-white/50 hover:text-white p-1" onClick={() => setEditing(false)} aria-label="Cancel"><X className="w-4 h-4" /></button>
+            {title !== shipped && (
+              <button type="button" onClick={() => void save(null)} className="text-[11px] text-white/40 hover:text-white inline-flex items-center gap-1" title={`Back to "${shipped}"`}>
+                <RotateCcw className="w-3 h-3" /> Back to "{shipped}"
+              </button>
+            )}
+          </>
+        ) : (
+          <>
+            <h2 className="text-base font-black uppercase tracking-wide" style={{ color: GC_BLUE }}>{title}</h2>
+            <button type="button" onClick={() => { setDraft(title); setEditing(true); }} className="p-1 rounded text-white/40 hover:text-white hover:bg-white/10 opacity-50 group-hover:opacity-100" title="Rename this shelf" aria-label={`Rename the shelf "${title}"`}>
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+          </>
+        )}
+      </div>
       <p className="text-[12px] text-white/50">{blurb}</p>
     </div>
   );
@@ -354,9 +409,10 @@ export default function GrantVault({ memoryBelow = false }: {
       />,
     ];
   });
-  const facts = FACT_CARDS.map(cardOf).filter(Boolean);
-  const background = BACKGROUND_CARDS.map(cardOf).filter(Boolean);
   const writer = WRITER_CARDS.map(cardOf).filter(Boolean);
+  /** A shelf's name: Josh's, if he renamed it, else as shipped. */
+  const shelfTitle = (key: string, shipped: string) => vault.saved[shelfTitleKey(key)]?.trim() || shipped;
+  const rename = (key: string) => (name: string | null) => vault.saveRaw(shelfTitleKey(key), name);
 
   return (
     <div className="space-y-5">
@@ -364,7 +420,7 @@ export default function GrantVault({ memoryBelow = false }: {
       <GcCard
         icon={<Library className="w-4 h-4" />}
         title="Grant Vault · one source of truth"
-        blurb={`Three shelves. The paragraphs: the six standard paragraphs for ${shortYear(snap.shown)}, approved word for word, used in any answer with one click. The facts: names, numbers, dates, addresses and lists that fill a portal box, one Copy per card. The background: the longer pieces Grant Coach reads for story and voice. Click a title to read it; Copy works without opening.`}
+        blurb={`Five shelves, named for what you came for: the six standard paragraphs for ${shortYear(snap.shown)}, NLA on paper, the money, what we do and who we serve, our story and our people. Click a title to read a card; Copy works without opening; the pencil beside a shelf renames it.`}
         right={
           <Button size="sm" variant="outline" className={outline} disabled={!snap.approved.length} onClick={() => copyText(snapshotText(snap.approved), `The ${shortYear(snap.shown)} story`)}>
             <Copy className="w-3.5 h-3.5 mr-1.5" /> Copy the year
@@ -408,26 +464,28 @@ export default function GrantVault({ memoryBelow = false }: {
       {/* Shelf 1 · the paragraphs: the six standard paragraphs, in funder order. */}
       {paragraphs.length > 0 && (
         <section className="space-y-3">
-          <Shelf n={1} title="The paragraphs" blurb={`The six standard paragraphs for ${shortYear(snap.shown)}, approved word for word. Use one in an answer, Copy it for another application, or talk to Grant Coach about it. Grant Coach reads these before anything else.`} />
+          <Shelf
+            n={1}
+            title={shelfTitle(PARAGRAPHS_SHELF.key, PARAGRAPHS_SHELF.title)}
+            shipped={PARAGRAPHS_SHELF.title}
+            onRename={rename(PARAGRAPHS_SHELF.key)}
+            blurb={`The six standard paragraphs for ${shortYear(snap.shown)}, approved word for word. Use one in an answer, Copy it for another application, or talk to Grant Coach about it. Grant Coach reads these before anything else.`}
+          />
           {paragraphs}
         </section>
       )}
 
-      {/* Shelf 2 · the facts: seven cards by subject. A form, not reading. */}
-      {facts.length > 0 && (
-        <section className="space-y-3">
-          <Shelf n={2} title="The facts" blurb="Names, numbers, dates, addresses, contacts and lists, by subject: what goes straight into a portal box. Copy the card takes the whole card with its labels. Fill them once; update them when they change." />
-          {facts}
-        </section>
-      )}
-
-      {/* Shelf 3 · the background: the long prose, folded. Source material, never the figure of record. */}
-      {background.length > 0 && (
-        <section className="space-y-3">
-          <Shelf n={3} title="The background" blurb="Source material: the longer pieces Grant Coach reads for story, programs and voice. A figure here never outranks a standard paragraph or the live numbers. Open one when you want it." />
-          {background}
-        </section>
-      )}
+      {/* Shelves 2–5: cards by subject (vaultShelves.ts). A shelf hides when the search finds nothing on it. */}
+      {VAULT_SHELVES.map((shelf, i) => {
+        const cards = shelf.cards.map(cardOf).filter(Boolean);
+        if (!cards.length) return null;
+        return (
+          <section key={shelf.key} className="space-y-3">
+            <Shelf n={i + 2} title={shelfTitle(shelf.key, shelf.title)} shipped={shelf.title} blurb={shelf.blurb} onRename={rename(shelf.key)} />
+            {cards}
+          </section>
+        );
+      })}
 
       {/* Below the amber line: not NLA information. The writer's settings, and (on Grant Coach home) its memory. */}
       {writer.length > 0 && (
