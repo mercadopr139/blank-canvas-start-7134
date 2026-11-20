@@ -17,6 +17,16 @@
 // card that matches. Same component on Grant Coach home and in the
 // Resources pop-up, so the two never show different things. Edits save to
 // grant_org_fields, which wins over the website seeds; every draft follows.
+//
+// THREE SHELVES (Josh, 2026-11-20: "it has so much… I need to understand its
+// current build… I think we need to regroup"). Three kinds of content had
+// shared one list, so the page is now three shelves, top to bottom: THE
+// PARAGRAPHS (the six standard paragraphs — what he reuses), THE FACTS (short
+// entries and lists, grouped by section — a form, not reading), THE
+// BACKGROUND (the long prose Grant Coach reads for story and voice, folded,
+// labeled so a figure in it never outranks a paragraph or the live numbers).
+// Nothing moved in the database: a field's shelf is its kind, or its `shelf`
+// flag in orgProfile.ts.
 import { useMemo, useState, type KeyboardEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -256,13 +266,93 @@ export default function GrantVault() {
     ...s.fields.filter((f) => f.kind === "long" || f.kind === "list").map((f) => `field:${f.key}`),
   ]), []);
 
+  const props = (f: OrgField): FieldProps => ({
+    field: f,
+    value: orgFieldValue(f, vault.saved),
+    fromSite: vault.saved[f.key] === undefined && !!f.seed,
+    savedWhen: vault.saved[f.key] !== undefined ? when(vault.savedAt[f.key]) : undefined,
+    onSave: (v: string) => vault.save(f, v),
+    onReset: () => vault.reset(f),
+  });
+  const visible = (f: OrgField) => matches(f.label, f.gist ?? "", orgFieldValue(f, vault.saved));
+  /** A row in "The facts" card: short, a number, a date, yes/no. */
+  const isRow = (f: OrgField) => f.kind !== "long" && f.kind !== "list";
+  /** On the facts shelf: every row, every list, and a long text flagged for it. */
+  const isFact = (f: OrgField) => f.kind !== "long" || f.shelf === "facts";
+  const textCard = (f: OrgField) => <TextCard key={f.key} {...props(f)} open={isOpen(`field:${f.key}`)} onToggle={() => toggle(`field:${f.key}`)} />;
+
+  // Shelf 1: one card per standard paragraph, in funder order.
+  const paragraphs = ORG_SECTIONS.flatMap((section) => {
+    const snapRow = section.snapshot ? snap.sections.find((s) => s.section_key === section.snapshot) : undefined;
+    if (!snapRow || !matches(snapRow.title, snapRow.body)) return [];
+    return [
+      <SnapshotSectionCard
+        key={`${snapRow.program_year}-${snapRow.section_key}`}
+        section={snapRow}
+        others={snap.sections}
+        previous={snap.previous.find((p) => p.section_key === snapRow.section_key && p.status === "approved")?.body ?? null}
+        userId={user?.id ?? null}
+        ask={ask}
+        onChanged={snap.refresh}
+        open={isOpen(`snap:${snapRow.section_key}`)}
+        onToggle={() => toggle(`snap:${snapRow.section_key}`)}
+      />,
+    ];
+  });
+
+  // Shelf 2: by section, "The facts" card of rows, then the lists and the flagged texts.
+  const factGroups = ORG_SECTIONS.filter((s) => s.key !== "voice").flatMap((section) => {
+    const fields = section.fields.filter(isFact).filter(visible);
+    if (!fields.length) return [];
+    const rows = fields.filter(isRow);
+    const needed = rows.filter((f) => f.required && !orgFieldValue(f, vault.saved).trim()).length;
+    const factsId = `facts:${section.key}`;
+    return [
+      <div key={section.key} className="space-y-2">
+        <Group title={section.title} />
+        {rows.length > 0 && (
+          <GcCard
+            title="The facts"
+            open={isOpen(factsId)}
+            onToggle={() => toggle(factsId)}
+            blurb={
+              isOpen(factsId)
+                ? "Short answers that go straight into a portal box. Hover a line for Copy and Edit."
+                : <span className="inline-flex items-center gap-2 flex-wrap">
+                    {needed > 0 && <span className="inline-flex items-center gap-1 font-bold uppercase tracking-wide text-amber-300"><AlertCircle className="w-3 h-3" /> {needed} needed</span>}
+                    <span>{rows.map((f) => f.label).join(" · ")}</span>
+                  </span>
+            }
+          >
+            <div className="px-4 py-1 grid gap-x-8 md:grid-cols-2 divide-y divide-white/[0.06] md:divide-y-0">
+              {rows.map((f) => <FactRow key={f.key} {...props(f)} />)}
+            </div>
+          </GcCard>
+        )}
+        {fields.filter((f) => !isRow(f)).map(textCard)}
+      </div>,
+    ];
+  });
+
+  // Shelf 3: by section, the long prose; "How Grant Coach writes" whole, at the end.
+  const backgroundGroups = ORG_SECTIONS.flatMap((section) => {
+    const fields = section.fields.filter((f) => section.key === "voice" || !isFact(f)).filter(visible);
+    if (!fields.length) return [];
+    return [
+      <div key={section.key} className="space-y-2">
+        <Group title={section.title} blurb={section.key === "voice" ? section.blurb : undefined} />
+        {fields.map(textCard)}
+      </div>,
+    ];
+  });
+
   return (
     <div className="space-y-5">
       {dialog}
       <GcCard
         icon={<Library className="w-4 h-4" />}
         title="Grant Vault · one source of truth"
-        blurb={`Everything a funder asks, in the order they ask it. Each section opens with its standard paragraph for ${shortYear(snap.shown)} — approved word for word, dropped into any question with one click — and the facts it draws on sit under it. Click a title to read it; Copy works without opening.`}
+        blurb={`Three shelves. The paragraphs: the six standard paragraphs for ${shortYear(snap.shown)}, approved word for word, used in any answer with one click. The facts: names, numbers, dates, addresses and lists that fill a portal box. The background: the longer pieces Grant Coach reads for story and voice. Click a title to read it; Copy works without opening.`}
         right={
           <Button size="sm" variant="outline" className={outline} disabled={!snap.approved.length} onClick={() => copyText(snapshotText(snap.approved), `The ${shortYear(snap.shown)} story`)}>
             <Copy className="w-3.5 h-3.5 mr-1.5" /> Copy the year
@@ -303,65 +393,52 @@ export default function GrantVault() {
       {snap.isError && <p className="text-sm text-red-400">Couldn't load the year's paragraphs: {snap.error?.message}</p>}
       {(snap.isLoading || vault.isLoading) && <p className="text-sm text-white/50 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Loading the Vault…</p>}
 
-      {ORG_SECTIONS.map((section) => {
-        const snapRow = section.snapshot ? snap.sections.find((s) => s.section_key === section.snapshot) : undefined;
-        const showSnap = snapRow && matches(snapRow.title, snapRow.body);
-        const fields = section.fields.filter((f) => matches(f.label, f.gist ?? "", orgFieldValue(f, vault.saved)));
-        if (!showSnap && !fields.length) return null;
-        const facts = fields.filter((f) => f.kind !== "long" && f.kind !== "list");
-        const texts = fields.filter((f) => f.kind === "long" || f.kind === "list");
-        const needed = facts.filter((f) => f.required && !orgFieldValue(f, vault.saved).trim()).length;
-        const props = (f: OrgField): FieldProps => ({
-          field: f,
-          value: orgFieldValue(f, vault.saved),
-          fromSite: vault.saved[f.key] === undefined && !!f.seed,
-          savedWhen: vault.saved[f.key] !== undefined ? when(vault.savedAt[f.key]) : undefined,
-          onSave: (v: string) => vault.save(f, v),
-          onReset: () => vault.reset(f),
-        });
-        const factsId = `facts:${section.key}`;
-        return (
-          <section key={section.key} className="space-y-3">
-            <div className="pt-2">
-              <h2 className="text-base font-black uppercase tracking-wide" style={{ color: GC_BLUE }}>{section.title}</h2>
-              <p className="text-[12px] text-white/50">{section.blurb}</p>
-            </div>
-            {showSnap && snapRow && (
-              <SnapshotSectionCard
-                key={`${snapRow.program_year}-${snapRow.section_key}`}
-                section={snapRow}
-                others={snap.sections}
-                previous={snap.previous.find((p) => p.section_key === snapRow.section_key && p.status === "approved")?.body ?? null}
-                userId={user?.id ?? null}
-                ask={ask}
-                onChanged={snap.refresh}
-                open={isOpen(`snap:${snapRow.section_key}`)}
-                onToggle={() => toggle(`snap:${snapRow.section_key}`)}
-              />
-            )}
-            {facts.length > 0 && (
-              <GcCard
-                title="The facts"
-                open={isOpen(factsId)}
-                onToggle={() => toggle(factsId)}
-                blurb={
-                  isOpen(factsId)
-                    ? "Short answers that go straight into a portal box. Hover a line for Copy and Edit."
-                    : <span className="inline-flex items-center gap-2 flex-wrap">
-                        {needed > 0 && <span className="inline-flex items-center gap-1 font-bold uppercase tracking-wide text-amber-300"><AlertCircle className="w-3 h-3" /> {needed} needed</span>}
-                        <span>{facts.map((f) => f.label).join(" · ")}</span>
-                      </span>
-                }
-              >
-                <div className="px-4 py-1 grid gap-x-8 md:grid-cols-2 divide-y divide-white/[0.06] md:divide-y-0">
-                  {facts.map((f) => <FactRow key={f.key} {...props(f)} />)}
-                </div>
-              </GcCard>
-            )}
-            {texts.map((f) => <TextCard key={f.key} {...props(f)} open={isOpen(`field:${f.key}`)} onToggle={() => toggle(`field:${f.key}`)} />)}
-          </section>
-        );
-      })}
+      {/* Shelf 1 · the paragraphs: the six standard paragraphs, in funder order. */}
+      {paragraphs.length > 0 && (
+        <section className="space-y-3">
+          <Shelf n={1} title="The paragraphs" blurb={`The six standard paragraphs for ${shortYear(snap.shown)}, approved word for word. Use one in an answer, Copy it for another application, or talk to Grant Coach about it. Grant Coach reads these before anything else.`} />
+          {paragraphs}
+        </section>
+      )}
+
+      {/* Shelf 2 · the facts: short entries and lists, by section. A form, not reading. */}
+      {factGroups.length > 0 && (
+        <section className="space-y-3">
+          <Shelf n={2} title="The facts" blurb="Names, numbers, dates, addresses, contacts and lists: short answers that go straight into a portal box. Fill them once; update them when they change." />
+          {factGroups}
+        </section>
+      )}
+
+      {/* Shelf 3 · the background: the long prose, folded. Source material, never the figure of record. */}
+      {backgroundGroups.length > 0 && (
+        <section className="space-y-3">
+          <Shelf n={3} title="The background" blurb="Source material: the longer pieces Grant Coach reads for story, programs and voice, and the rules it writes by. A figure here never outranks a standard paragraph or the live numbers. Open one when you want it." />
+          {backgroundGroups}
+        </section>
+      )}
+    </div>
+  );
+}
+
+/** A shelf's heading: its number, its name, one line on what sits there. */
+function Shelf({ n, title, blurb }: { n: number; title: string; blurb: string }) {
+  return (
+    <div className="pt-3">
+      <h2 className="text-base font-black uppercase tracking-wide inline-flex items-center gap-2" style={{ color: GC_BLUE }}>
+        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-black text-black" style={{ backgroundColor: GC_BLUE }}>{n}</span>
+        {title}
+      </h2>
+      <p className="text-[12px] text-white/50">{blurb}</p>
+    </div>
+  );
+}
+
+/** A section's name over its cards on a shelf. */
+function Group({ title, blurb }: { title: string; blurb?: string }) {
+  return (
+    <div className="pt-1">
+      <h3 className="text-[12px] font-black uppercase tracking-wide text-white/60">{title}</h3>
+      {blurb && <p className="text-[11px] text-white/35">{blurb}</p>}
     </div>
   );
 }
