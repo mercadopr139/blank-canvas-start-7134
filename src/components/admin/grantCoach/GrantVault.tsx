@@ -47,7 +47,7 @@ import GcCard, { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
 import SnapshotSectionCard, { useSnapshot, copyText, outline } from "@/components/admin/grantCoach/SnapshotSection";
 import { useAsk } from "@/components/admin/AskDialog";
 import { ORG_SECTIONS, ORG_FIELDS, orgFieldValue, orgCompleteness, formatEin, type OrgField } from "@/lib/grantCoach/orgProfile";
-import { VAULT_SHELVES, WRITER_CARDS, ALL_VAULT_CARDS, PARAGRAPHS_SHELF, shelfTitleKey, type VaultCardDef } from "@/lib/grantCoach/vaultShelves";
+import { VAULT_SHELVES, WRITER_CARDS, ALL_VAULT_CARDS, PARAGRAPHS_SHELF, shelfTitleKey, cardTitleKey, type VaultCardDef } from "@/lib/grantCoach/vaultShelves";
 import { shortYear, snapshotText } from "@/lib/grantCoach/snapshot";
 
 interface FieldRow { key: string; value: string | null; updated_at: string }
@@ -251,19 +251,58 @@ const cardText = (fields: OrgField[], valueOf: (f: OrgField) => string) => {
   return filled.map((f) => (isRow(f) ? `${f.label}: ${valueOf(f)}` : `${f.label.toUpperCase()}\n${valueOf(f)}`)).join("\n\n");
 };
 
-/** One card of a shelf: its subject, the rows, then the lists and long texts. One Copy for all of it. */
-function VaultCard({ def, fields, props, open, onToggle }: {
-  def: VaultCardDef; fields: OrgField[]; props: (f: OrgField) => FieldProps; open: boolean; onToggle: () => void;
+/**
+ * One card of a shelf: its subject, the rows, then the lists and long texts.
+ * One Copy for all of it. Its title can be renamed in place (Josh,
+ * 2026-11-20): the pencil in the header, Enter saves, Escape cancels, and a
+ * renamed card offers its shipped name back.
+ */
+function VaultCard({ def, title, fields, props, open, onToggle, onRename }: {
+  def: VaultCardDef; title: string; fields: OrgField[]; props: (f: OrgField) => FieldProps; open: boolean; onToggle: () => void;
+  onRename: (name: string | null) => Promise<void>;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(title);
+  const [busy, setBusy] = useState(false);
   const rows = fields.filter(isRow);
   const blocks = fields.filter((f) => !isRow(f));
   const valueOf = (f: OrgField) => props(f).value;
   const needed = fields.filter((f) => f.required && !valueOf(f).trim()).length;
   const filled = fields.filter((f) => valueOf(f).trim()).length;
   const bare = fields.length === 1 && blocks.length === 1;
+  const saveName = async (name: string | null) => {
+    setBusy(true);
+    try { await onRename(name); setEditing(false); toast.success(name ? `Card renamed to "${name}"` : `Card named "${def.title}" again`); }
+    catch (e) { toast.error((e as Error).message); }
+    finally { setBusy(false); }
+  };
+  const nameOrNull = (v: string) => (v.trim() && v.trim() !== def.title ? v.trim() : null);
   return (
     <GcCard
-      title={def.title}
+      title={
+        editing ? (
+          // Inside the header band, which toggles the card on a click: the edit swallows its clicks.
+          <span className="inline-flex items-center gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
+            <Input
+              autoFocus
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void saveName(nameOrNull(draft)); } if (e.key === "Escape") setEditing(false); }}
+              className="h-8 w-72 text-sm font-black uppercase tracking-wide bg-neutral-950 border-white/20 text-white"
+              aria-label="Card title"
+            />
+            <Button size="sm" className="h-8 font-bold text-black hover:brightness-110" style={{ backgroundColor: GC_BLUE }} disabled={busy || !draft.trim()} onClick={() => void saveName(nameOrNull(draft))}>
+              {busy ? <Loader2 className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />}
+            </Button>
+            <button type="button" className="text-white/50 hover:text-white p-1" onClick={() => setEditing(false)} aria-label="Cancel"><X className="w-4 h-4" /></button>
+            {title !== def.title && (
+              <button type="button" onClick={() => void saveName(null)} className="text-[11px] normal-case tracking-normal font-normal text-white/40 hover:text-white inline-flex items-center gap-1" title={`Back to "${def.title}"`}>
+                <RotateCcw className="w-3 h-3" /> Back to "{def.title}"
+              </button>
+            )}
+          </span>
+        ) : title
+      }
       open={open}
       onToggle={onToggle}
       blurb={
@@ -274,10 +313,17 @@ function VaultCard({ def, fields, props, open, onToggle }: {
         </span>
       }
       right={
-        filled > 0 && (
-          <Button size="sm" variant="outline" className={outline} onClick={() => copyText(cardText(fields, valueOf), def.title)} title={bare ? "Copy the text" : "Copy the whole card, each line with its label"}>
-            <Copy className="w-3.5 h-3.5 mr-1.5" /> {bare ? "Copy" : "Copy the card"}
-          </Button>
+        !editing && (
+          <>
+            <button type="button" onClick={() => { setDraft(title); setEditing(true); }} className="p-1 rounded text-white/40 hover:text-white hover:bg-white/10" title="Rename this card" aria-label={`Rename the card "${title}"`}>
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+            {filled > 0 && (
+              <Button size="sm" variant="outline" className={outline} onClick={() => copyText(cardText(fields, valueOf), title)} title={bare ? "Copy the text" : "Copy the whole card, each line with its label"}>
+                <Copy className="w-3.5 h-3.5 mr-1.5" /> {bare ? "Copy" : "Copy the card"}
+              </Button>
+            )}
+          </>
         )
       }
     >
@@ -384,11 +430,19 @@ export default function GrantVault({ memoryBelow = false }: {
     onSave: (v: string) => vault.save(f, v),
     onReset: () => vault.reset(f),
   });
-  /** A card shows when its title, its gist, or any line in it matches the search. */
+  /** A card's name: Josh's, if he renamed it, else as shipped. */
+  const cardTitle = (def: VaultCardDef) => vault.saved[cardTitleKey(def.key)]?.trim() || def.title;
+  /** A card shows when its title (either name), its gist, or any line in it matches the search. */
   const cardOf = (def: VaultCardDef) => {
     const fields = fieldsOf(def);
-    if (!matches(def.title, def.gist, ...fields.flatMap((f) => [f.label, orgFieldValue(f, vault.saved)]))) return null;
-    return <VaultCard key={def.key} def={def} fields={fields} props={props} open={isOpen(`card:${def.key}`)} onToggle={() => toggle(`card:${def.key}`)} />;
+    if (!matches(def.title, cardTitle(def), def.gist, ...fields.flatMap((f) => [f.label, orgFieldValue(f, vault.saved)]))) return null;
+    return (
+      <VaultCard
+        key={def.key} def={def} title={cardTitle(def)} fields={fields} props={props}
+        open={isOpen(`card:${def.key}`)} onToggle={() => toggle(`card:${def.key}`)}
+        onRename={(name) => vault.saveRaw(cardTitleKey(def.key), name)}
+      />
+    );
   };
 
   // Shelf 1: one card per standard paragraph, in funder order.

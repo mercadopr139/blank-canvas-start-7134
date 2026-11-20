@@ -40,6 +40,8 @@ export interface VaultShelfDef {
 
 /** The key in grant_org_fields that holds a renamed shelf title. */
 export const shelfTitleKey = (shelfKey: string) => `shelf_title:${shelfKey}`;
+/** The key in grant_org_fields that holds a renamed card title (Josh, 2026-11-20: "the ability to manually edit the card titles"). */
+export const cardTitleKey = (cardKey: string) => `card_title:${cardKey}`;
 
 /** Shelf 1 is the six standard paragraphs (SnapshotSection cards), not fields; it is named here so it can be renamed too. */
 export const PARAGRAPHS_SHELF = { key: "paragraphs", title: "The paragraphs", blurb: "" };
