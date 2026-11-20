@@ -13,6 +13,7 @@
  import { Plus, Trash2, Edit2, Check, X } from "lucide-react";
  import { useToast } from "@/hooks/use-toast";
  import { supabase } from "@/integrations/supabase/client";
+ import { RATE_TYPE_OPTIONS } from "@/lib/billingTypes";
  
  interface ClientService {
    id: string;
@@ -27,12 +28,8 @@
    onServicesChange?: () => void;
  }
  
- const rateTypeOptions = [
-   { value: "per_day", label: "Per Day" },
-   { value: "per_hour", label: "Per Hour" },
-   { value: "sponsorship", label: "Sponsorship" },
-  { value: "other_service", label: "Other" },
- ];
+ // Per Day, Per Hour, Sponsorship, Adjustment, Other — the same list the invoice's Type column reads (2026-11-20).
+ const rateTypeOptions = RATE_TYPE_OPTIONS;
  
  export default function PartnerServicesManager({
    clientId,

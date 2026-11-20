@@ -266,6 +266,8 @@ export default function AdminServiceCalendar() {
     flat_amount: selectedClient!.rate_amount ?? 0,
     line_total: selectedClient!.rate_amount ?? 0,
     service_type: selectedClient!.service_description_default || "Service",
+    // The client's rate type, so the invoice's Type column reads "Per Day" by design (2026-11-20).
+    rate_type: selectedClient!.rate_type ?? "per_day",
     notes,
   });
 
@@ -274,7 +276,7 @@ export default function AdminServiceCalendar() {
     setFilling(true);
     const rows = unbilledAttended.map((d) =>
       entryFor(d, `From attendance: ${attendanceByDate[d]} ${attendanceByDate[d] === 1 ? "student" : "students"} checked in`));
-    const { error } = await supabase.from("service_logs").insert(rows);
+    const { error } = await supabase.from("service_logs").insert(rows as never);
     setFilling(false);
     if (error) { toast({ title: "Could not add service days", description: error.message, variant: "destructive" }); return; }
     toast({ title: `Added ${rows.length} service ${rows.length === 1 ? "day" : "days"} from attendance` });
@@ -285,7 +287,7 @@ export default function AdminServiceCalendar() {
     if (!overrideFor || !selectedClient) return;
     const reason = overrideReason.trim();
     if (!reason) { toast({ title: "Add a short reason for billing this day", variant: "destructive" }); return; }
-    const { error } = await supabase.from("service_logs").insert([entryFor(overrideFor, `${OVERRIDE_PREFIX} ${reason}`)]);
+    const { error } = await supabase.from("service_logs").insert([entryFor(overrideFor, `${OVERRIDE_PREFIX} ${reason}`)] as never);
     if (error) { toast({ title: "Could not add the day", description: error.message, variant: "destructive" }); return; }
     toast({ title: `${format(new Date(`${overrideFor}T12:00:00`), "MMM d")} billed by override` });
     setOverrideFor(null);

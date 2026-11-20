@@ -3,6 +3,7 @@ import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import type { Tables } from "@/integrations/supabase/types";
 import nlaLogo from "@/assets/nla-logo.png";
+import { invoiceTypeLabel } from "@/lib/billingTypes";
 
 type Client = Tables<"clients">;
 type ServiceLog = Tables<"service_logs">;
@@ -10,6 +11,8 @@ type ServiceLog = Tables<"service_logs">;
 interface LineItem {
   date: string;
   billingMethod: "hourly" | "flat_rate" | "per_day";
+  /** The rate type the line was saved with (2026-11-20); null on older rows. */
+  rateType: string | null;
   hours: number | null;
   flatAmount: number | null;
   lineTotal: number;
@@ -39,6 +42,7 @@ function calculateLineItems(serviceLogs: ServiceLog[]): LineItem[] {
   return sortedLogs.map((log) => ({
     date: log.service_date,
     billingMethod: ((log as any).billing_method || "hourly") as "hourly" | "flat_rate" | "per_day",
+    rateType: ((log as any).rate_type as string | null) ?? null,
     hours: (log as any).hours || null,
     flatAmount: (log as any).flat_amount || null,
     lineTotal: (log as any).line_total || 0,
@@ -272,12 +276,8 @@ export function generateInvoicePdf(data: InvoicePdfData): jsPDF {
     : [["Date", "Type", "Hours", "Amount"]];
 
   const tableData = lineItems.map((item) => {
-    const defaultLabel =
-      item.billingMethod === "hourly"
-        ? "Hourly"
-        : item.billingMethod === "per_day"
-          ? "Per Day"
-          : "Flat Rate";
+    // The line's own type (2026-11-20); the preview and the PDF now say the same thing.
+    const defaultLabel = invoiceTypeLabel(item.rateType, item.billingMethod);
     const row = [
       format(new Date(item.date + "T00:00:00"), "MMM d, yyyy"),
       ...(hasMultipleServices ? [item.serviceType] : []),

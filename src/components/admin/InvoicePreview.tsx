@@ -12,6 +12,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import SendInvoiceModal from "./SendInvoiceModal";
 import ApprovalRequestModal from "./ApprovalRequestModal";
 import nlaLogo from "@/assets/nla-logo.png";
+import { invoiceTypeLabel } from "@/lib/billingTypes";
 
 type Client = Tables<"clients">;
 type ServiceLog = Tables<"service_logs">;
@@ -20,6 +21,8 @@ type Invoice = Tables<"invoices">;
 interface LineItem {
   date: string;
   billingMethod: "hourly" | "flat_rate" | "per_day";
+  /** The rate type the line was saved with (2026-11-20); null on older rows. */
+  rateType: string | null;
   hours: number | null;
   flatAmount: number | null;
   lineTotal: number;
@@ -121,6 +124,7 @@ export default function InvoicePreview({
     return sortedLogs.map((log) => ({
       date: log.service_date,
       billingMethod: ((log as any).billing_method || "hourly") as "hourly" | "flat_rate" | "per_day",
+      rateType: ((log as any).rate_type as string | null) ?? null,
       hours: (log as any).hours || null,
       flatAmount: (log as any).flat_amount || null,
       lineTotal: (log as any).line_total || 0,
@@ -713,13 +717,7 @@ No Limits Academy`,
                       <input
                         type="text"
                         value={billingLabel}
-                        placeholder={
-                          item.billingMethod === "hourly"
-                            ? "Hourly"
-                            : item.billingMethod === "per_day"
-                              ? "Per Day"
-                              : "Monthly Program Cost"
-                        }
+                        placeholder={invoiceTypeLabel(item.rateType, item.billingMethod)}
                         onChange={(e) => setBillingLabel(e.target.value)}
                         onBlur={persistBillingLabel}
                         onKeyDown={(e) => {

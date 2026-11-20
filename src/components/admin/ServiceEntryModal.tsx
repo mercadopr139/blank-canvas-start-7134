@@ -22,6 +22,7 @@ import { format } from "date-fns";
 import type { Tables } from "@/integrations/supabase/types";
 import { RefreshCw, Plus, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { rateTypeLabel } from "@/lib/billingTypes";
 
 type Client = Tables<"clients">;
 type ServiceLog = Tables<"service_logs">;
@@ -57,15 +58,8 @@ function getBillingMethodFromRateType(rateType: string | null): "per_day" | "hou
   return "flat_rate";
 }
 
-// Helper to get display label for rate type
-function getRateTypeLabel(rateType: string | null): string {
-  if (!rateType) return "Per Day";
-  const normalized = rateType.toLowerCase();
-  if (normalized === "per_day") return "Per Day";
-  if (normalized === "per_hour" || normalized === "hourly_rate") return "Hourly";
-  // Return the custom label as-is
-  return rateType;
-}
+// The rate type as the forms name it (Per Day, Per Hour, Sponsorship, Adjustment, Other).
+const getRateTypeLabel = (rateType: string | null): string => rateTypeLabel(rateType);
 
 export default function ServiceEntryModal({
   open,
@@ -237,6 +231,8 @@ export default function ServiceEntryModal({
       flat_amount: activeService.rateAmount, // Store the rate used for historical consistency
       line_total: lineTotal,
       service_type: selectedService?.service_name || activeService.name,
+      // The rate type the line was saved with: the invoice's Type column reads it (2026-11-20).
+      rate_type: activeService.rateType || null,
       // Note: service_type_id references service_types table, not client_services
       // We store the service name in service_type text field instead
     };
@@ -246,7 +242,7 @@ export default function ServiceEntryModal({
         // Update existing
         const { error } = await supabase
           .from("service_logs")
-          .update(entryData)
+          .update(entryData as never)
           .eq("id", existingLog.id);
 
         if (error) throw error;
@@ -255,7 +251,7 @@ export default function ServiceEntryModal({
         // Create new
         const { error } = await supabase
           .from("service_logs")
-          .insert([entryData]);
+          .insert([entryData] as never);
 
         if (error) throw error;
         toast({ title: "Service entry added" });
