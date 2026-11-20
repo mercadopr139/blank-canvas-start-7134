@@ -517,7 +517,7 @@ export default function AdminServiceCalendar() {
                           : "bg-white/[0.02] border-white/[0.06] text-white/30 hover:bg-white/5";
                   const hint = !linkedProgram ? undefined
                     : isServiceDay ? (overridden ? "Billed by override" : "Billed")
-                    : attended > 0 ? `${attended} checked in — not billed yet`
+                    : attended > 0 ? `${attended} checked in — not billed yet${canAutoFill ? ` · ${formatCurrency(selectedClient!.rate_amount ?? 0)} when filled` : ""}`
                     : scheduled ? `${linkedProgram.name} day with no check-ins — click to bill it by override`
                     : `Not a ${linkedProgram.name} day`;
 
@@ -536,12 +536,15 @@ export default function AdminServiceCalendar() {
                       `}
                     >
                       <span>{format(day, "d")}</span>
-                      {isServiceDay && (
+                      {isServiceDay ? (
                         <span className="text-[10px] opacity-80 leading-tight text-center">
                           {formatCurrency(dayTotal)}
                           {entryCount > 1 && ` (${entryCount})`}
                         </span>
-                      )}
+                      ) : canAutoFill && attended > 0 ? (
+                        /* What the day will bill once it is filled: the client's day rate (Josh, 2026-11-20). */
+                        <span className="text-[10px] leading-tight text-center text-emerald-200/90">{formatCurrency(selectedClient!.rate_amount ?? 0)}</span>
+                      ) : null}
                       {linkedProgram && attended > 0 && (
                         <span className={`text-[10px] leading-tight inline-flex items-center gap-0.5 ${isServiceDay ? "text-black/70" : "text-emerald-300"}`}>
                           <Users className="w-3 h-3" /> {attended}{!isServiceDay && " · unbilled"}
