@@ -31,13 +31,6 @@ export interface OrgField {
   gist?: string;
   /** Text from the public website, shown until a saved value exists. */
   seed?: string;
-  /**
-   * Which shelf of the Vault the card sits on (Josh, 2026-11-20: "let's regroup").
-   * A long text is background — the source material Grant Coach reads for story and
-   * voice — unless it is flagged "facts": an address, the mission, a budget's lines,
-   * an answer a portal box takes as is. Short fields and lists are always facts.
-   */
-  shelf?: "facts";
 }
 
 export interface OrgSection {
@@ -345,7 +338,7 @@ export const ORG_SECTIONS: OrgSection[] = [
     blurb: "One program, three groups. The mission, Josh's program description, the values and rules, the services and the hours.",
     snapshot: "what_we_do",
     fields: [
-      { key: "mission", shelf: "facts", label: "Mission Statement", gist: "Free, year-round, ages 7–19, Cape May County: boxing, mentorship and structure.", kind: "long", required: true, seed: MISSION },
+      { key: "mission", label: "Mission Statement", gist: "Free, year-round, ages 7–19, Cape May County: boxing, mentorship and structure.", kind: "long", required: true, seed: MISSION },
       { key: "program_description", label: "Boxing Groups Explained", gist: "One program, three groups — the Littles, the Non-Battle Team and the Battle Team — with Junior Boxing on Tuesdays as the door. Josh's words, approved 2026-10-28.", kind: "long", required: true, seed: PROGRAM_DESCRIPTION, help: "One program, three groups: the Battle Team, the Non-Battle Team and the Littles, with Junior Boxing on Tuesdays as the door. Josh's words, approved word for word. The 40–120 a night and the 45/30/25 split are his figures until the January–February counts replace them." },
       { key: "boxing_teams_short", label: "Battle Team and Non-Battle Team · in four sentences", gist: "The two teams for ages 14–19, in a few lines, for a funder who wants the boxing program short.", kind: "long", required: true, seed: BOXING_TEAMS_SHORT, help: "Josh's words. The short way to say what the Battle Team and the Non-Battle Team are (ages 14–19) when a funder wants the boxing program in a few lines; the Littles are the third group and the full picture is \"The program · three groups\"." },
       { key: "battle_team_case", label: "The Battle Team Explained · the funding case", kind: "long", gist: "Josh's two paragraphs (2026-10-28): the battle between the ears, who earns the Battle Team and why it matters. Written for O.C.E.A.N. 2027 — the $75,000 ask is in the first paragraph.", help: "Your words, saved from the O.C.E.A.N. 2027 application. Reuse the second paragraph anywhere; change the ask and the funder's name for the next grant." },
@@ -371,8 +364,8 @@ export const ORG_SECTIONS: OrgSection[] = [
       { key: "year_established", label: "Year established", kind: "number", required: true, seed: "2020" },
       { key: "website", label: "Website", kind: "short", seed: "https://www.nolimitsboxingacademy.org" },
       { key: "phone", label: "Main phone", kind: "short" },
-      { key: "address_physical", shelf: "facts", label: "Program address (the gym)", kind: "long", required: true, seed: "1086 Route 47 South, Rio Grande, NJ 08242", help: "From Our Story; confirm the ZIP." },
-      { key: "address_mailing", shelf: "facts", label: "Mailing address of record", kind: "long", required: true, help: "Funders use this on the award. Repeat the gym address if they are the same." },
+      { key: "address_physical", label: "Program address (the gym)", kind: "long", required: true, seed: "1086 Route 47 South, Rio Grande, NJ 08242", help: "From Our Story; confirm the ZIP." },
+      { key: "address_mailing", label: "Mailing address of record", kind: "long", required: true, help: "Funders use this on the award. Repeat the gym address if they are the same." },
       { key: "story", label: "Our Story", gist: "Josh and Dave, 2020, the building on Route 47, and what NLA became.", kind: "long", required: true, seed: STORY },
       { key: "facility", label: "The Facility and the CPF Project", gist: "The 14,000-square-foot building and what the $300,000 CPF award is building.", kind: "long", seed: FACILITY, help: "The building, the hours, and what the $300,000 award is building. Update as the project is completed." },
     ],
@@ -416,11 +409,11 @@ export const ORG_SECTIONS: OrgSection[] = [
       { key: "revenue_history", label: "Annual Revenue History", kind: "list", seed: "2021 — $149,180\n2022 — $374,295\n2023 — $518,905\n2024 — $596,862\n2025 — $932,498", help: "From the CPF proposal. Funders read steady growth as capacity; add each year as it closes." },
       { key: "prior_expenses", label: "Prior fiscal year — total expenses ($)", kind: "number" },
       { key: "operating_deficit", label: "Operating deficit?", kind: "yesno", required: true },
-      { key: "deficit_explanation", shelf: "facts", label: "If a Deficit: amount and explanation", kind: "long" },
+      { key: "deficit_explanation", label: "If a Deficit: amount and explanation", kind: "long" },
       { key: "audit_status", label: "Audit or financial review", kind: "short", help: "Most recent audited statements or financial review, and the year." },
       { key: "form_990_year", label: "Most recent Form 990 — tax year", kind: "short", required: true },
-      { key: "financial_position", shelf: "facts", label: "Financial Position · from the latest audit and 990", kind: "long", gist: "Revenue, surplus, cash, net assets, debt, the program share of spending and the audit opinion — the capacity answer, in one place.", help: "Refresh each year when the audit and the 990 arrive. Figures are from the audited statements unless the line says the 990." },
-      { key: "transport_budget", shelf: "facts", label: "Transportation Budget · 2026, board-approved", kind: "long", gist: "The Transportation section of the 2026 operating budget, line for line: $89,177.56 of $794,426.82.", seed: TRANSPORT_BUDGET, help: "From the board-approved 2026 operating budget PDF (2026-10-30). Grant Coach quotes these lines as they are and never asks for more than the subtotal on a transportation application. Replace when the 2027 budget is approved." },
+      { key: "financial_position", label: "Financial Position · from the latest audit and 990", kind: "long", gist: "Revenue, surplus, cash, net assets, debt, the program share of spending and the audit opinion — the capacity answer, in one place.", help: "Refresh each year when the audit and the 990 arrive. Figures are from the audited statements unless the line says the 990." },
+      { key: "transport_budget", label: "Transportation Budget · 2026, board-approved", kind: "long", gist: "The Transportation section of the 2026 operating budget, line for line: $89,177.56 of $794,426.82.", seed: TRANSPORT_BUDGET, help: "From the board-approved 2026 operating budget PDF (2026-10-30). Grant Coach quotes these lines as they are and never asks for more than the subtotal on a transportation application. Replace when the 2027 budget is approved." },
     ],
   },
   {
@@ -433,7 +426,7 @@ export const ORG_SECTIONS: OrgSection[] = [
       { key: "ocean_program", label: "O.C.E.A.N. — program name funded", kind: "short", seed: "No Limits Academy's Youth Boxing Program" },
       { key: "ocean_amount", label: "O.C.E.A.N. — previous funding amount ($)", kind: "number", seed: "180000", help: "From the walk-through on 2026-10-15 — confirm." },
       { key: "past_grants", label: "Past Grants Received", gist: "Funding received, by funder, amount and year.", kind: "list", seed: "U.S. House Community Project Funding, FY2027 (Rep. Jeff Van Drew) — $300,000 — Facility Improvement and Youth Development Expansion Project — awarded 2026\nO.C.E.A.N., Inc. CSBG Partnership Program — $180,000 — youth boxing program (confirm amount and years)", help: "Optional. Foundations often ask for grants received in the last three years; awards logged in Grant Coach will add themselves here. Funding only — honors live under Awards and recognition." },
-      { key: "other_funds", shelf: "facts", label: "Other Committed or Pending Program Funds", kind: "long", help: "Source, status (committed or pending) and amount." },
+      { key: "other_funds", label: "Other Committed or Pending Program Funds", kind: "long", help: "Source, status (committed or pending) and amount." },
       { key: "sustainability", label: "Sustainability and Revenue Model", gist: "What keeps the program free when a grant ends: donors, events, fee-for-service districts, grants.", kind: "long", seed: "NLA keeps core after-school programming free for families through a diversified funding structure: community support, philanthropic contributions, and fee-for-service partnerships with local school districts (Cape May County Special Services, Cape May County Technical, Middle Township, Lower Cape May Regional, Wildwood and Woodbine) that provide a reliable revenue stream. Annual revenue has grown every year since 2021, from $149,180 to $932,498 in 2025. The CPF award protects the facility itself. Dave Von Savage's business training underpins the financial framework and long-term model.", help: "Every funder asks what happens when their grant ends. From the CPF proposal." },
     ],
   },

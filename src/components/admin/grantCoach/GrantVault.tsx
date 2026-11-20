@@ -18,19 +18,23 @@
 // Resources pop-up, so the two never show different things. Edits save to
 // grant_org_fields, which wins over the website seeds; every draft follows.
 //
-// THREE SHELVES (Josh, 2026-11-20: "it has so much… I need to understand its
-// current build… I think we need to regroup"). Three kinds of content had
-// shared one list, so the page is now three shelves, top to bottom: THE
-// PARAGRAPHS (the six standard paragraphs — what he reuses), THE FACTS (short
-// entries and lists, grouped by section — a form, not reading), THE
-// BACKGROUND (the long prose Grant Coach reads for story and voice, folded,
-// labeled so a figure in it never outranks a paragraph or the live numbers).
-// Nothing moved in the database: a field's shelf is its kind, or its `shelf`
-// flag in orgProfile.ts.
+// THREE SHELVES, CARDS BY SUBJECT (Josh, 2026-11-20: "it has so much… I
+// think we need to regroup", then "I want this area to be so user friendly
+// that anyone can easily pull important NLA info from it"). Three kinds of
+// content had shared one list organized the way funders ask. The page is now
+// three shelves, top to bottom: THE PARAGRAPHS (the six standard paragraphs
+// — what he reuses: Copy, Talk to Grant Coach, the narrative), THE FACTS
+// (seven cards named for what is inside — "NLA on paper", "Who to call",
+// "The money" — each with one Copy for the whole card), THE BACKGROUND (the
+// long prose Grant Coach reads for story and voice, folded, labeled so a
+// figure in it never outranks a paragraph or the live numbers). Below an
+// amber line: "How Grant Coach writes", settings for the writer, not NLA
+// information. The cards are vaultShelves.ts; the fields and their saved
+// values did not move.
 import { useMemo, useState, type KeyboardEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Copy, Check, Pencil, Loader2, Search, Library, AlertCircle, RotateCcw, X, ChevronsDownUp, ChevronsUpDown } from "lucide-react";
+import { Copy, Check, Pencil, Loader2, Search, Library, AlertCircle, RotateCcw, X, ChevronsDownUp, ChevronsUpDown, History } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -39,19 +43,14 @@ import { Textarea } from "@/components/ui/textarea";
 import GcCard, { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
 import SnapshotSectionCard, { useSnapshot, copyText, outline } from "@/components/admin/grantCoach/SnapshotSection";
 import { useAsk } from "@/components/admin/AskDialog";
-import { ORG_SECTIONS, orgFieldValue, orgCompleteness, formatEin, type OrgField } from "@/lib/grantCoach/orgProfile";
+import { ORG_SECTIONS, ORG_FIELDS, orgFieldValue, orgCompleteness, formatEin, type OrgField } from "@/lib/grantCoach/orgProfile";
+import { FACT_CARDS, BACKGROUND_CARDS, WRITER_CARDS, ALL_VAULT_CARDS, type VaultCardDef } from "@/lib/grantCoach/vaultShelves";
 import { shortYear, snapshotText } from "@/lib/grantCoach/snapshot";
 
 interface FieldRow { key: string; value: string | null; updated_at: string }
 
 const when = (iso: string) =>
   new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/New_York" });
-
-/** The first line or so of a text, for a folded card with no gist of its own. */
-const firstLine = (text: string, max = 150) => {
-  const t = text.replace(/\s+/g, " ").trim();
-  return t.length > max ? t.slice(0, max).replace(/\s+\S*$/, "") + "…" : t;
-};
 
 /** The Vault as saved: what was typed over the website seeds, with when. */
 function useVault() {
@@ -91,6 +90,9 @@ interface FieldProps {
   field: OrgField; value: string; fromSite: boolean; savedWhen?: string;
   onSave: (v: string) => Promise<void>; onReset: () => Promise<void>;
 }
+
+/** A row in a card: short, a number, a date, yes/no. Lists and long texts are blocks. */
+const isRow = (f: OrgField) => f.kind !== "long" && f.kind !== "list";
 
 /** A short fact: label, value, Copy, Edit in place. */
 function FactRow({ field, value, fromSite, savedWhen, onSave, onReset }: FieldProps) {
@@ -163,8 +165,8 @@ function FactRow({ field, value, fromSite, savedWhen, onSave, onReset }: FieldPr
   );
 }
 
-/** A paragraph or a list: its own card, folded to title + gist; Copy from the fold, Edit once open. */
-function TextCard({ field, value, fromSite, savedWhen, onSave, onReset, open, onToggle }: FieldProps & { open: boolean; onToggle: () => void }) {
+/** A list or a long text inside a card: its label, Copy and Edit, the text. `bare` when it is the card's only field. */
+function TextBlock({ field, value, fromSite, savedWhen, onSave, onReset, bare }: FieldProps & { bare: boolean }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   const [busy, setBusy] = useState(false);
@@ -176,41 +178,30 @@ function TextCard({ field, value, fromSite, savedWhen, onSave, onReset, open, on
     finally { setBusy(false); }
   };
   return (
-    <GcCard
-      title={field.label}
-      open={open}
-      onToggle={onToggle}
-      blurb={
-        open ? (
-          <span className="inline-flex items-center gap-2 flex-wrap">
+    <div className={bare ? "" : "border-t border-white/[0.06] first:border-0"}>
+      <div className="px-4 pt-3 flex items-start justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
+          {!bare && <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/55">{field.label}</p>}
+          <p className="text-[11px] text-white/40 inline-flex items-center gap-2 flex-wrap">
             {field.required && empty && <span className="inline-flex items-center gap-1 font-bold uppercase tracking-wide text-amber-300"><AlertCircle className="w-3 h-3" /> Needed</span>}
             {fromSite && !empty && <span className="font-bold uppercase tracking-wide rounded px-1 py-0.5 bg-sky-500/15 text-sky-200">From the website</span>}
             {savedWhen && <span>Your words · saved {savedWhen}</span>}
             {field.help && <span>{field.help}</span>}
-          </span>
-        ) : empty ? (
-          <span className="inline-flex items-center gap-1 text-amber-300/80">{field.required && <AlertCircle className="w-3 h-3" />} Not filled in yet{field.gist ? ` — ${field.gist}` : ""}</span>
-        ) : (
-          field.gist ?? firstLine(value)
-        )
-      }
-      right={
-        !editing && (
-          <>
+          </p>
+        </div>
+        {!editing && (
+          <span className="inline-flex items-center gap-1.5 shrink-0">
             {!empty && (
               <Button size="sm" variant="outline" className={outline} onClick={() => copyText(value, field.label)}>
                 <Copy className="w-3.5 h-3.5 mr-1.5" /> Copy
               </Button>
             )}
-            {open && (
-              <Button size="sm" variant="outline" className={outline} onClick={() => { setDraft(value); setEditing(true); }}>
-                <Pencil className="w-3.5 h-3.5 mr-1.5" /> {empty ? "Fill in" : "Edit"}
-              </Button>
-            )}
-          </>
-        )
-      }
-    >
+            <Button size="sm" variant="outline" className={outline} onClick={() => { setDraft(value); setEditing(true); }}>
+              <Pencil className="w-3.5 h-3.5 mr-1.5" /> {empty ? "Fill in" : "Edit"}
+            </Button>
+          </span>
+        )}
+      </div>
       {editing ? (
         <div className="p-4 space-y-2">
           <Textarea
@@ -234,15 +225,80 @@ function TextCard({ field, value, fromSite, savedWhen, onSave, onReset, open, on
           </div>
         </div>
       ) : empty ? (
-        <p className="p-4 text-[12px] text-amber-300/80">Not filled in yet. Open Edit to fill it in.</p>
+        <p className="px-4 pb-3 pt-1 text-[12px] text-amber-300/80">Not filled in yet. Open Edit to fill it in.</p>
       ) : (
-        <div className="p-4 whitespace-pre-wrap text-sm leading-relaxed text-white/90">{value}</div>
+        <div className="px-4 pb-4 pt-2 whitespace-pre-wrap text-sm leading-relaxed text-white/90">{value}</div>
       )}
+    </div>
+  );
+}
+
+/** The whole card as text for the clipboard: rows as "Label: value", blocks under their label; a one-field card is just its text. */
+const cardText = (fields: OrgField[], valueOf: (f: OrgField) => string) => {
+  const filled = fields.filter((f) => valueOf(f).trim());
+  if (filled.length === 1 && !isRow(filled[0])) return valueOf(filled[0]);
+  return filled.map((f) => (isRow(f) ? `${f.label}: ${valueOf(f)}` : `${f.label.toUpperCase()}\n${valueOf(f)}`)).join("\n\n");
+};
+
+/** One card of a shelf: its subject, the rows, then the lists and long texts. One Copy for all of it. */
+function VaultCard({ def, fields, props, open, onToggle }: {
+  def: VaultCardDef; fields: OrgField[]; props: (f: OrgField) => FieldProps; open: boolean; onToggle: () => void;
+}) {
+  const rows = fields.filter(isRow);
+  const blocks = fields.filter((f) => !isRow(f));
+  const valueOf = (f: OrgField) => props(f).value;
+  const needed = fields.filter((f) => f.required && !valueOf(f).trim()).length;
+  const filled = fields.filter((f) => valueOf(f).trim()).length;
+  const bare = fields.length === 1 && blocks.length === 1;
+  return (
+    <GcCard
+      title={def.title}
+      open={open}
+      onToggle={onToggle}
+      blurb={
+        <span className="inline-flex items-center gap-2 flex-wrap">
+          {needed > 0 && <span className="inline-flex items-center gap-1 font-bold uppercase tracking-wide text-amber-300"><AlertCircle className="w-3 h-3" /> {needed} needed</span>}
+          <span>{def.gist}</span>
+        </span>
+      }
+      right={
+        filled > 0 && (
+          <Button size="sm" variant="outline" className={outline} onClick={() => copyText(cardText(fields, valueOf), def.title)} title={bare ? "Copy the text" : "Copy the whole card, each line with its label"}>
+            <Copy className="w-3.5 h-3.5 mr-1.5" /> {bare ? "Copy" : "Copy the card"}
+          </Button>
+        )
+      }
+    >
+      {rows.length > 0 && (
+        <div className="px-4 py-1 grid gap-x-8 md:grid-cols-2 divide-y divide-white/[0.06] md:divide-y-0">
+          {rows.map((f) => <FactRow key={f.key} {...props(f)} />)}
+        </div>
+      )}
+      {blocks.map((f) => <TextBlock key={f.key} {...props(f)} bare={bare} />)}
     </GcCard>
   );
 }
 
-export default function GrantVault() {
+/** A shelf's heading: its number, its name, one line on what sits there. */
+function Shelf({ n, title, blurb }: { n: number; title: string; blurb: string }) {
+  return (
+    <div className="pt-3">
+      <h2 className="text-base font-black uppercase tracking-wide inline-flex items-center gap-2" style={{ color: GC_BLUE }}>
+        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-black text-black" style={{ backgroundColor: GC_BLUE }}>{n}</span>
+        {title}
+      </h2>
+      <p className="text-[12px] text-white/50">{blurb}</p>
+    </div>
+  );
+}
+
+const fieldByKey = new Map(ORG_FIELDS.map((f) => [f.key, f]));
+const fieldsOf = (def: VaultCardDef) => def.fields.map((k) => fieldByKey.get(k)).filter((f): f is OrgField => !!f);
+
+export default function GrantVault({ memoryBelow = false }: {
+  /** On Grant Coach home the story bank and the past answers follow; the amber line says so. */
+  memoryBelow?: boolean;
+}) {
   const { user } = useAuth();
   const { ask, dialog } = useAsk();
   const snap = useSnapshot();
@@ -260,11 +316,10 @@ export default function GrantVault() {
   const allApproved = snap.approved.length === snap.sections.length && snap.sections.length > 0;
 
   // Every card id, for Open all / Fold all.
-  const allIds = useMemo(() => ORG_SECTIONS.flatMap((s) => [
-    ...(s.snapshot ? [`snap:${s.snapshot}`] : []),
-    ...(s.fields.some((f) => f.kind !== "long" && f.kind !== "list") ? [`facts:${s.key}`] : []),
-    ...s.fields.filter((f) => f.kind === "long" || f.kind === "list").map((f) => `field:${f.key}`),
-  ]), []);
+  const allIds = useMemo(() => [
+    ...ORG_SECTIONS.flatMap((s) => (s.snapshot ? [`snap:${s.snapshot}`] : [])),
+    ...ALL_VAULT_CARDS.map((c) => `card:${c.key}`),
+  ], []);
 
   const props = (f: OrgField): FieldProps => ({
     field: f,
@@ -274,12 +329,12 @@ export default function GrantVault() {
     onSave: (v: string) => vault.save(f, v),
     onReset: () => vault.reset(f),
   });
-  const visible = (f: OrgField) => matches(f.label, f.gist ?? "", orgFieldValue(f, vault.saved));
-  /** A row in "The facts" card: short, a number, a date, yes/no. */
-  const isRow = (f: OrgField) => f.kind !== "long" && f.kind !== "list";
-  /** On the facts shelf: every row, every list, and a long text flagged for it. */
-  const isFact = (f: OrgField) => f.kind !== "long" || f.shelf === "facts";
-  const textCard = (f: OrgField) => <TextCard key={f.key} {...props(f)} open={isOpen(`field:${f.key}`)} onToggle={() => toggle(`field:${f.key}`)} />;
+  /** A card shows when its title, its gist, or any line in it matches the search. */
+  const cardOf = (def: VaultCardDef) => {
+    const fields = fieldsOf(def);
+    if (!matches(def.title, def.gist, ...fields.flatMap((f) => [f.label, orgFieldValue(f, vault.saved)]))) return null;
+    return <VaultCard key={def.key} def={def} fields={fields} props={props} open={isOpen(`card:${def.key}`)} onToggle={() => toggle(`card:${def.key}`)} />;
+  };
 
   // Shelf 1: one card per standard paragraph, in funder order.
   const paragraphs = ORG_SECTIONS.flatMap((section) => {
@@ -299,52 +354,9 @@ export default function GrantVault() {
       />,
     ];
   });
-
-  // Shelf 2: by section, "The facts" card of rows, then the lists and the flagged texts.
-  const factGroups = ORG_SECTIONS.filter((s) => s.key !== "voice").flatMap((section) => {
-    const fields = section.fields.filter(isFact).filter(visible);
-    if (!fields.length) return [];
-    const rows = fields.filter(isRow);
-    const needed = rows.filter((f) => f.required && !orgFieldValue(f, vault.saved).trim()).length;
-    const factsId = `facts:${section.key}`;
-    return [
-      <div key={section.key} className="space-y-2">
-        <Group title={section.title} />
-        {rows.length > 0 && (
-          <GcCard
-            title="The facts"
-            open={isOpen(factsId)}
-            onToggle={() => toggle(factsId)}
-            blurb={
-              isOpen(factsId)
-                ? "Short answers that go straight into a portal box. Hover a line for Copy and Edit."
-                : <span className="inline-flex items-center gap-2 flex-wrap">
-                    {needed > 0 && <span className="inline-flex items-center gap-1 font-bold uppercase tracking-wide text-amber-300"><AlertCircle className="w-3 h-3" /> {needed} needed</span>}
-                    <span>{rows.map((f) => f.label).join(" · ")}</span>
-                  </span>
-            }
-          >
-            <div className="px-4 py-1 grid gap-x-8 md:grid-cols-2 divide-y divide-white/[0.06] md:divide-y-0">
-              {rows.map((f) => <FactRow key={f.key} {...props(f)} />)}
-            </div>
-          </GcCard>
-        )}
-        {fields.filter((f) => !isRow(f)).map(textCard)}
-      </div>,
-    ];
-  });
-
-  // Shelf 3: by section, the long prose; "How Grant Coach writes" whole, at the end.
-  const backgroundGroups = ORG_SECTIONS.flatMap((section) => {
-    const fields = section.fields.filter((f) => section.key === "voice" || !isFact(f)).filter(visible);
-    if (!fields.length) return [];
-    return [
-      <div key={section.key} className="space-y-2">
-        <Group title={section.title} blurb={section.key === "voice" ? section.blurb : undefined} />
-        {fields.map(textCard)}
-      </div>,
-    ];
-  });
+  const facts = FACT_CARDS.map(cardOf).filter(Boolean);
+  const background = BACKGROUND_CARDS.map(cardOf).filter(Boolean);
+  const writer = WRITER_CARDS.map(cardOf).filter(Boolean);
 
   return (
     <div className="space-y-5">
@@ -352,7 +364,7 @@ export default function GrantVault() {
       <GcCard
         icon={<Library className="w-4 h-4" />}
         title="Grant Vault · one source of truth"
-        blurb={`Three shelves. The paragraphs: the six standard paragraphs for ${shortYear(snap.shown)}, approved word for word, used in any answer with one click. The facts: names, numbers, dates, addresses and lists that fill a portal box. The background: the longer pieces Grant Coach reads for story and voice. Click a title to read it; Copy works without opening.`}
+        blurb={`Three shelves. The paragraphs: the six standard paragraphs for ${shortYear(snap.shown)}, approved word for word, used in any answer with one click. The facts: names, numbers, dates, addresses and lists that fill a portal box, one Copy per card. The background: the longer pieces Grant Coach reads for story and voice. Click a title to read it; Copy works without opening.`}
         right={
           <Button size="sm" variant="outline" className={outline} disabled={!snap.approved.length} onClick={() => copyText(snapshotText(snap.approved), `The ${shortYear(snap.shown)} story`)}>
             <Copy className="w-3.5 h-3.5 mr-1.5" /> Copy the year
@@ -384,7 +396,7 @@ export default function GrantVault() {
             </button>
             <div className="relative w-56">
               <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-white/40" />
-              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find a fact or a line" className="h-8 pl-8 text-sm bg-neutral-950 border-white/15 text-white" />
+              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="EIN, board, Littles, 990…" className="h-8 pl-8 text-sm bg-neutral-950 border-white/15 text-white" />
             </div>
           </div>
         </div>
@@ -401,44 +413,38 @@ export default function GrantVault() {
         </section>
       )}
 
-      {/* Shelf 2 · the facts: short entries and lists, by section. A form, not reading. */}
-      {factGroups.length > 0 && (
+      {/* Shelf 2 · the facts: seven cards by subject. A form, not reading. */}
+      {facts.length > 0 && (
         <section className="space-y-3">
-          <Shelf n={2} title="The facts" blurb="Names, numbers, dates, addresses, contacts and lists: short answers that go straight into a portal box. Fill them once; update them when they change." />
-          {factGroups}
+          <Shelf n={2} title="The facts" blurb="Names, numbers, dates, addresses, contacts and lists, by subject: what goes straight into a portal box. Copy the card takes the whole card with its labels. Fill them once; update them when they change." />
+          {facts}
         </section>
       )}
 
       {/* Shelf 3 · the background: the long prose, folded. Source material, never the figure of record. */}
-      {backgroundGroups.length > 0 && (
+      {background.length > 0 && (
         <section className="space-y-3">
-          <Shelf n={3} title="The background" blurb="Source material: the longer pieces Grant Coach reads for story, programs and voice, and the rules it writes by. A figure here never outranks a standard paragraph or the live numbers. Open one when you want it." />
-          {backgroundGroups}
+          <Shelf n={3} title="The background" blurb="Source material: the longer pieces Grant Coach reads for story, programs and voice. A figure here never outranks a standard paragraph or the live numbers. Open one when you want it." />
+          {background}
         </section>
       )}
-    </div>
-  );
-}
 
-/** A shelf's heading: its number, its name, one line on what sits there. */
-function Shelf({ n, title, blurb }: { n: number; title: string; blurb: string }) {
-  return (
-    <div className="pt-3">
-      <h2 className="text-base font-black uppercase tracking-wide inline-flex items-center gap-2" style={{ color: GC_BLUE }}>
-        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-black text-black" style={{ backgroundColor: GC_BLUE }}>{n}</span>
-        {title}
-      </h2>
-      <p className="text-[12px] text-white/50">{blurb}</p>
-    </div>
-  );
-}
-
-/** A section's name over its cards on a shelf. */
-function Group({ title, blurb }: { title: string; blurb?: string }) {
-  return (
-    <div className="pt-1">
-      <h3 className="text-[12px] font-black uppercase tracking-wide text-white/60">{title}</h3>
-      {blurb && <p className="text-[11px] text-white/35">{blurb}</p>}
+      {/* Below the amber line: not NLA information. The writer's settings, and (on Grant Coach home) its memory. */}
+      {writer.length > 0 && (
+        <section className="space-y-3 pt-5 border-t-2 border-dashed border-amber-400/60">
+          <div>
+            <h2 className="text-base font-black uppercase tracking-wide text-amber-300 inline-flex items-center gap-2">
+              <History className="w-4 h-4" /> Not the Vault · for Grant Coach, not for people
+            </h2>
+            <p className="text-[12px] text-amber-100/60 max-w-3xl">
+              {memoryBelow
+                ? "How Grant Coach writes: the proposal it writes like and the rules it learned from your edits. Then its memory: the story bank, and the answers from past grants, reused only as a starting point when the same question comes up. Neither is a source of record; the Vault's paragraphs, its facts and the live numbers are."
+                : "How Grant Coach writes: the proposal it writes like and the rules it learned from your edits. Settings for the writer, not facts about NLA."}
+            </p>
+          </div>
+          {writer}
+        </section>
+      )}
     </div>
   );
 }

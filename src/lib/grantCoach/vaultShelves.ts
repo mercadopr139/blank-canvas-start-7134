@@ -1,0 +1,116 @@
+// The Grant Vault's cards, by SUBJECT (Josh, 2026-11-20: "I want this area to
+// be so user friendly that anyone can easily pull important NLA info from it").
+//
+// The fields themselves live in orgProfile.ts, grouped the way funders ask,
+// which is how the writer reads them. People read by subject, so the page
+// shows the same fields on cards named for what is inside — "NLA on paper",
+// "Who to call", "The money" — one subject per card, one card per subject.
+// Three shelves: THE PARAGRAPHS (the six standard paragraphs, not here), THE
+// FACTS (short answers and lists), THE BACKGROUND (the long prose Grant
+// Coach reads for story and voice). "How Grant Coach writes" sits below the
+// amber line: it is settings for the writer, not NLA information.
+//
+// Every field of ORG_SECTIONS belongs to exactly one card (vaultShelves.test.ts).
+
+export interface VaultCardDef {
+  key: string;
+  title: string;
+  /** One line while the card is folded: what is inside. */
+  gist: string;
+  /** Field keys from orgProfile.ts, in the order they read. */
+  fields: string[];
+}
+
+/** Shelf 2 · the facts: what goes straight into a portal box. */
+export const FACT_CARDS: VaultCardDef[] = [
+  {
+    key: "paper", title: "NLA on paper",
+    gist: "Legal name, EIN, 501(c)(3) date, fiscal year, year established, website, phone, both addresses, the mission.",
+    fields: ["legal_name", "dba", "ein", "nonprofit_date", "fiscal_year", "year_established", "website", "phone", "address_physical", "address_mailing", "mission"],
+  },
+  {
+    key: "contacts", title: "Who to call",
+    gist: "Executive leadership, the grant contact, the program contact, the finance contact, who signs.",
+    fields: ["ed_name", "ed_email", "ed_phone", "grant_contact_name", "grant_contact_email", "grant_contact_phone", "program_contact_name", "program_contact_email", "program_contact_phone", "finance_contact_name", "finance_contact_email", "finance_contact_phone", "signer_name"],
+  },
+  {
+    key: "board", title: "The board",
+    gist: "The Board of Directors: name, role, affiliation.",
+    fields: ["board"],
+  },
+  {
+    key: "money", title: "The money",
+    gist: "Budget, revenue and expenses, deficit, audit, the 990 year, revenue history, financial position, the transportation budget lines.",
+    fields: ["annual_budget", "prior_revenue", "prior_expenses", "operating_deficit", "deficit_explanation", "audit_status", "form_990_year", "revenue_history", "financial_position", "transport_budget"],
+  },
+  {
+    key: "funding", title: "Funding received",
+    gist: "Past grants by funder, amount and year; the O.C.E.A.N. history; other committed or pending funds.",
+    fields: ["past_grants", "ocean_prior", "ocean_program", "ocean_amount", "other_funds"],
+  },
+  {
+    key: "runs", title: "What NLA runs and when",
+    gist: "Every program and service, the five things NLA offers, and the hours by season.",
+    fields: ["programs", "offer_top5", "schedule"],
+  },
+  {
+    key: "partners", title: "Partners, letters and recognition",
+    gist: "Partners and what each does with NLA, the law enforcement partners, the letters of support, what partners say, awards.",
+    fields: ["partners", "law_enforcement", "letters_support", "partner_quotes", "awards"],
+  },
+];
+
+/** Shelf 3 · the background: the long prose Grant Coach reads for story, programs and voice. */
+export const BACKGROUND_CARDS: VaultCardDef[] = [
+  {
+    key: "program", title: "The program: three groups",
+    gist: "The Littles, the Non-Battle Team and the Battle Team, with Junior Boxing on Tuesdays as the door; the short version; the Battle Team funding case.",
+    fields: ["program_description", "boxing_teams_short", "battle_team_case"],
+  },
+  {
+    key: "values", title: "Core values and house rules",
+    gist: "The seven values and the ten rules, word for word.",
+    fields: ["values_rules"],
+  },
+  {
+    key: "story", title: "Our story and the facility",
+    gist: "Josh and Dave, 2020, the building on Route 47, and what the CPF award is building.",
+    fields: ["story", "facility"],
+  },
+  {
+    key: "fleet", title: "The fleet and who rides",
+    gist: "Four vehicles, 59 seats, five CDL drivers; Woodbine and Wildwood are the standing routes.",
+    fields: ["fleet"],
+  },
+  {
+    key: "outcomes", title: "Outcomes and how we measure",
+    gist: "What the back end records and how youth served, retention and the disadvantaged share are counted.",
+    fields: ["outcomes"],
+  },
+  {
+    key: "staff", title: "Staffing and staff bios",
+    gist: "Two full-time staff and the coaches, said as efficiency; a short paragraph for each person a funder will see named.",
+    fields: ["staffing", "staff_bios"],
+  },
+  {
+    key: "need", title: "The need in the county",
+    gist: "The county, the service area, the county's hardship and where it concentrates, the target population.",
+    fields: ["counties", "need", "service_area", "target_population"],
+  },
+  {
+    key: "sustain", title: "Sustainability and revenue model",
+    gist: "What keeps the program free when a grant ends.",
+    fields: ["sustainability"],
+  },
+];
+
+/** Below the amber line: instructions to the writer, not facts about NLA. */
+export const WRITER_CARDS: VaultCardDef[] = [
+  {
+    key: "voice", title: "How Grant Coach writes",
+    gist: "The proposal it writes like, and the rules it learned from your edits.",
+    fields: ["writing_examples", "corrections"],
+  },
+];
+
+export const ALL_VAULT_CARDS = [...FACT_CARDS, ...BACKGROUND_CARDS, ...WRITER_CARDS];
