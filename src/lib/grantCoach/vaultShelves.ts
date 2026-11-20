@@ -42,6 +42,13 @@ export interface VaultShelfDef {
 export const shelfTitleKey = (shelfKey: string) => `shelf_title:${shelfKey}`;
 /** The key in grant_org_fields that holds a renamed card title (Josh, 2026-11-20: "the ability to manually edit the card titles"). */
 export const cardTitleKey = (cardKey: string) => `card_title:${cardKey}`;
+/**
+ * The key in grant_org_fields that holds a renamed standard-paragraph card title
+ * (Josh, 2026-11-20: "no pencil or edit option in the 1st paragraph section").
+ * Display only: the writer, the classifier and the "Standard paragraph" chip keep
+ * the title from code, so the rules that name a paragraph still hold.
+ */
+export const paragraphTitleKey = (sectionKey: string) => `paragraph_title:${sectionKey}`;
 
 /** Shelf 1 is the six standard paragraphs (SnapshotSection cards), not fields; it is named here so it can be renamed too. */
 export const PARAGRAPHS_SHELF = { key: "paragraphs", title: "The paragraphs", blurb: "" };

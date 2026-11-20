@@ -8,7 +8,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Copy, Lock, LockOpen, Check, Sparkles, Loader2, MessageSquare } from "lucide-react";
+import { Copy, Lock, LockOpen, Check, Sparkles, Loader2, MessageSquare, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import GcCard, { GC_BLUE } from "@/components/admin/grantCoach/GcCard";
@@ -20,6 +20,7 @@ import {
 import { loadLibrary, redraftSnapshotSection } from "@/lib/grantCoach/writer";
 import { gatherLiveFacts } from "@/lib/grantCoach/liveFacts";
 import ParagraphChat from "@/components/admin/grantCoach/ParagraphChat";
+import RenameTitle from "@/components/admin/grantCoach/RenameTitle";
 
 const fmtDate = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", year: "numeric" }) : "";
@@ -64,8 +65,12 @@ const gistOf = (body: string, max = 170) => {
   return t.length > max ? t.slice(0, max).replace(/\s+\S*$/, "") + "…" : t;
 };
 
-export default function SnapshotSectionCard({ section, others, previous, userId, ask, onChanged, open, onToggle }: {
+export default function SnapshotSectionCard({ section, others, previous, userId, ask, onChanged, open, onToggle, displayTitle, onRename }: {
   section: SnapshotRow;
+  /** The card's name as Josh renamed it (2026-11-20); the writer keeps section.title. */
+  displayTitle?: string;
+  /** Save a renamed title (null: back to the shipped one). Without it there is no pencil. */
+  onRename?: (name: string | null) => Promise<void>;
   /** The year's other paragraphs, for the conversation: a sentence lives in one place. */
   others: SnapshotRow[];
   previous: string | null;
@@ -78,6 +83,8 @@ export default function SnapshotSectionCard({ section, others, previous, userId,
 }) {
   const locked = section.status === "approved";
   const [text, setText] = useState(section.body);
+  const [renaming, setRenaming] = useState(false);
+  const shown = displayTitle?.trim() || section.title;
   const [busy, setBusy] = useState<null | "save" | "approve" | "unlock" | "redraft">(null);
   const [changed, setChanged] = useState<string[]>([]);
   const [talking, setTalking] = useState(false);
@@ -139,7 +146,11 @@ export default function SnapshotSectionCard({ section, others, previous, userId,
   return (
     <GcCard
       icon={locked ? <Lock className="w-3.5 h-3.5" /> : <LockOpen className="w-3.5 h-3.5" />}
-      title={`${section.title} · ${shortYear(section.program_year)}`}
+      title={
+        renaming && onRename
+          ? <RenameTitle title={shown} shipped={section.title} what="paragraph" onRename={onRename} onClose={() => setRenaming(false)} />
+          : `${shown} · ${shortYear(section.program_year)}`
+      }
       open={open}
       onToggle={onToggle}
       blurb={!open
@@ -149,7 +160,12 @@ export default function SnapshotSectionCard({ section, others, previous, userId,
           : section.body ? "Draft. Grant Coach does not use it until you approve it." : "Not written yet."}
       right={
         <>
-          <Button size="sm" variant="outline" className={outline} disabled={!text.trim()} onClick={() => copyText(text, section.title)}>
+          {onRename && !renaming && (
+            <button type="button" onClick={() => setRenaming(true)} className="p-1 rounded text-white/40 hover:text-white hover:bg-white/10" title="Rename this card (Grant Coach keeps its own name for the paragraph)" aria-label={`Rename the card "${shown}"`}>
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+          )}
+          <Button size="sm" variant="outline" className={outline} disabled={!text.trim()} onClick={() => copyText(text, shown)}>
             <Copy className="w-3.5 h-3.5 mr-1.5" /> Copy
           </Button>
           {locked && open && (

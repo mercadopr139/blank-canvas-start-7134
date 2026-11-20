@@ -3,7 +3,7 @@
 // per subject; "read a section and think, yup, that's where I will find it").
 import { describe, expect, it } from "vitest";
 import { ORG_FIELDS } from "@/lib/grantCoach/orgProfile";
-import { ALL_VAULT_CARDS, VAULT_SHELVES, WRITER_CARDS, PARAGRAPHS_SHELF, shelfTitleKey, cardTitleKey } from "@/lib/grantCoach/vaultShelves";
+import { ALL_VAULT_CARDS, VAULT_SHELVES, WRITER_CARDS, PARAGRAPHS_SHELF, shelfTitleKey, cardTitleKey, paragraphTitleKey } from "@/lib/grantCoach/vaultShelves";
 
 describe("the Vault's cards", () => {
   const placed = ALL_VAULT_CARDS.flatMap((c) => c.fields);
@@ -56,7 +56,8 @@ describe("the Vault's shelves", () => {
   it("keep a renamed shelf or card title under its own key in the Vault's table", () => {
     expect(shelfTitleKey("money")).toBe("shelf_title:money");
     expect(cardTitleKey("contacts")).toBe("card_title:contacts");
-    expect(ORG_FIELDS.some((f) => f.key.startsWith("shelf_title:") || f.key.startsWith("card_title:"))).toBe(false);
+    expect(paragraphTitleKey("intro")).toBe("paragraph_title:intro");
+    expect(ORG_FIELDS.some((f) => /^(shelf|card|paragraph)_title:/.test(f.key))).toBe(false);
     // A shelf and a card may share a key ("paper", "money"); their title rows never collide.
     expect(shelfTitleKey("paper")).not.toBe(cardTitleKey("paper"));
   });
