@@ -625,7 +625,8 @@ export default function AdminServiceCalendar() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Service Entry Modal */}
+      {/* Service Entry Modal. Its list of the day's entries comes from the live list, not the
+          snapshot taken on click, so a delete or an add inside the window shows at once (Josh, 2026-11-20). */}
       {selectedClient && selectedDate && (
         <ServiceEntryModal
           open={entryModalOpen}
@@ -640,8 +641,6 @@ export default function AdminServiceCalendar() {
           client={selectedClient}
           date={selectedDate}
           existingLog={editingLog}
-          {/* The day's entries from the live list, not the snapshot taken on click, so a delete or
-              an add inside the window shows at once (Josh, 2026-11-20). */}
           existingLogsForDate={serviceLogsByDate[format(selectedDate, "yyyy-MM-dd")] ?? existingLogsForDate}
           onEditLog={(log) => setEditingLog(log)}
           onSuccess={refreshLogs}
