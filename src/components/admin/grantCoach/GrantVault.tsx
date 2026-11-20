@@ -492,12 +492,13 @@ export default function GrantVault({ memoryBelow = false }: {
         <section className="space-y-3 pt-5 border-t-2 border-dashed border-amber-400/60">
           <div>
             <h2 className="text-base font-black uppercase tracking-wide text-amber-300 inline-flex items-center gap-2">
-              <History className="w-4 h-4" /> Not the Vault · for Grant Coach, not for people
+              {/* Josh's words for it (2026-11-20): "sort of like a Grant Coach brain". */}
+              <History className="w-4 h-4" /> Grant Coach's brain · how it writes and what it remembers
             </h2>
             <p className="text-[12px] text-amber-100/60 max-w-3xl">
               {memoryBelow
-                ? "How Grant Coach writes: the proposal it writes like and the rules it learned from your edits. Then its memory: the story bank, and the answers from past grants, reused only as a starting point when the same question comes up. Neither is a source of record; the Vault's paragraphs, its facts and the live numbers are."
-                : "How Grant Coach writes: the proposal it writes like and the rules it learned from your edits. Settings for the writer, not facts about NLA."}
+                ? "Not NLA information. How it writes: the proposal it imitates and the rules it learned from your edits. What it remembers: the story bank, and every answer you approved in a grant, reused as a starting point when the same question comes up. The Vault always wins over a memory."
+                : "Not NLA information. How it writes: the proposal it imitates and the rules it learned from your edits. Its memory, the story bank and the answers from past grants, is on Grant Coach home. The Vault always wins over a memory."}
             </p>
           </div>
           {writer}
