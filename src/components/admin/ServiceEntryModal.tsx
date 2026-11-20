@@ -162,13 +162,16 @@ export default function ServiceEntryModal({
           setSelectedServiceId("__default__");
         }
       } else {
-        // Adding new entry - select first service if available
+        // Adding a new entry: the client's OWN rate when it has one (a partner
+        // program's day rate); the first service only for a client billed by
+        // its services alone (Josh, 2026-11-20: a one-off         ,300 adjustment
+        // service must never become every day's default).
         setIsAddingNew(true);
-        const defaultServiceId = clientServices.length > 0 ? clientServices[0].id : "__default__";
+        const ownRate = client.rate_amount != null && Number(client.rate_amount) > 0;
+        const useService = !ownRate && clientServices.length > 0;
+        const defaultServiceId = useService ? clientServices[0].id : "__default__";
         setSelectedServiceId(defaultServiceId);
-        const defaultRateType = clientServices.length > 0 
-          ? clientServices[0].rate_type 
-          : client.rate_type;
+        const defaultRateType = useService ? clientServices[0].rate_type : client.rate_type;
         const defaultMethod = getBillingMethodFromRateType(defaultRateType);
         setBillingMethod(defaultMethod);
         setHours(1);

@@ -587,6 +587,7 @@ export default function AdminServiceCalendar() {
             <AlertDialogDescription className="text-white/60">
               No {linkedProgram?.name} check-ins were recorded that day. If the school cancelled but the day is still
               owed under the contract, say why and it will be billed with an &ldquo;override&rdquo; mark on the entry.
+              To put something else on this day &mdash; a rate adjustment, a flat charge &mdash; use &ldquo;Add a charge instead&rdquo;.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <Textarea
@@ -598,6 +599,19 @@ export default function AdminServiceCalendar() {
             autoFocus
           />
           <AlertDialogFooter>
+            {/* A charge that is not a service day (Josh, 2026-11-20): the normal entry window, where a service with its own rate can be picked. */}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                const d = overrideFor; if (!d) return;
+                setOverrideFor(null); setOverrideReason("");
+                setSelectedDate(new Date(`${d}T12:00:00`)); setExistingLogsForDate([]); setEditingLog(null); setEntryModalOpen(true);
+              }}
+              className="bg-transparent border-white/15 text-white hover:bg-white/10 hover:text-white mr-auto"
+            >
+              Add a charge instead
+            </Button>
             <AlertDialogCancel className="bg-transparent border-white/15 text-white hover:bg-white/10 hover:text-white">Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={(e) => { e.preventDefault(); confirmOverride(); }} className="bg-amber-500 text-black hover:bg-amber-400 font-semibold">
               Bill this day
