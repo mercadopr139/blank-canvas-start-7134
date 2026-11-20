@@ -13,6 +13,7 @@
 // paragraph; the Introduction owns the identity line and nobody repeats it.
 import { supabase } from "@/integrations/supabase/client";
 import { factPeriods } from "@/lib/grantCoach/liveFacts";
+import type { ParagraphAttachment } from "@/lib/grantCoach/paragraphAttachments";
 
 export const SNAPSHOT_SECTIONS = [
   { key: "intro", sort: 0, title: "The Introduction", purpose: "The opening of any application: a registered nonprofit, who it serves, the meals, the partners. For \"tell us about your organization\", \"background\", \"overview\", \"who are you\"." },
@@ -152,7 +153,7 @@ export async function approvedSnapshotForWriter(): Promise<WriterSnapshot | null
 
 /* ── Talk to Grant Coach on a paragraph (2026-11-19): the thread, kept per paragraph per year ── */
 
-export interface ParagraphMsg { id: string; role: "user" | "coach"; content: string; payload: { after?: string; why?: string; used?: boolean; /** The paragraph as it stood when this was asked, so the marks stay true after later edits. */ before?: string } | null }
+export interface ParagraphMsg { id: string; role: "user" | "coach"; content: string; payload: { after?: string; why?: string; used?: boolean; /** The paragraph as it stood when this was asked, so the marks stay true after later edits. */ before?: string; /** Screenshots or PDFs pasted with the message (Josh, 2026-11-20). */ attachments?: ParagraphAttachment[] } | null }
 
 const msgTable = () => supabase.from("grant_paragraph_messages" as never);
 
@@ -167,6 +168,11 @@ export async function paragraphMessages(year: string, key: string): Promise<Para
 export async function saveParagraphMessage(year: string, key: string, role: "user" | "coach", content: string, payload: ParagraphMsg["payload"], userId: string | null): Promise<string | null> {
   const { data, error } = await (msgTable().insert({ program_year: year, section_key: key, role, content, payload: payload ?? {}, created_by: userId } as never).select("id").single() as unknown as Promise<{ data: { id: string } | null; error: { message: string } | null }>);
   return error ? null : data?.id ?? null;
+}
+
+/** A message whose send failed is taken back, so a retry doesn't show the question twice (Josh, 2026-11-20). */
+export async function deleteParagraphMessage(id: string): Promise<void> {
+  await (msgTable().delete().eq("id", id) as unknown as Promise<unknown>);
 }
 
 /** The change went into the box: the card remembers. */

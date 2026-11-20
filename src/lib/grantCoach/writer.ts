@@ -262,7 +262,8 @@ export async function readFunderBrief(folder: DraftFolder, docs: { title: string
 export async function paragraphChat(input: {
   year: string; title: string; purpose: string; current: string;
   others: { title: string; body: string }[];
-  messages: { role: "user" | "coach"; content: string }[];
+  /** attachments (2026-11-20): the files pasted with a message, by their bucket path; the function reads them for the model. */
+  messages: { role: "user" | "coach"; content: string; attachments?: { path: string; title: string }[] }[];
   library: LibraryEntry[]; facts: Fact[];
 }): Promise<{ reply: string; after: string | null; why: string | null }> {
   const { data, error } = await supabase.functions.invoke("grant-writer", { body: { mode: "paragraph_chat", ...input, siteText: SITE_TEXT } });

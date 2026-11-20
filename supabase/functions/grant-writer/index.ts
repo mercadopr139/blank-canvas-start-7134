@@ -31,7 +31,8 @@ type Folder = { name: string; funder: string; program_name: string | null; amoun
   funder_notes?: string | null;
   /** How it is delivered (2026-11-12): an online portal's copy/paste boxes (default) or a written proposal mailed or emailed back. */
   delivery?: "portal" | "proposal" | null };
-type Msg = { role: "user" | "coach"; content: string };
+/** attachments (paragraph_chat, 2026-11-20): screenshots or PDFs pasted with the message, under paragraphs/ in the bucket. */
+type Msg = { role: "user" | "coach"; content: string; attachments?: { path: string; title: string }[] };
 /** What the funder's documents say, read once (Josh, 2026-10-22). */
 type FunderBrief = {
   summary: string; funds: string[]; does_not_fund: string[];
@@ -211,6 +212,35 @@ async function docContent(docs: { title: string; path?: string; text?: string }[
     else content.push({ type: "text", text: "(a file type that can't be read here)" });
   }
   return content;
+}
+
+/** The thread's images and PDFs are resent every turn, so only the latest few go to the model. */
+const MAX_CHAT_ATTACHMENTS = 10;
+
+/**
+ * A paragraph_chat thread as model messages (2026-11-20): a user message with
+ * pasted files carries them inline after its text, newest ten across the
+ * thread; the rest are named as left out so the model knows there was one.
+ */
+// deno-lint-ignore no-explicit-any
+async function chatHistory(history: Msg[]): Promise<{ role: "user" | "assistant"; content: any }[]> {
+  let budget = MAX_CHAT_ATTACHMENTS;
+  // deno-lint-ignore no-explicit-any
+  const out: { role: "user" | "assistant"; content: any }[] = [];
+  for (let i = history.length - 1; i >= 0; i--) {
+    const m = history[i];
+    const role = m.role === "user" ? "user" : "assistant";
+    const text = m.content.trim() || (m.attachments?.length ? "(see what is attached)" : "(nothing said)");
+    const atts = (Array.isArray(m.attachments) ? m.attachments : []).filter((a) => a && typeof a.path === "string" && a.path.startsWith("paragraphs/") && !a.path.includes(".."));
+    if (role !== "user" || !atts.length) { out.unshift({ role, content: text }); continue; }
+    const take = Math.min(atts.length, budget);
+    budget -= take;
+    const sent = atts.slice(atts.length - take);
+    const left = atts.length - take;
+    const docs = take ? await docContent(sent.map((a) => ({ title: String(a.title ?? "attachment"), path: a.path }))) : [];
+    out.unshift({ role, content: [{ type: "text", text: left ? `${text}\n(${left} earlier attachment${left === 1 ? "" : "s"} not shown again)` : text }, ...docs] });
+  }
+  return out;
 }
 
 const isYmd = (v: unknown) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
@@ -531,12 +561,13 @@ Deno.serve(async (req) => {
 - Never add a figure, a name, a program or a claim that is not in the paragraph, THE OTHER STANDARD PARAGRAPHS, the LIVE NUMBERS, the website or the library. If he asks for one you cannot source, say so and ask him for it.
 - A sentence lives in ONE paragraph. If what he asks for already lives in another standard paragraph, say which one and where, and offer the briefest cross-reference instead of a repeat — unless he says to add it anyway.
 - Keep his voice: short declarative sentences, American English, the ALL-CAPS heading line kept as the first line.
+- A screenshot or a PDF Josh pastes is a source. Read it closely and quote what it shows exactly: a figure from NLA's back end in a screenshot is a live number as of that screenshot. Say in one line what you read from it. If it is too small or cut off to read, say so.
 - When he only asks a question, answer it; leave "after" out.
 Return ONLY JSON: {"reply":"<plain text, paragraphs allowed>","after":"<the full paragraph with the change>" (only when a change is proposed; otherwise omit),"why":"<one line>" (only with after)}`,
         messages: [
           { role: "user", content: context + "\n\nThe conversation follows. Reply to the last message." },
           { role: "assistant", content: "Ready." },
-          ...history.map((m) => ({ role: (m.role === "user" ? "user" : "assistant") as "user" | "assistant", content: m.content })),
+          ...(await chatHistory(history)),
         ],
         ...thinking("medium"),
       });
