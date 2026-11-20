@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   BookOpen, FolderLock, Check, Loader2, Upload, Link2, ExternalLink, Trash2, AlertCircle, FolderPlus, CalendarClock, ChevronRight,
+  History,
 } from "lucide-react";
 import { checklistProgress } from "@/lib/grantCoach/oceanChecklist";
 import { orgCompleteness } from "@/lib/grantCoach/orgProfile";
@@ -283,9 +284,11 @@ const AdminGrantCoach = () => {
           {/* Kept apart from the Vault (Josh, 2026-11-20: "I thought it was part of the vault"):
               the stories and the answers from past grants are Grant Coach's memory, not the
               source of record. The Vault stops at the background shelf; this line says so. */}
-          <div className="pt-5 border-t-2 border-dashed border-white/15">
-            <h2 className="text-base font-black uppercase tracking-wide text-white/70">Not the Vault · Grant Coach's memory</h2>
-            <p className="text-[12px] text-white/45 max-w-3xl">
+          <div className="pt-5 border-t-2 border-dashed border-amber-400/60">
+            <h2 className="text-base font-black uppercase tracking-wide text-amber-300 inline-flex items-center gap-2">
+              <History className="w-4 h-4" /> Not the Vault · Grant Coach's memory
+            </h2>
+            <p className="text-[12px] text-amber-100/60 max-w-3xl">
               Two things kept apart from the Vault. The story bank: real moments, told once, that any grant can use. The answers from past grants: what you told a funder before, reused as a starting point when the same question comes up. Neither is a source of record; the Vault's paragraphs, its facts and the live numbers are.
             </p>
           </div>
