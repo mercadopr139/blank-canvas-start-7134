@@ -640,7 +640,9 @@ export default function AdminServiceCalendar() {
           client={selectedClient}
           date={selectedDate}
           existingLog={editingLog}
-          existingLogsForDate={existingLogsForDate}
+          {/* The day's entries from the live list, not the snapshot taken on click, so a delete or
+              an add inside the window shows at once (Josh, 2026-11-20). */}
+          existingLogsForDate={serviceLogsByDate[format(selectedDate, "yyyy-MM-dd")] ?? existingLogsForDate}
           onEditLog={(log) => setEditingLog(log)}
           onSuccess={refreshLogs}
         />
