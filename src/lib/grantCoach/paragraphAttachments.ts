@@ -19,6 +19,8 @@ const mb = (n: number) => `${Math.round(n / 1024 / 1024)} MB`;
 
 /** Why a file can't be sent, or null when it can: PNG, JPG and WebP up to 5 MB; a PDF up to 10 MB. */
 export function attachmentProblem(file: File): string | null {
+  // A file dragged out of a PDF viewer or an email arrives with a name and no bytes (2026-11-20: "PDF cannot be empty").
+  if (file.size === 0) return `${file.name || "That file"} is empty (0 bytes). Save it to a folder first, then use the paperclip or drag it from there.`;
   if (file.type === "application/pdf") return file.size > PDF_LIMIT ? `${file.name} is over ${mb(PDF_LIMIT)}.` : null;
   if (!IMAGE_TYPES[file.type]) return `${file.name || "That file"} isn't a PNG, JPG, WebP or PDF.`;
   return file.size > IMAGE_LIMIT ? `${file.name} is over ${mb(IMAGE_LIMIT)}.` : null;

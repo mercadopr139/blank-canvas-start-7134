@@ -204,6 +204,9 @@ async function docContent(docs: { title: string; path?: string; text?: string }[
     const { data, error } = await service.storage.from("grant-documents").download(d.path);
     if (error || !data) { content.push({ type: "text", text: `(could not be opened: ${error?.message ?? "no file"})` }); continue; }
     const buf = new Uint8Array(await data.arrayBuffer());
+    console.log(`docContent: ${d.path} ${buf.length} bytes`);
+    // An empty file would fail the whole call ("PDF cannot be empty", 2026-11-20); say so instead and go on.
+    if (!buf.length) { content.push({ type: "text", text: "(the stored file is empty — 0 bytes. Ask Josh to attach it again from a folder, not from a viewer or an email.)" }); continue; }
     let b64 = "";
     for (let i = 0; i < buf.length; i += 0x8000) b64 += String.fromCharCode(...buf.subarray(i, i + 0x8000));
     const p = d.path.toLowerCase();
