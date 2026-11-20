@@ -52,7 +52,9 @@ export default function GcCard({ title, blurb, right, icon, open, onToggle, chil
           tabIndex={0}
           aria-expanded={!!open}
           onClick={onToggle}
-          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); } }}
+          // Only keys on the band itself: a space or an Enter typed in a rename box or on a button inside it
+          // is theirs (Josh, 2026-11-20: "I don't have ability to use space bar").
+          onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onToggle(); } }}
           className={`w-full px-4 py-2.5 flex items-start gap-3 cursor-pointer select-none hover:brightness-125 transition ${showBody ? "border-b" : ""}`}
           style={{ background: GC_SHADE, borderColor: `${GC_BLUE}55` }}
         >
